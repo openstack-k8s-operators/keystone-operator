@@ -1,0 +1,1 @@
+mysql -h {{.DatabaseHostname}} -u admin -P 3306 -e "CREATE DATABASE IF NOT EXISTS keystone; GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'localhost' IDENTIFIED BY '{{.DatabasePassword}}';GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'%' IDENTIFIED BY '{{.DatabasePassword}}';"
