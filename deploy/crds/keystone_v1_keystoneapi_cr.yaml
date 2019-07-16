@@ -1,7 +1,12 @@
 apiVersion: keystone.openstack.org/v1
 kind: KeystoneApi
 metadata:
-  name: example-keystoneapi
+  name: example
 spec:
-  # Add fields here
-  size: 3
+  databasePassword: foobar123
+  databaseHostname: openstack-db-mariadb
+  adminDatabasePassword: foobar123
+  adminPassword: foobar123
+  containerImage: docker.io/tripleomaster/centos-binary-keystone:current-tripleo
+  mysqlContainerImage: docker.io/tripleomaster/centos-binary-mariadb:current-tripleo
+  replicas: 1
