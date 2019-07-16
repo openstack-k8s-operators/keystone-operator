@@ -1,0 +1,7 @@
+apiVersion: keystone.openstack.org/v1
+kind: KeystoneApi
+metadata:
+  name: example-keystoneapi
+spec:
+  # Add fields here
+  size: 3
