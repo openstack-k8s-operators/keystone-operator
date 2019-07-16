@@ -65,7 +65,58 @@ func schema_pkg_apis_keystone_v1_KeystoneApiSpec(ref common.ReferenceCallback) c
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "KeystoneApiSpec defines the desired state of KeystoneApi",
-				Properties:  map[string]spec.Schema{},
+				Properties: map[string]spec.Schema{
+					"databasePassword": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Keystone Database Password String",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"databaseHostname": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Keystone Database Hostname String",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"containerImage": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Keystone Container Image URL",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"mysqlContainerImage": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Mysql Container Image URL (used for database syncing)",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"adminDatabasePassword": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Admin database password",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"adminPassword": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Keystone API Admin Password",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"replicas": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Replicas",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+				},
+				Required: []string{"replicas"},
 			},
 		},
 		Dependencies: []string{},
@@ -77,7 +128,29 @@ func schema_pkg_apis_keystone_v1_KeystoneApiStatus(ref common.ReferenceCallback)
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "KeystoneApiStatus defines the observed state of KeystoneApi",
-				Properties:  map[string]spec.Schema{},
+				Properties: map[string]spec.Schema{
+					"messages": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Deployment messages",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"dbSyncVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Current Db sync version",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
 			},
 		},
 		Dependencies: []string{},
