@@ -1,0 +1,5 @@
+channels:
+- currentCSV: keystone-operator.v0.0.1
+  name: devel
+defaultChannel: devel
+packageName: keystone-operator
