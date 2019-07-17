@@ -15,12 +15,12 @@ spec:
       version: v1
       description: Keystone Kubernetes Operator
       displayName: KeystoneApi
-    required:
-    - name: mariadbs.mariadb.com
-      version: v1alpha1
-      kind: MariaDB
-      displayName: MariaDB Kubernetes Operator
-      description: Instance of a MariaDB Database
+      #    required:
+      #- name: mariadbs.mariadb.com
+      #version: v1alpha1
+      #kind: MariaDB
+      #displayName: MariaDB Kubernetes Operator
+      #description: Instance of a MariaDB Database
   description: Keystone Kubernetes Operator
   displayName: KeystoneApi
   install:
