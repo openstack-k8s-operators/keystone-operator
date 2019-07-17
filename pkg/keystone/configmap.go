@@ -1,4 +1,4 @@
-package config
+package keystone
 
 import (
         util "github.com/openstack-k8s-operators/keystone-operator/pkg/util"
@@ -14,7 +14,7 @@ type keystoneConfigOptions struct {
 }
 
 // custom keystone config map
-func KeystoneConfigMap(cr *comv1.KeystoneApi, cmName string) *corev1.ConfigMap {
+func ConfigMap(cr *comv1.KeystoneApi, cmName string) *corev1.ConfigMap {
 	opts := keystoneConfigOptions{cr.Spec.DatabasePassword, cr.Spec.DatabaseHostname, cr.Spec.AdminPassword}
 
 	cm := &corev1.ConfigMap{

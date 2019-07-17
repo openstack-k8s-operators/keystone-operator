@@ -31,7 +31,7 @@ func BootstrapJob(cr *comv1.KeystoneApi, configMapName string) *batchv1.Job {
 						{
 							Name:  "keystone-bootstrap",
 							Image: cr.Spec.ContainerImage,
-                                                        Command: []string{"/bin/bash", "-c", util.ExecuteTemplateFile("config/bootstrap.sh", &opts)},
+                                                        Command: []string{"/bin/bash", "-c", util.ExecuteTemplateFile("bootstrap.sh", &opts)},
 							SecurityContext: &corev1.SecurityContext{
 								RunAsUser: &runAsUser,
 							},

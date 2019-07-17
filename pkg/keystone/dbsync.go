@@ -83,7 +83,7 @@ func DbSyncJob(cr *comv1.KeystoneApi, cmName string) *batchv1.Job {
 						{
 							Name:    "keystone-db-create",
 							Image:   "docker.io/tripleomaster/centos-binary-mariadb:current-tripleo",
-							Command: []string{"/bin/sh", "-c", util.ExecuteTemplateFile("config/db_create.sh", &opts)},
+							Command: []string{"/bin/sh", "-c", util.ExecuteTemplateFile("db_create.sh", &opts)},
 							Env: []corev1.EnvVar{
 								{
 									Name:  "MYSQL_PWD",

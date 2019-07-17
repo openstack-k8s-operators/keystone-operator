@@ -7,7 +7,6 @@ import (
 	"time"
 
 	keystone "github.com/openstack-k8s-operators/keystone-operator/pkg/keystone"
-	config "github.com/openstack-k8s-operators/keystone-operator/pkg/keystone/config"
         comv1 "github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1"
         appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -122,7 +121,7 @@ func (r *ReconcileKeystoneApi) Reconcile(request reconcile.Request) (reconcile.R
 	}
 
         // ConfigMap
-        configMap := config.KeystoneConfigMap(instance, instance.Name)
+        configMap := keystone.ConfigMap(instance, instance.Name)
 	if err := controllerutil.SetControllerReference(instance, configMap, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
