@@ -16,7 +16,7 @@ spec:
       containers:
         - name: keystone-operator
           # Replace this with the built image name
-          image: REPLACE_IMAGE
+          image: quay.io/openstack-k8s-operators/keystone-operator:devel
           command:
           - keystone-operator
           imagePullPolicy: Always
