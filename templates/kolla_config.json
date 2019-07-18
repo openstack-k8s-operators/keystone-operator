@@ -14,6 +14,12 @@
             "perm": "0644"
         },
         {
+            "source": "/var/lib/config-data/logging.conf",
+            "dest": "/etc/keystone/logging.conf",
+            "owner": "keystone",
+            "perm": "0644"
+        },
+        {
             "source": "/var/lib/fernet-keys",
             "dest": "/etc/keystone/",
             "owner": "keystone:keystone",

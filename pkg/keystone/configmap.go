@@ -30,6 +30,7 @@ func ConfigMap(cr *comv1.KeystoneApi, cmName string) *corev1.ConfigMap {
 			"keystone.conf": util.ExecuteTemplateFile("keystone.conf", &opts),
 			"httpd.conf":    util.ExecuteTemplateFile("httpd.conf", nil),
 			"config.json":   util.ExecuteTemplateFile("kolla_config.json", nil),
+			"logging.conf":  util.ExecuteTemplateFile("logging.conf", nil),
 		},
 	}
 

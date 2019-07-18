@@ -38,6 +38,10 @@ func getVolumes(name string) []corev1.Volume {
 							Path: "keystone.conf",
 						},
 						{
+							Key:  "logging.conf",
+							Path: "logging.conf",
+						},
+						{
 							Key:  "httpd.conf",
 							Path: "httpd.conf",
 						},
