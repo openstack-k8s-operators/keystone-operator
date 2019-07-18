@@ -4,7 +4,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// add common keystone API volumes
+// common Keystone API Volumes
 func getVolumes(name string) []corev1.Volume {
 
 	return []corev1.Volume{
@@ -56,6 +56,28 @@ func getVolumes(name string) []corev1.Volume {
 					SecretName: name,
 				},
 			},
+		},
+	}
+
+}
+
+// common Keystone API VolumeMounts
+func getVolumeMounts() []corev1.VolumeMount {
+	return []corev1.VolumeMount{
+		{
+			MountPath: "/var/lib/config-data",
+			ReadOnly:  true,
+			Name:      "config-data",
+		},
+		{
+			MountPath: "/var/lib/kolla/config_files",
+			ReadOnly:  true,
+			Name:      "kolla-config",
+		},
+		{
+			MountPath: "/var/lib/fernet-keys",
+			ReadOnly:  true,
+			Name:      "fernet-keys",
 		},
 	}
 

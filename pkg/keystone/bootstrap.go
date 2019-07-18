@@ -41,23 +41,7 @@ func BootstrapJob(cr *comv1.KeystoneApi, configMapName string) *batchv1.Job {
 									Value: "COPY_ALWAYS",
 								},
 							},
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									MountPath: "/var/lib/config-data",
-									ReadOnly:  true,
-									Name:      "config-data",
-								},
-								{
-									MountPath: "/var/lib/kolla/config_files",
-									ReadOnly:  true,
-									Name:      "kolla-config",
-								},
-                                                                {
-                                                                        MountPath: "/var/lib/fernet-keys",
-                                                                        ReadOnly:  true,
-                                                                        Name:      "fernet-keys",
-                                                                },
-							},
+                                                        VolumeMounts: getVolumeMounts(),
 						},
 					},
 				},
