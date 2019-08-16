@@ -6,13 +6,14 @@ import (
 	"reflect"
 	"time"
 
+	comv1 "github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1"
 	keystone "github.com/openstack-k8s-operators/keystone-operator/pkg/keystone"
-        comv1 "github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1"
-        appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	//metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	logr "github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,11 +27,6 @@ import (
 )
 
 var log = logf.Log.WithName("controller_keystoneapi")
-
-/**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
 
 // Add creates a new KeystoneApi Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -57,7 +53,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// TODO(user): Modify this to be the types you create that are owned by the primary resource
 	// Watch for changes to secondary resource Pods and requeue the owner KeystoneApi
 	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
@@ -104,8 +99,8 @@ func (r *ReconcileKeystoneApi) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, err
 	}
 
-        // Secret
-        secret := keystone.FernetSecret(instance, instance.Name)
+	// Secret
+	secret := keystone.FernetSecret(instance, instance.Name)
 	if err := controllerutil.SetControllerReference(instance, secret, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -120,8 +115,8 @@ func (r *ReconcileKeystoneApi) Reconcile(request reconcile.Request) (reconcile.R
 		}
 	}
 
-        // ConfigMap
-        configMap := keystone.ConfigMap(instance, instance.Name)
+	// ConfigMap
+	configMap := keystone.ConfigMap(instance, instance.Name)
 	if err := controllerutil.SetControllerReference(instance, configMap, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -136,52 +131,24 @@ func (r *ReconcileKeystoneApi) Reconcile(request reconcile.Request) (reconcile.R
 		}
 	}
 
-
 	// Define a new Job object
-        job := keystone.DbSyncJob(instance, instance.Name)
+	job := keystone.DbSyncJob(instance, instance.Name)
 
 	// Set KeystoneApi instance as the owner and controller
 	if err := controllerutil.SetControllerReference(instance, job, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// Check if this Job already exists
-	foundJob := &batchv1.Job{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, foundJob)
-	if err != nil && k8s_errors.IsNotFound(err) {
-		reqLogger.Info("Creating a new Job", "Job.Namespace", job.Namespace, "Job.Name", job.Name)
-		err = r.client.Create(context.TODO(), job)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
-                status := comv1.KeystoneApiStatus{
-                        DbSyncVersion: "syncing",
-                }
-	        err = updateStatus(instance, r.client, status)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-		return reconcile.Result{RequeueAfter: time.Second * 5}, err
-	} else if err != nil {
+	requeue := true
+	requeue, err = EnsureJob(job, r, reqLogger)
+	if err != nil {
 		return reconcile.Result{}, err
-	} else {
-                //FIXME replace with WaitForJobCompletion from pkg/operator/k8sutil/job.go in rook
-                if foundJob.Status.Active > 0 {
-	                reqLogger.Info("Dbsync Job Status Active... requeuing")
-		        return reconcile.Result{RequeueAfter: time.Second * 5}, err
-                }
-                if foundJob.Status.Failed > 0 {
-	                reqLogger.Info("DbSync Job Status Failed")
-			return reconcile.Result{}, k8s_errors.NewInternalError(errors.New("DbSync Failed. Check job logs."))
-                }
-                if foundJob.Status.Succeeded > 0 {
-	                reqLogger.Info("Job Status Successful")
-                }
+	} else if requeue {
+		return reconcile.Result{RequeueAfter: time.Second * 5}, err
 	}
 
 	// Define a new Deployment object
-        deployment := keystone.Deployment(instance, instance.Name)
+	deployment := keystone.Deployment(instance, instance.Name)
 
 	// Set KeystoneApi instance as the owner and controller
 	if err := controllerutil.SetControllerReference(instance, deployment, r.scheme); err != nil {
@@ -204,52 +171,29 @@ func (r *ReconcileKeystoneApi) Reconcile(request reconcile.Request) (reconcile.R
 	} else if err != nil {
 		return reconcile.Result{}, err
 	} else {
-                //FIXME replace with WaitForJobCompletion from pkg/operator/k8sutil/job.go in rook
-                if foundDeployment.Status.ReadyReplicas == instance.Spec.Replicas {
+		//FIXME replace with WaitForJobCompletion from pkg/operator/k8sutil/job.go in rook
+		if foundDeployment.Status.ReadyReplicas == instance.Spec.Replicas {
 			reqLogger.Info("Keystone Deployment Replicas running:")
-                } else {
-	            reqLogger.Info("Waiting on Keystone Deployment...")
-		    return reconcile.Result{RequeueAfter: time.Second * 5}, err
-                }
+		} else {
+			reqLogger.Info("Waiting on Keystone Deployment...")
+			return reconcile.Result{RequeueAfter: time.Second * 5}, err
+		}
 	}
 
-        // Create the service if none exists
-        service := keystone.Service(instance, instance.Name)
-
-        // Set KeystoneApi instance as the owner and controller
-        if err := controllerutil.SetControllerReference(instance, service, r.scheme); err != nil {
-                return reconcile.Result{}, err
-        }
-
-        // Check if this Service already exists
-        foundService := &corev1.Service{}
-        err = r.client.Get(context.TODO(), types.NamespacedName{Name: service.Name, Namespace: service.Namespace}, foundService)
-        if err != nil && k8s_errors.IsNotFound(err) {
-                reqLogger.Info("Creating a new Service", "Service.Namespace", service.Namespace, "Service.Name", service.Name)
-                err = r.client.Create(context.TODO(), service)
-                if err != nil {
-                        return reconcile.Result{}, err
-                }
-
-                return reconcile.Result{RequeueAfter: time.Second * 5}, err
-        } else if err != nil {
-                return reconcile.Result{}, err
-        }
-
-	// Define a new BootStrap Job object
-        bootstrapJob := keystone.BootstrapJob(instance, instance.Name)
+	// Create the service if none exists
+	service := keystone.Service(instance, instance.Name)
 
 	// Set KeystoneApi instance as the owner and controller
-	if err := controllerutil.SetControllerReference(instance, bootstrapJob, r.scheme); err != nil {
+	if err := controllerutil.SetControllerReference(instance, service, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// Check if this Job already exists
-	foundBootStrapJob := &batchv1.Job{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: bootstrapJob.Name, Namespace: bootstrapJob.Namespace}, foundBootStrapJob)
+	// Check if this Service already exists
+	foundService := &corev1.Service{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: service.Name, Namespace: service.Namespace}, foundService)
 	if err != nil && k8s_errors.IsNotFound(err) {
-		reqLogger.Info("Creating a new Bootstrap Job", "Job.Namespace", bootstrapJob.Namespace, "Job.Name", bootstrapJob.Name)
-		err = r.client.Create(context.TODO(), bootstrapJob)
+		reqLogger.Info("Creating a new Service", "Service.Namespace", service.Namespace, "Service.Name", service.Name)
+		err = r.client.Create(context.TODO(), service)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -257,29 +201,62 @@ func (r *ReconcileKeystoneApi) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{RequeueAfter: time.Second * 5}, err
 	} else if err != nil {
 		return reconcile.Result{}, err
-	} else {
-                //FIXME replace with WaitForJobCompletion from pkg/operator/k8sutil/bootstrapJob.go in rook
-                if foundBootStrapJob.Status.Active > 0 {
-	                reqLogger.Info("Bootstrap Job Status Active... requeuing")
-		        return reconcile.Result{RequeueAfter: time.Second * 5}, err
-                }
-                if foundBootStrapJob.Status.Failed > 0 {
-	                reqLogger.Info("Bootstrap Job Status Failed")
-			return reconcile.Result{}, k8s_errors.NewInternalError(errors.New("Bootstrap Failed. Check job logs."))
-                }
-                if foundBootStrapJob.Status.Succeeded > 0 {
-	                reqLogger.Info("Bootstrap Successful")
-                }
 	}
+
+	// Define a new BootStrap Job object
+	bootstrapJob := keystone.BootstrapJob(instance, instance.Name)
+
+	// Set KeystoneApi instance as the owner and controller
+	if err := controllerutil.SetControllerReference(instance, bootstrapJob, r.scheme); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	requeue, err = EnsureJob(bootstrapJob, r, reqLogger)
+	if err != nil {
+		return reconcile.Result{}, err
+	} else if requeue {
+		return reconcile.Result{RequeueAfter: time.Second * 5}, err
+	}
+
 	return reconcile.Result{}, nil
 }
 
-
 func updateStatus(instance *comv1.KeystoneApi, client client.Client, status comv1.KeystoneApiStatus) error {
 
-        if !reflect.DeepEqual(instance.Status, status) {
-                instance.Status = status
+	if !reflect.DeepEqual(instance.Status, status) {
+		instance.Status = status
 		return client.Status().Update(context.TODO(), instance)
-        }
-    return nil
+	}
+	return nil
+}
+
+func EnsureJob(job *batchv1.Job, kr *ReconcileKeystoneApi, reqLogger logr.Logger) (bool, error) {
+
+	// Check if this Job already exists
+	foundJob := &batchv1.Job{}
+	err := kr.client.Get(context.TODO(), types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, foundJob)
+	if err != nil && k8s_errors.IsNotFound(err) {
+		reqLogger.Info("Creating a new Job", "Job.Namespace", job.Namespace, "Job.Name", job.Name)
+		err = kr.client.Create(context.TODO(), job)
+		if err != nil {
+			return false, err
+		}
+		return true, err
+	} else if err != nil {
+		return false, err
+	} else {
+		if foundJob.Status.Active > 0 {
+			reqLogger.Info("Job Status Active... requeuing")
+			return true, err
+		}
+		if foundJob.Status.Failed > 0 {
+			reqLogger.Info("Job Status Failed")
+			return false, k8s_errors.NewInternalError(errors.New("Job Failed. Check job logs."))
+		}
+		if foundJob.Status.Succeeded > 0 {
+			reqLogger.Info("Job Status Successful")
+		}
+	}
+	return false, nil
+
 }
