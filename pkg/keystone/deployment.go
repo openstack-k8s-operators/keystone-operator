@@ -1,13 +1,13 @@
 package keystone
 
 import (
-        comv1 "github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1"
+	comv1 "github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func Deployment(cr *comv1.KeystoneApi, cmName string) *appsv1.Deployment {
+func Deployment(cr *comv1.KeystoneApi, cmName string, configHash string) *appsv1.Deployment {
 	runAsUser := int64(0)
 
 	labels := map[string]string{
@@ -40,6 +40,10 @@ func Deployment(cr *comv1.KeystoneApi, cmName string) *appsv1.Deployment {
 								{
 									Name:  "KOLLA_CONFIG_STRATEGY",
 									Value: "COPY_ALWAYS",
+								},
+								{
+									Name:  "CONFIG_HASH",
+									Value: configHash,
 								},
 							},
 							VolumeMounts: getVolumeMounts(),

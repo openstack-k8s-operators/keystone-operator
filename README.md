@@ -30,7 +30,7 @@ The current design takes care of the following:
 - Creates a keystone deployment with the specified replicas
 - Creates a keystone service
 - Generates Fernet keys (TODO: rotate them, and bounce the APIs upon rotation)
-- Keystone bootstrap, and db sync are executed automatically on install (TODO: on upgrade)
+- Keystone bootstrap, and db sync are executed automatically on install and updates
 - ConfigMap is recreated on any changes KeystoneAPI object changes and the Deployment updated.
 
 # Requirements

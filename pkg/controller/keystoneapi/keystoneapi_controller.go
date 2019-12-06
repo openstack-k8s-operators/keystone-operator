@@ -3,19 +3,17 @@ package keystoneapi
 import (
 	"context"
 	"errors"
-	"reflect"
-	"time"
-
+	logr "github.com/go-logr/logr"
 	comv1 "github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1"
 	keystone "github.com/openstack-k8s-operators/keystone-operator/pkg/keystone"
+	util "github.com/openstack-k8s-operators/keystone-operator/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
-	//metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	logr "github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -24,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	"time"
 )
 
 var log = logf.Log.WithName("controller_keystoneapi")
@@ -129,26 +128,47 @@ func (r *ReconcileKeystoneApi) Reconcile(request reconcile.Request) (reconcile.R
 		if err != nil {
 			return reconcile.Result{}, err
 		}
+	} else if !reflect.DeepEqual(configMap.Data, foundConfigMap.Data) {
+		reqLogger.Info("Updating ConfigMap")
+		foundConfigMap.Data = configMap.Data
+		err = r.client.Update(context.TODO(), foundConfigMap)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		return reconcile.Result{RequeueAfter: time.Second * 5}, err
 	}
 
 	// Define a new Job object
 	job := keystone.DbSyncJob(instance, instance.Name)
-
-	// Set KeystoneApi instance as the owner and controller
-	if err := controllerutil.SetControllerReference(instance, job, r.scheme); err != nil {
-		return reconcile.Result{}, err
-	}
+	dbSyncHash := util.ObjectHash(job)
 
 	requeue := true
-	requeue, err = EnsureJob(job, r, reqLogger)
+	if instance.Status.DbSyncHash != dbSyncHash {
+		// Set KeystoneApi instance as the owner and controller
+		if err := controllerutil.SetControllerReference(instance, job, r.scheme); err != nil {
+			return reconcile.Result{}, err
+		}
+		requeue, err = EnsureJob(job, r, reqLogger)
+		if err != nil {
+			return reconcile.Result{}, err
+		} else if requeue {
+			return reconcile.Result{RequeueAfter: time.Second * 5}, err
+		}
+	}
+	// db sync completed... okay to store the hash to disable it
+	r.setDbSyncHash(instance, dbSyncHash)
+	// delete the job
+	requeue, err = DeleteJob(job, r, reqLogger)
 	if err != nil {
 		return reconcile.Result{}, err
-	} else if requeue {
-		return reconcile.Result{RequeueAfter: time.Second * 5}, err
 	}
 
 	// Define a new Deployment object
-	deployment := keystone.Deployment(instance, instance.Name)
+	configMapHash := util.ObjectHash(configMap)
+	reqLogger.Info("ConfigMapHash: ", "Data Hash:", configMapHash)
+	deployment := keystone.Deployment(instance, instance.Name, configMapHash)
+	deploymentHash := util.ObjectHash(deployment)
+	reqLogger.Info("DeploymentHash: ", "Deployment Hash:", deploymentHash)
 
 	// Set KeystoneApi instance as the owner and controller
 	if err := controllerutil.SetControllerReference(instance, deployment, r.scheme); err != nil {
@@ -171,9 +191,19 @@ func (r *ReconcileKeystoneApi) Reconcile(request reconcile.Request) (reconcile.R
 	} else if err != nil {
 		return reconcile.Result{}, err
 	} else {
-		//FIXME replace with WaitForJobCompletion from pkg/operator/k8sutil/job.go in rook
+
+		if instance.Status.DeploymentHash != deploymentHash {
+			reqLogger.Info("Deployment Updated")
+			foundDeployment.Spec = deployment.Spec
+			err = r.client.Update(context.TODO(), foundDeployment)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+			r.setDeploymentHash(instance, deploymentHash)
+			return reconcile.Result{RequeueAfter: time.Second * 10}, err
+		}
 		if foundDeployment.Status.ReadyReplicas == instance.Spec.Replicas {
-			reqLogger.Info("Keystone Deployment Replicas running:")
+			reqLogger.Info("Deployment Replicas running:", "Replicas", foundDeployment.Status.ReadyReplicas)
 		} else {
 			reqLogger.Info("Waiting on Keystone Deployment...")
 			return reconcile.Result{RequeueAfter: time.Second * 5}, err
@@ -205,29 +235,67 @@ func (r *ReconcileKeystoneApi) Reconcile(request reconcile.Request) (reconcile.R
 
 	// Define a new BootStrap Job object
 	bootstrapJob := keystone.BootstrapJob(instance, instance.Name)
+	bootstrapHash := util.ObjectHash(bootstrapJob)
 
 	// Set KeystoneApi instance as the owner and controller
-	if err := controllerutil.SetControllerReference(instance, bootstrapJob, r.scheme); err != nil {
-		return reconcile.Result{}, err
-	}
+	if instance.Status.BootstrapHash != dbSyncHash {
+		if err := controllerutil.SetControllerReference(instance, bootstrapJob, r.scheme); err != nil {
+			return reconcile.Result{}, err
+		}
 
-	requeue, err = EnsureJob(bootstrapJob, r, reqLogger)
+		requeue, err = EnsureJob(bootstrapJob, r, reqLogger)
+		if err != nil {
+			return reconcile.Result{}, err
+		} else if requeue {
+			return reconcile.Result{RequeueAfter: time.Second * 5}, err
+		}
+	}
+	// db sync completed... okay to store the hash to disable it
+	r.setBootstrapHash(instance, bootstrapHash)
+	// delete the job
+	requeue, err = DeleteJob(bootstrapJob, r, reqLogger)
 	if err != nil {
 		return reconcile.Result{}, err
-	} else if requeue {
-		return reconcile.Result{RequeueAfter: time.Second * 5}, err
 	}
 
 	return reconcile.Result{}, nil
+
 }
 
-func updateStatus(instance *comv1.KeystoneApi, client client.Client, status comv1.KeystoneApiStatus) error {
+func (r *ReconcileKeystoneApi) setDbSyncHash(instance *comv1.KeystoneApi, hashStr string) error {
 
-	if !reflect.DeepEqual(instance.Status, status) {
-		instance.Status = status
-		return client.Status().Update(context.TODO(), instance)
+	if hashStr != instance.Status.DbSyncHash {
+		instance.Status.DbSyncHash = hashStr
+		if err := r.client.Status().Update(context.TODO(), instance); err != nil {
+			return err
+		}
 	}
 	return nil
+
+}
+
+func (r *ReconcileKeystoneApi) setBootstrapHash(instance *comv1.KeystoneApi, hashStr string) error {
+
+	if hashStr != instance.Status.BootstrapHash {
+		instance.Status.BootstrapHash = hashStr
+		if err := r.client.Status().Update(context.TODO(), instance); err != nil {
+			return err
+		}
+	}
+	return nil
+
+}
+
+func (r *ReconcileKeystoneApi) setDeploymentHash(instance *comv1.KeystoneApi, hashStr string) error {
+
+	if hashStr != instance.Status.DeploymentHash {
+		instance.Status.DeploymentHash = hashStr
+		if err := r.client.Status().Update(context.TODO(), instance); err != nil {
+			return err
+		}
+	}
+	return nil
+
 }
 
 func EnsureJob(job *batchv1.Job, kr *ReconcileKeystoneApi, reqLogger logr.Logger) (bool, error) {
@@ -256,6 +324,23 @@ func EnsureJob(job *batchv1.Job, kr *ReconcileKeystoneApi, reqLogger logr.Logger
 		if foundJob.Status.Succeeded > 0 {
 			reqLogger.Info("Job Status Successful")
 		}
+	}
+	return false, nil
+
+}
+
+func DeleteJob(job *batchv1.Job, kr *ReconcileKeystoneApi, reqLogger logr.Logger) (bool, error) {
+
+	// Check if this Job already exists
+	foundJob := &batchv1.Job{}
+	err := kr.client.Get(context.TODO(), types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, foundJob)
+	if err == nil {
+		reqLogger.Info("Deleting Job", "Job.Namespace", job.Namespace, "Job.Name", job.Name)
+		err = kr.client.Delete(context.TODO(), foundJob)
+		if err != nil {
+			return false, err
+		}
+		return true, err
 	}
 	return false, nil
 

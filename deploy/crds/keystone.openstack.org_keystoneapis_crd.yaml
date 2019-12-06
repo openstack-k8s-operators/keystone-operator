@@ -9,11 +9,12 @@ spec:
     listKind: KeystoneApiList
     plural: keystoneapis
     singular: keystoneapi
-  scope: Namespaced
+  scope: ""
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
+      description: KeystoneApi is the Schema for the keystoneapis API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -28,6 +29,7 @@ spec:
         metadata:
           type: object
         spec:
+          description: KeystoneApiSpec defines the desired state of KeystoneApi
           properties:
             adminDatabasePassword:
               description: Admin database password
@@ -55,16 +57,24 @@ spec:
           - replicas
           type: object
         status:
+          description: KeystoneApiStatus defines the observed state of KeystoneApi
           properties:
-            dbSyncVersion:
-              description: Current Db sync version
+            bootstrapHash:
+              description: bootstrap completed
               type: string
-            messages:
-              description: Deployment messages
-              items:
-                type: string
-              type: array
+            dbSyncHash:
+              description: Deployment messages Messages []string `json:"messages,omitempty"`
+                DbSync hash
+              type: string
+            deploymentHash:
+              description: Deployment hash used to detect changes
+              type: string
+          required:
+          - bootstrapHash
+          - dbSyncHash
+          - deploymentHash
           type: object
+      type: object
   version: v1
   versions:
   - name: v1
