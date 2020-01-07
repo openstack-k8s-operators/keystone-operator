@@ -82,6 +82,13 @@ func schema_pkg_apis_keystone_v1_KeystoneApiSpec(ref common.ReferenceCallback) c
 							Format:      "",
 						},
 					},
+					"databaseUsername": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Keystone Database Username",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"containerImage": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Keystone Container Image URL",

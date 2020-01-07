@@ -19,8 +19,6 @@ func Service(cr *comv1.KeystoneApi, cmName string) *corev1.Service {
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: labels,
-			//Type:     corev1.ServiceTypeLoadBalancer,
-			Type: corev1.ServiceTypeNodePort,
 			Ports: []corev1.ServicePort{
 				{Name: "api", Port: 5000, Protocol: corev1.ProtocolTCP},
 			},

@@ -28,7 +28,7 @@ func Deployment(cr *comv1.KeystoneApi, cmName string, configHash string) *appsv1
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: "keystone-operator",
+					ServiceAccountName: "keystone",
 					Containers: []corev1.Container{
 						{
 							Name:  "keystone-api",
