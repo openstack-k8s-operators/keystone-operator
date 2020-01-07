@@ -149,9 +149,11 @@ func (r *ReconcileKeystoneApi) Reconcile(request reconcile.Request) (reconcile.R
 			return reconcile.Result{}, err
 		}
 		requeue, err = EnsureJob(job, r, reqLogger)
+		reqLogger.Info("Running DB sync")
 		if err != nil {
 			return reconcile.Result{}, err
 		} else if requeue {
+			reqLogger.Info("Waiting on DB sync")
 			return reconcile.Result{RequeueAfter: time.Second * 5}, err
 		}
 	}
@@ -238,7 +240,7 @@ func (r *ReconcileKeystoneApi) Reconcile(request reconcile.Request) (reconcile.R
 	bootstrapHash := util.ObjectHash(bootstrapJob)
 
 	// Set KeystoneApi instance as the owner and controller
-	if instance.Status.BootstrapHash != dbSyncHash {
+	if instance.Status.BootstrapHash != bootstrapHash {
 		if err := controllerutil.SetControllerReference(instance, bootstrapJob, r.scheme); err != nil {
 			return reconcile.Result{}, err
 		}
@@ -299,7 +301,6 @@ func (r *ReconcileKeystoneApi) setDeploymentHash(instance *comv1.KeystoneApi, ha
 }
 
 func EnsureJob(job *batchv1.Job, kr *ReconcileKeystoneApi, reqLogger logr.Logger) (bool, error) {
-
 	// Check if this Job already exists
 	foundJob := &batchv1.Job{}
 	err := kr.client.Get(context.TODO(), types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, foundJob)
@@ -311,18 +312,21 @@ func EnsureJob(job *batchv1.Job, kr *ReconcileKeystoneApi, reqLogger logr.Logger
 		}
 		return true, err
 	} else if err != nil {
-		return false, err
-	} else {
+		reqLogger.Info("EnsureJob err")
+		return true, err
+	} else if foundJob != nil {
+		reqLogger.Info("EnsureJob foundJob")
 		if foundJob.Status.Active > 0 {
 			reqLogger.Info("Job Status Active... requeuing")
 			return true, err
-		}
-		if foundJob.Status.Failed > 0 {
+		} else if foundJob.Status.Failed > 0 {
 			reqLogger.Info("Job Status Failed")
-			return false, k8s_errors.NewInternalError(errors.New("Job Failed. Check job logs."))
-		}
-		if foundJob.Status.Succeeded > 0 {
+			return true, k8s_errors.NewInternalError(errors.New("Job Failed. Check job logs."))
+		} else if foundJob.Status.Succeeded > 0 {
 			reqLogger.Info("Job Status Successful")
+		} else {
+			reqLogger.Info("Job Status incomplete... requeuing")
+			return true, err
 		}
 	}
 	return false, nil
