@@ -3,6 +3,7 @@ kind: KeystoneApi
 metadata:
   name: keystone
 spec:
+  apiEndpoint: http://keystone-test.apps.test.dprince/
   databasePassword: foobar123
   databaseHostname: openstack-db-mariadb
   databaseUsername: root

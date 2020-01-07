@@ -21,6 +21,8 @@ type KeystoneApiSpec struct {
 	AdminDatabasePassword string `json:"adminDatabasePassword,omitempty"`
 	// Keystone API Admin Password
 	AdminPassword string `json:"adminPassword,omitempty"`
+	// Keystone API Endpoint, the http/https route configured to access the Keystone API
+	ApiEndpoint string `json:"apiEndpoint,omitempty"`
 	// Replicas
 	Replicas int32 `json:"replicas"`
 }

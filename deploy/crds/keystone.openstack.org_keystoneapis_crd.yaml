@@ -37,6 +37,10 @@ spec:
             adminPassword:
               description: Keystone API Admin Password
               type: string
+            apiEndpoint:
+              description: Keystone API Endpoint, the http/https route configured
+                to access the Keystone API
+              type: string
             containerImage:
               description: Keystone Container Image URL
               type: string

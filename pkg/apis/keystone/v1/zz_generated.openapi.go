@@ -117,6 +117,13 @@ func schema_pkg_apis_keystone_v1_KeystoneApiSpec(ref common.ReferenceCallback) c
 							Format:      "",
 						},
 					},
+					"apiEndpoint": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Keystone API Endpoint, the http/https route configured to access the Keystone API",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"replicas": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Replicas",

@@ -10,11 +10,14 @@ import (
 
 type bootstrapOptions struct {
 	AdminPassword string
+	ApiEndpoint   string
+	ServiceName   string
 }
 
 func BootstrapJob(cr *comv1.KeystoneApi, configMapName string) *batchv1.Job {
 
-	opts := bootstrapOptions{cr.Spec.AdminPassword}
+	// NOTE: as a convention the configmap is name the same as the service
+	opts := bootstrapOptions{cr.Spec.AdminPassword, cr.Spec.ApiEndpoint, configMapName}
 	runAsUser := int64(0)
 
 	job := &batchv1.Job{
@@ -29,7 +32,7 @@ func BootstrapJob(cr *comv1.KeystoneApi, configMapName string) *batchv1.Job {
 					ServiceAccountName: "keystone",
 					Containers: []corev1.Container{
 						{
-							Name:    "keystone-bootstrap",
+							Name:    configMapName + "-bootstrap",
 							Image:   cr.Spec.ContainerImage,
 							Command: []string{"/bin/bash", "-c", util.ExecuteTemplateFile("bootstrap.sh", &opts)},
 							SecurityContext: &corev1.SecurityContext{
