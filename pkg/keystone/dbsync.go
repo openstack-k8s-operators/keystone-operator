@@ -54,17 +54,6 @@ func DbSyncJob(cr *comv1.KeystoneApi, cmName string) *batchv1.Job {
 						},
 					},
 					InitContainers: []corev1.Container{
-						//{
-						//Name:    "keystone-db-drop",
-						//Image:   cr.Spec.MysqlContainerImage,
-						//Command: []string{"/bin/sh", "-c", `mysql -h openstack-db-mariadb -u root -P 3306 -e "DROP DATABASE IF EXISTS keystone";`},
-						//Env: []corev1.EnvVar{
-						//{
-						//Name:  "MYSQL_PWD",
-						//Value: cr.Spec.AdminDatabasePassword,
-						//},
-						//},
-						//},
 						{
 							Name:    "keystone-db-create",
 							Image:   "docker.io/tripleomaster/centos-binary-mariadb:current-tripleo",
