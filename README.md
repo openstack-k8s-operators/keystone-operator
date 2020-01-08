@@ -14,9 +14,11 @@ kind: KeystoneApi
 metadata:
   name: example
 spec:
+  apiEndpoint: http://keystone-test.apps.test.dprince/
   adminDatabasePassword: foobar123
   databasePassword: foobar123
   databaseHostname: openstack-db-mariadb
+  databaseUsername: root
   adminPassword: foobar123
   containerImage: docker.io/tripleomaster/centos-binary-keystone:current-tripleo
   mysqlContainerImage: docker.io/tripleomaster/centos-binary-mariadb:current-tripleo
@@ -35,6 +37,4 @@ The current design takes care of the following:
 
 # Requirements
 
-- A MariaDB database. TODO create this via the keystone operator!!!
-
-Note: you can use the MariaDB operator to quickly create your own DB
+- A MariaDB database. TODO move the db-create logic to a mariadb operator for OpenStack services
