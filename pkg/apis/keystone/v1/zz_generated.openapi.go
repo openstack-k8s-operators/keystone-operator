@@ -82,13 +82,6 @@ func schema_pkg_apis_keystone_v1_KeystoneApiSpec(ref common.ReferenceCallback) c
 							Format:      "",
 						},
 					},
-					"databaseUsername": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Keystone Database Username",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
 					"containerImage": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Keystone Container Image URL",
@@ -103,9 +96,16 @@ func schema_pkg_apis_keystone_v1_KeystoneApiSpec(ref common.ReferenceCallback) c
 							Format:      "",
 						},
 					},
-					"adminDatabasePassword": {
+					"databaseAdminUsername": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Admin database password",
+							Description: "Database Admin Username",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"databaseAdminPassword": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Database Admin Password",
 							Type:        []string{"string"},
 							Format:      "",
 						},

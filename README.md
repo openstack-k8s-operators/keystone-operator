@@ -12,17 +12,19 @@ instances within the cluster. Example CR to create an Keystone API in your clust
 apiVersion: keystone.openstack.org/v1
 kind: KeystoneApi
 metadata:
-  name: example
+  name: keystone
 spec:
-  apiEndpoint: http://keystone-test.apps.test.dprince/
-  adminDatabasePassword: foobar123
+  adminPassword: foobar123
+  containerImage: docker.io/tripleostein/centos-binary-keystone:current-tripleo
+  replicas: 1
   databasePassword: foobar123
   databaseHostname: openstack-db-mariadb
-  databaseUsername: root
-  adminPassword: foobar123
-  containerImage: docker.io/tripleomaster/centos-binary-keystone:current-tripleo
+  # used for keystone-manage bootstrap endpoints
+  apiEndpoint: http://keystone-test.apps.test.dprince/
+  # used to create the DB schema
+  databaseAdminUsername: root
+  databaseAdminPassword: foobar123
   mysqlContainerImage: docker.io/tripleomaster/centos-binary-mariadb:current-tripleo
-  replicas: 1
 ``` 
 
 # Design

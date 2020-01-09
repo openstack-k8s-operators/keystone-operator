@@ -11,14 +11,14 @@ type KeystoneApiSpec struct {
 	DatabasePassword string `json:"databasePassword,omitempty"`
 	// Keystone Database Hostname String
 	DatabaseHostname string `json:"databaseHostname,omitempty"`
-	// Keystone Database Username
-	DatabaseUsername string `json:"databaseUsername,omitempty"`
 	// Keystone Container Image URL
 	ContainerImage string `json:"containerImage,omitempty"`
 	// Mysql Container Image URL (used for database syncing)
 	MysqlContainerImage string `json:"mysqlContainerImage,omitempty"`
-	// Admin database password
-	AdminDatabasePassword string `json:"adminDatabasePassword,omitempty"`
+	// Database Admin Username
+	DatabaseAdminUsername string `json:"databaseAdminUsername,omitempty"`
+	// Database Admin Password
+	DatabaseAdminPassword string `json:"databaseAdminPassword,omitempty"`
 	// Keystone API Admin Password
 	AdminPassword string `json:"adminPassword,omitempty"`
 	// Keystone API Endpoint, the http/https route configured to access the Keystone API

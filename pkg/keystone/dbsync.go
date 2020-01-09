@@ -9,14 +9,14 @@ import (
 )
 
 type dbCreateOptions struct {
-	DatabasePassword string
-	DatabaseHostname string
-	DatabaseUsername string
+	DatabasePassword      string
+	DatabaseHostname      string
+	DatabaseAdminUsername string
 }
 
 func DbSyncJob(cr *comv1.KeystoneApi, cmName string) *batchv1.Job {
 
-	opts := dbCreateOptions{cr.Spec.DatabasePassword, cr.Spec.DatabaseHostname, cr.Spec.DatabaseUsername}
+	opts := dbCreateOptions{cr.Spec.DatabasePassword, cr.Spec.DatabaseHostname, cr.Spec.DatabaseAdminUsername}
 	runAsUser := int64(0)
 
 	labels := map[string]string{
@@ -61,7 +61,7 @@ func DbSyncJob(cr *comv1.KeystoneApi, cmName string) *batchv1.Job {
 							Env: []corev1.EnvVar{
 								{
 									Name:  "MYSQL_PWD",
-									Value: cr.Spec.AdminDatabasePassword,
+									Value: cr.Spec.DatabaseAdminPassword,
 								},
 							},
 						},
