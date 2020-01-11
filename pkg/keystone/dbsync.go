@@ -24,7 +24,7 @@ func DbSyncJob(cr *comv1.KeystoneApi, cmName string) *batchv1.Job {
 	}
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cmName,
+			Name:      cmName + "-db-sync",
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
