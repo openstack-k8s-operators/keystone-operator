@@ -2,17 +2,108 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
   annotations:
-    alm-examples: '[{"apiVersion":"keystone.openstack.org/v1","kind":"KeystoneApi","metadata":{"name":"example"},"spec":{"adminDatabasePassword":"","adminPassword":"","containerImage":"docker.io/tripleomaster/centos-binary-keystone:current-tripleo","databaseHostname":"openstack-db-mariadb","databasePassword":"","mysqlContainerImage":"docker.io/tripleomaster/centos-binary-mariadb:current-tripleo","replicas":1}}]'
+    alm-examples: |-
+      [
+        {
+          "apiVersion": "keystone.openstack.org/v1",
+          "kind": "KeystoneApi",
+          "metadata": {
+            "name": "keystone"
+          },
+          "spec": {
+            "adminPassword": "foobar123",
+            "apiEndpoint": "http://keystone-test.apps.test.dprince/",
+            "containerImage": "docker.io/tripleostein/centos-binary-keystone:current-tripleo",
+            "databaseAdminPassword": "foobar123",
+            "databaseAdminUsername": "root",
+            "databaseHostname": "openstack-db-mariadb",
+            "databasePassword": "foobar123",
+            "mysqlContainerImage": "docker.io/tripleomaster/centos-binary-mariadb:current-tripleo",
+            "replicas": 1
+          }
+        }
+      ]
     capabilities: Basic Install
   name: keystone-operator.v0.0.1
+  namespace: placeholder
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - description: Keystone Kubernetes Operator
+    - description: KeystoneApi is the Schema for the keystoneapis API
       displayName: KeystoneApi
       kind: KeystoneApi
       name: keystoneapis.keystone.openstack.org
+      resources:
+      - kind: ConfigMaps
+        name: keystone-operator
+        version: v1
+      - kind: Jobs
+        name: keystone-operator
+        version: v1
+      - kind: Pods
+        name: keystone-operator
+        version: v1
+      - kind: Secrets
+        name: keystone-operator
+        version: v1
+      specDescriptors:
+      - description: Keystone API Admin Password
+        displayName: Admin Password
+        path: adminPassword
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:password
+      - description: Keystone API Endpoint, the http/https route configured to access
+          the Keystone API
+        displayName: API Endpoint
+        path: apiEndpoint
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Keystone Container Image URL
+        displayName: Container Image
+        path: containerImage
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Database Admin Password
+        displayName: Database Admin Password
+        path: databaseAdminPassword
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:password
+      - description: Database Admin Username
+        displayName: Database Admin Username
+        path: databaseAdminUsername
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Keystone Database Hostname String
+        displayName: Database Hostname
+        path: databaseHostname
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Keystone Database Password String
+        displayName: Database Password
+        path: databasePassword
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:password
+      - description: Mysql Container Image URL (used for database syncing)
+        displayName: MySQL Container Image
+        path: mysqlContainerImage
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Replicas
+        displayName: Replica Count
+        path: replicas
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:number
+      statusDescriptors:
+      - description: bootstrap completed
+        displayName: Bootstrap Hash
+        path: bootstrapHash
+      - description: DbSync hash
+        displayName: Db Sync Hash
+        path: dbSyncHash
+      - description: Deployment hash used to detect changes
+        displayName: Deployment Hash
+        path: deploymentHash
       version: v1
   description: Keystone Kubernetes Operator
   displayName: KeystoneApi

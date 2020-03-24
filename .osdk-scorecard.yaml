@@ -1,0 +1,12 @@
+scorecard:
+  version: v1alpha2
+  output: text
+  bundle: deploy/olm-catalog/keystone-operator/0.0.1/metadata
+  plugins:
+    - basic:
+        cr-manifest:
+          - "deploy/crds/keystone.openstack.org_keystoneapis_cr.yaml"
+    - olm:
+        cr-manifest:
+          - "deploy/crds/keystone.openstack.org_keystoneapis_cr.yaml"
+        csv-path: "deploy/olm-catalog/keystone-operator/0.0.1/keystone-operator.v0.0.1.clusterserviceversion.yaml"
