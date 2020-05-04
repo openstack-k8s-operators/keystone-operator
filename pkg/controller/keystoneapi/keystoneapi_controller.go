@@ -322,7 +322,7 @@ func EnsureJob(job *batchv1.Job, kr *ReconcileKeystoneAPI, reqLogger logr.Logger
 			return true, err
 		} else if foundJob.Status.Failed > 0 {
 			reqLogger.Info("Job Status Failed")
-			return true, k8s_errors.NewInternalError(errors.New("Job Failed. Check job logs."))
+			return true, k8s_errors.NewInternalError(errors.New("Job Failed. Check job logs"))
 		} else if foundJob.Status.Succeeded > 0 {
 			reqLogger.Info("Job Status Successful")
 		} else {
