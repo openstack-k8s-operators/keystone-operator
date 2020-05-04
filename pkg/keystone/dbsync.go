@@ -14,7 +14,8 @@ type dbCreateOptions struct {
 	DatabaseAdminUsername string
 }
 
-func DbSyncJob(cr *comv1.KeystoneApi, cmName string) *batchv1.Job {
+// DbSyncJob func
+func DbSyncJob(cr *comv1.KeystoneAPI, cmName string) *batchv1.Job {
 
 	opts := dbCreateOptions{cr.Spec.DatabasePassword, cr.Spec.DatabaseHostname, cr.Spec.DatabaseAdminUsername}
 	runAsUser := int64(0)

@@ -13,8 +13,8 @@ type keystoneConfigOptions struct {
 	AdminPassword    string
 }
 
-// custom keystone config map
-func ConfigMap(cr *comv1.KeystoneApi, cmName string) *corev1.ConfigMap {
+// ConfigMap custom keystone config map
+func ConfigMap(cr *comv1.KeystoneAPI, cmName string) *corev1.ConfigMap {
 	opts := keystoneConfigOptions{cr.Spec.DatabasePassword, cr.Spec.DatabaseHostname, cr.Spec.AdminPassword}
 
 	cm := &corev1.ConfigMap{

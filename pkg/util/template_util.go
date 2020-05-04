@@ -9,7 +9,7 @@ import (
 	"text/template"
 )
 
-// create a template from the file and execute it with the specified data
+// ExecuteTemplateFile creates a template from the file and execute it with the specified data
 func ExecuteTemplateFile(filename string, data interface{}) string {
 
         templates := os.Getenv("KEYSTONE_OPERATOR_TEMPLATES")

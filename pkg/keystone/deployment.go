@@ -7,7 +7,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func Deployment(cr *comv1.KeystoneApi, cmName string, configHash string) *appsv1.Deployment {
+// Deployment func
+func Deployment(cr *comv1.KeystoneAPI, cmName string, configHash string) *appsv1.Deployment {
 	runAsUser := int64(0)
 
 	labels := map[string]string{

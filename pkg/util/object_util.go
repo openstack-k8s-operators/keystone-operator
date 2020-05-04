@@ -7,7 +7,7 @@ import (
 	hashutil "k8s.io/kubernetes/pkg/util/hash"
 )
 
-// create a deep object hash and return it as a safe encoded string
+// ObjectHash creates a deep object hash and return it as a safe encoded string
 func ObjectHash(i interface{}) string {
 	hf := fnv.New32()
 	hashutil.DeepHashObject(hf, i)

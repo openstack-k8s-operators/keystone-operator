@@ -9,19 +9,20 @@ import (
 	common "k8s.io/kube-openapi/pkg/common"
 )
 
+// GetOpenAPIDefinitions func
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1.KeystoneApi":       schema_pkg_apis_keystone_v1_KeystoneApi(ref),
-		"github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1.KeystoneApiSpec":   schema_pkg_apis_keystone_v1_KeystoneApiSpec(ref),
-		"github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1.KeystoneApiStatus": schema_pkg_apis_keystone_v1_KeystoneApiStatus(ref),
+		"github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1.KeystoneAPI":       schemaPkgApisKeystoneV1KeystoneAPI(ref),
+		"github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1.KeystoneAPISpec":   schemaPkgApisKeystoneV1KeystoneAPISpec(ref),
+		"github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1.KeystoneAPIStatus": schemaPkgApisKeystoneV1KeystoneAPIStatus(ref),
 	}
 }
 
-func schema_pkg_apis_keystone_v1_KeystoneApi(ref common.ReferenceCallback) common.OpenAPIDefinition {
+func schemaPkgApisKeystoneV1KeystoneAPI(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "KeystoneApi is the Schema for the keystoneapis API",
+				Description: "KeystoneAPI is the Schema for the keystoneapis API",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
@@ -45,27 +46,27 @@ func schema_pkg_apis_keystone_v1_KeystoneApi(ref common.ReferenceCallback) commo
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1.KeystoneApiSpec"),
+							Ref: ref("github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1.KeystoneAPISpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1.KeystoneApiStatus"),
+							Ref: ref("github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1.KeystoneAPIStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1.KeystoneApiSpec", "github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1.KeystoneApiStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1.KeystoneAPISpec", "github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1.KeystoneAPIStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
-func schema_pkg_apis_keystone_v1_KeystoneApiSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+func schemaPkgApisKeystoneV1KeystoneAPISpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "KeystoneApiSpec defines the desired state of KeystoneApi",
+				Description: "KeystoneAPISpec defines the desired state of KeystoneAPI",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"databasePassword": {
@@ -138,11 +139,11 @@ func schema_pkg_apis_keystone_v1_KeystoneApiSpec(ref common.ReferenceCallback) c
 	}
 }
 
-func schema_pkg_apis_keystone_v1_KeystoneApiStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+func schemaPkgApisKeystoneV1KeystoneAPIStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "KeystoneApiStatus defines the observed state of KeystoneApi",
+				Description: "KeystoneAPIStatus defines the observed state of KeystoneAPI",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"dbSyncHash": {
