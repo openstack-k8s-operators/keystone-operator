@@ -5,12 +5,12 @@ on Kubernetes. This Operator was developed using [RDO](https://www.rdoproject.or
 
 # API Example
 
-The Operator creates a custom KeystoneApi resource that can be used to create Keystone API
+The Operator creates a custom KeystoneAPI resource that can be used to create Keystone API
 instances within the cluster. Example CR to create an Keystone API in your cluster:
 
 ```yaml
 apiVersion: keystone.openstack.org/v1
-kind: KeystoneApi
+kind: KeystoneAPI
 metadata:
   name: keystone
 spec:

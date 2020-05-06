@@ -6,7 +6,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func Service(cr *comv1.KeystoneApi, cmName string) *corev1.Service {
+// Service func
+func Service(cr *comv1.KeystoneAPI, cmName string) *corev1.Service {
 
 	labels := map[string]string{
 		"app": "keystone-api",

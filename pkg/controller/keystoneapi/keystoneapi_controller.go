@@ -27,7 +27,7 @@ import (
 
 var log = logf.Log.WithName("controller_keystoneapi")
 
-// Add creates a new KeystoneApi Controller and adds it to the Manager. The Manager will set fields on the Controller
+// Add creates a new KeystoneAPI Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
 	return add(mgr, newReconciler(mgr))
@@ -35,7 +35,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileKeystoneApi{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileKeystoneAPI{client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -46,16 +46,16 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch for changes to primary resource KeystoneApi
-	err = c.Watch(&source.Kind{Type: &comv1.KeystoneApi{}}, &handler.EnqueueRequestForObject{})
+	// Watch for changes to primary resource KeystoneAPI
+	err = c.Watch(&source.Kind{Type: &comv1.KeystoneAPI{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
 
-	// Watch for changes to secondary resource Pods and requeue the owner KeystoneApi
+	// Watch for changes to secondary resource Pods and requeue the owner KeystoneAPI
 	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &comv1.KeystoneApi{},
+		OwnerType:    &comv1.KeystoneAPI{},
 	})
 	if err != nil {
 		return err
@@ -64,28 +64,28 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-// blank assignment to verify that ReconcileKeystoneApi implements reconcile.Reconciler
-var _ reconcile.Reconciler = &ReconcileKeystoneApi{}
+// blank assignment to verify that ReconcileKeystoneAPI implements reconcile.Reconciler
+var _ reconcile.Reconciler = &ReconcileKeystoneAPI{}
 
-// ReconcileKeystoneApi reconciles a KeystoneApi object
-type ReconcileKeystoneApi struct {
+// ReconcileKeystoneAPI reconciles a KeystoneAPI object
+type ReconcileKeystoneAPI struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
 	scheme *runtime.Scheme
 }
 
-// Reconcile reads that state of the cluster for a KeystoneApi object and makes changes based on the state read
-// and what is in the KeystoneApi.Spec
+// Reconcile reads that state of the cluster for a KeystoneAPI object and makes changes based on the state read
+// and what is in the KeystoneAPI.Spec
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *ReconcileKeystoneApi) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileKeystoneAPI) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling KeystoneApi")
+	reqLogger.Info("Reconciling KeystoneAPI")
 
-	// Fetch the KeystoneApi instance
-	instance := &comv1.KeystoneApi{}
+	// Fetch the KeystoneAPI instance
+	instance := &comv1.KeystoneAPI{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
@@ -144,7 +144,7 @@ func (r *ReconcileKeystoneApi) Reconcile(request reconcile.Request) (reconcile.R
 
 	requeue := true
 	if instance.Status.DbSyncHash != dbSyncHash {
-		// Set KeystoneApi instance as the owner and controller
+		// Set KeystoneAPI instance as the owner and controller
 		if err := controllerutil.SetControllerReference(instance, job, r.scheme); err != nil {
 			return reconcile.Result{}, err
 		}
@@ -172,7 +172,7 @@ func (r *ReconcileKeystoneApi) Reconcile(request reconcile.Request) (reconcile.R
 	deploymentHash := util.ObjectHash(deployment)
 	reqLogger.Info("DeploymentHash: ", "Deployment Hash:", deploymentHash)
 
-	// Set KeystoneApi instance as the owner and controller
+	// Set KeystoneAPI instance as the owner and controller
 	if err := controllerutil.SetControllerReference(instance, deployment, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -215,7 +215,7 @@ func (r *ReconcileKeystoneApi) Reconcile(request reconcile.Request) (reconcile.R
 	// Create the service if none exists
 	service := keystone.Service(instance, instance.Name)
 
-	// Set KeystoneApi instance as the owner and controller
+	// Set KeystoneAPI instance as the owner and controller
 	if err := controllerutil.SetControllerReference(instance, service, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -239,7 +239,7 @@ func (r *ReconcileKeystoneApi) Reconcile(request reconcile.Request) (reconcile.R
 	bootstrapJob := keystone.BootstrapJob(instance, instance.Name)
 	bootstrapHash := util.ObjectHash(bootstrapJob)
 
-	// Set KeystoneApi instance as the owner and controller
+	// Set KeystoneAPI instance as the owner and controller
 	if instance.Status.BootstrapHash != bootstrapHash {
 		if err := controllerutil.SetControllerReference(instance, bootstrapJob, r.scheme); err != nil {
 			return reconcile.Result{}, err
@@ -264,7 +264,7 @@ func (r *ReconcileKeystoneApi) Reconcile(request reconcile.Request) (reconcile.R
 
 }
 
-func (r *ReconcileKeystoneApi) setDbSyncHash(instance *comv1.KeystoneApi, hashStr string) error {
+func (r *ReconcileKeystoneAPI) setDbSyncHash(instance *comv1.KeystoneAPI, hashStr string) error {
 
 	if hashStr != instance.Status.DbSyncHash {
 		instance.Status.DbSyncHash = hashStr
@@ -276,7 +276,7 @@ func (r *ReconcileKeystoneApi) setDbSyncHash(instance *comv1.KeystoneApi, hashSt
 
 }
 
-func (r *ReconcileKeystoneApi) setBootstrapHash(instance *comv1.KeystoneApi, hashStr string) error {
+func (r *ReconcileKeystoneAPI) setBootstrapHash(instance *comv1.KeystoneAPI, hashStr string) error {
 
 	if hashStr != instance.Status.BootstrapHash {
 		instance.Status.BootstrapHash = hashStr
@@ -288,7 +288,7 @@ func (r *ReconcileKeystoneApi) setBootstrapHash(instance *comv1.KeystoneApi, has
 
 }
 
-func (r *ReconcileKeystoneApi) setDeploymentHash(instance *comv1.KeystoneApi, hashStr string) error {
+func (r *ReconcileKeystoneAPI) setDeploymentHash(instance *comv1.KeystoneAPI, hashStr string) error {
 
 	if hashStr != instance.Status.DeploymentHash {
 		instance.Status.DeploymentHash = hashStr
@@ -300,7 +300,8 @@ func (r *ReconcileKeystoneApi) setDeploymentHash(instance *comv1.KeystoneApi, ha
 
 }
 
-func EnsureJob(job *batchv1.Job, kr *ReconcileKeystoneApi, reqLogger logr.Logger) (bool, error) {
+// EnsureJob func
+func EnsureJob(job *batchv1.Job, kr *ReconcileKeystoneAPI, reqLogger logr.Logger) (bool, error) {
 	// Check if this Job already exists
 	foundJob := &batchv1.Job{}
 	err := kr.client.Get(context.TODO(), types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, foundJob)
@@ -321,7 +322,7 @@ func EnsureJob(job *batchv1.Job, kr *ReconcileKeystoneApi, reqLogger logr.Logger
 			return true, err
 		} else if foundJob.Status.Failed > 0 {
 			reqLogger.Info("Job Status Failed")
-			return true, k8s_errors.NewInternalError(errors.New("Job Failed. Check job logs."))
+			return true, k8s_errors.NewInternalError(errors.New("Job Failed. Check job logs"))
 		} else if foundJob.Status.Succeeded > 0 {
 			reqLogger.Info("Job Status Successful")
 		} else {
@@ -333,7 +334,8 @@ func EnsureJob(job *batchv1.Job, kr *ReconcileKeystoneApi, reqLogger logr.Logger
 
 }
 
-func DeleteJob(job *batchv1.Job, kr *ReconcileKeystoneApi, reqLogger logr.Logger) (bool, error) {
+// DeleteJob func
+func DeleteJob(job *batchv1.Job, kr *ReconcileKeystoneAPI, reqLogger logr.Logger) (bool, error) {
 
 	// Check if this Job already exists
 	foundJob := &batchv1.Job{}

@@ -18,7 +18,8 @@ func generateFernetKey() string {
 	return base64.StdEncoding.EncodeToString(data)
 }
 
-func FernetSecret(cr *comv1.KeystoneApi, name string) *corev1.Secret {
+// FernetSecret func
+func FernetSecret(cr *comv1.KeystoneAPI, name string) *corev1.Secret {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,

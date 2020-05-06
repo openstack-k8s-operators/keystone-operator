@@ -2,7 +2,7 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
   annotations:
-    alm-examples: '[{"apiVersion":"keystone.openstack.org/v1","kind":"KeystoneApi","metadata":{"name":"example"},"spec":{"adminDatabasePassword":"","adminPassword":"","containerImage":"docker.io/tripleomaster/centos-binary-keystone:current-tripleo","databaseHostname":"openstack-db-mariadb","databasePassword":"","mysqlContainerImage":"docker.io/tripleomaster/centos-binary-mariadb:current-tripleo","replicas":1}}]'
+    alm-examples: '[{"apiVersion":"keystone.openstack.org/v1","kind":"KeystoneAPI","metadata":{"name":"example"},"spec":{"adminDatabasePassword":"","adminPassword":"","containerImage":"docker.io/tripleomaster/centos-binary-keystone:current-tripleo","databaseHostname":"openstack-db-mariadb","databasePassword":"","mysqlContainerImage":"docker.io/tripleomaster/centos-binary-mariadb:current-tripleo","replicas":1}}]'
     capabilities: Basic Install
   name: keystone-operator.v0.0.1
 spec:
@@ -10,12 +10,12 @@ spec:
   customresourcedefinitions:
     owned:
     - description: Keystone Kubernetes Operator
-      displayName: KeystoneApi
-      kind: KeystoneApi
+      displayName: KeystoneAPI
+      kind: KeystoneAPI
       name: keystoneapis.keystone.openstack.org
       version: v1
   description: Keystone Kubernetes Operator
-  displayName: KeystoneApi
+  displayName: KeystoneAPI
   icon:
   - base64data: |
       iVBORw0KGgoAAAANSUhEUgAAALcAAADICAIAAAAleOfcAAAf73pUWHRSYXcgcHJvZmlsZSB0eXBl

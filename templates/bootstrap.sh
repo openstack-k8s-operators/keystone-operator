@@ -3,6 +3,6 @@ bootstrap --bootstrap-password {{.AdminPassword}} \
 --bootstrap-service-name keystone \
 --bootstrap-project-name admin \
 --bootstrap-role-name admin \
---bootstrap-admin-url {{.ApiEndpoint}} \
---bootstrap-public-url {{.ApiEndpoint}} \
+--bootstrap-admin-url {{.APIEndpoint}} \
+--bootstrap-public-url {{.APIEndpoint}} \
 --bootstrap-internal-url http://{{.ServiceName}}/ #FIXME: this should also support TLS

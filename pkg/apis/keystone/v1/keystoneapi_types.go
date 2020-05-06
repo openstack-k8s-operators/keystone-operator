@@ -4,9 +4,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// KeystoneApiSpec defines the desired state of KeystoneApi
+// KeystoneAPISpec defines the desired state of KeystoneAPI
 // +k8s:openapi-gen=true
-type KeystoneApiSpec struct {
+type KeystoneAPISpec struct {
 	// Keystone Database Password String
 	DatabasePassword string `json:"databasePassword,omitempty"`
 	// Keystone Database Hostname String
@@ -22,14 +22,14 @@ type KeystoneApiSpec struct {
 	// Keystone API Admin Password
 	AdminPassword string `json:"adminPassword,omitempty"`
 	// Keystone API Endpoint, the http/https route configured to access the Keystone API
-	ApiEndpoint string `json:"apiEndpoint,omitempty"`
+	APIEndpoint string `json:"apiEndpoint,omitempty"`
 	// Replicas
 	Replicas int32 `json:"replicas"`
 }
 
-// KeystoneApiStatus defines the observed state of KeystoneApi
+// KeystoneAPIStatus defines the observed state of KeystoneAPI
 // +k8s:openapi-gen=true
-type KeystoneApiStatus struct {
+type KeystoneAPIStatus struct {
 	// Deployment messages
 	//Messages []string `json:"messages,omitempty"`
 	// DbSync hash
@@ -42,25 +42,25 @@ type KeystoneApiStatus struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// KeystoneApi is the Schema for the keystoneapis API
+// KeystoneAPI is the Schema for the keystoneapis API
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
-type KeystoneApi struct {
+type KeystoneAPI struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   KeystoneApiSpec   `json:"spec,omitempty"`
-	Status KeystoneApiStatus `json:"status,omitempty"`
+	Spec   KeystoneAPISpec   `json:"spec,omitempty"`
+	Status KeystoneAPIStatus `json:"status,omitempty"`
 }
 
+// KeystoneAPIList contains a list of KeystoneAPI
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// KeystoneApiList contains a list of KeystoneApi
-type KeystoneApiList struct {
+type KeystoneAPIList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KeystoneApi `json:"items"`
+	Items           []KeystoneAPI `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&KeystoneApi{}, &KeystoneApiList{})
+	SchemeBuilder.Register(&KeystoneAPI{}, &KeystoneAPIList{})
 }

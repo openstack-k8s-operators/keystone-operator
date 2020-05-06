@@ -5,8 +5,8 @@ metadata:
 spec:
   group: keystone.openstack.org
   names:
-    kind: KeystoneApi
-    listKind: KeystoneApiList
+    kind: KeystoneAPI
+    listKind: KeystoneAPIList
     plural: keystoneapis
     singular: keystoneapi
   scope: ""
@@ -14,7 +14,7 @@ spec:
     status: {}
   validation:
     openAPIV3Schema:
-      description: KeystoneApi is the Schema for the keystoneapis API
+      description: KeystoneAPI is the Schema for the keystoneapis API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -29,7 +29,7 @@ spec:
         metadata:
           type: object
         spec:
-          description: KeystoneApiSpec defines the desired state of KeystoneApi
+          description: KeystoneAPISpec defines the desired state of KeystoneAPI
           properties:
             adminPassword:
               description: Keystone API Admin Password
@@ -64,7 +64,7 @@ spec:
           - replicas
           type: object
         status:
-          description: KeystoneApiStatus defines the observed state of KeystoneApi
+          description: KeystoneAPIStatus defines the observed state of KeystoneAPI
           properties:
             bootstrapHash:
               description: bootstrap completed

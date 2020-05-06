@@ -1,5 +1,5 @@
 apiVersion: keystone.openstack.org/v1
-kind: KeystoneApi
+kind: KeystoneAPI
 metadata:
   name: keystone
 spec:
