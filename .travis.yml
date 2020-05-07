@@ -1,25 +1,6 @@
-language: go
-go:
-  - 1.13.x
-  - 1.14.x
-  - master
+# Version needed to share Travis build
+# configuration from external sources
+version: ~> 1.0
 
-git:
-  depth: 1
-
-install:
-  - go get -t -v ./...
-
-jobs:
-  include:
-    - stage: "lintvet"
-      name: "Lint and vet tests"
-      go_import_path:
-        - golang.org/x/lint
-      script:
-        - ./ci_scripts/travis.golint.sh
-        - ./ci_scripts/travis.govet.sh
-
-stages:
-  - lintvet
-  - tests
+import:
+  - openstack-k8s-operators/openstack-k8s-operators-ci:.travis/common_pipeline.yml
