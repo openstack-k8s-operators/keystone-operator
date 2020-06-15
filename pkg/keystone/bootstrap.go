@@ -30,7 +30,7 @@ func BootstrapJob(cr *comv1.KeystoneAPI, configMapName string) *batchv1.Job {
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					RestartPolicy:      "OnFailure",
-					ServiceAccountName: "keystone",
+					ServiceAccountName: "keystone-operator",
 					Containers: []corev1.Container{
 						{
 							Name:    configMapName + "-bootstrap",
