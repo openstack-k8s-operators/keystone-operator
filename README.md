@@ -3,6 +3,21 @@
 A Kubernetes Operator built using the [Operator Framework](https://github.com/operator-framework) for Go. The Operator provides a way to easily install and manage an OpenStack Keystone installation
 on Kubernetes. This Operator was developed using [RDO](https://www.rdoproject.org/) containers for openStack.
 
+# Creating resources
+
+Create the following resources to start the operator with a single KeystoneAPI
+instance:
+
+<pre>
+oc create -f keystone-operator/deploy/crds/keystone.openstack.org_keystoneapis_crd.yaml
+oc create -f keystone-operator/deploy/crds/keystone.openstack.org_keystoneapis_cr.yaml
+oc create -f keystone-operator/deploy/role.yaml
+oc create -f keystone-operator/deploy/role_binding.yaml
+oc create -f keystone-operator/deploy/service_account.yaml
+oc create -f keystone-operator/deploy/operator.yaml
+oc create -f keystone-operator/deploy/route.yaml
+</pre>
+
 # API Example
 
 The Operator creates a custom KeystoneAPI resource that can be used to create Keystone API
