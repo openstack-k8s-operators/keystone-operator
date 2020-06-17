@@ -1,0 +1,19 @@
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: keystone
+  namespace: default
+  labels:
+    app: keystone-api
+  annotations:
+    openshift.io/host.generated: 'true'
+spec:
+  to:
+    kind: Service
+    name: keystone
+    weight: 100
+  port:
+    targetPort: api
+  wildcardPolicy: None
+status:
+  ingress:
