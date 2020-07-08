@@ -5,4 +5,5 @@ bootstrap --bootstrap-password {{.AdminPassword}} \
 --bootstrap-role-name admin \
 --bootstrap-admin-url {{.APIEndpoint}} \
 --bootstrap-public-url {{.APIEndpoint}} \
---bootstrap-internal-url http://{{.ServiceName}}/ #FIXME: this should also support TLS
+--bootstrap-internal-url http://{{.ServiceName}}/  \
+--bootstrap-region-id regionOne
