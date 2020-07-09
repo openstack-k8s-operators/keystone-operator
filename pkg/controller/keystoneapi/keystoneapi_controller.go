@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	logr "github.com/go-logr/logr"
+	routev1 "github.com/openshift/api/route/v1"
 	comv1 "github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1"
 	keystone "github.com/openstack-k8s-operators/keystone-operator/pkg/keystone"
 	util "github.com/openstack-k8s-operators/keystone-operator/pkg/util"
@@ -213,7 +214,9 @@ func (r *ReconcileKeystoneAPI) Reconcile(request reconcile.Request) (reconcile.R
 	}
 
 	// Create the service if none exists
-	service := keystone.Service(instance, instance.Name)
+	var keystonePort int32
+	keystonePort = 5000
+	service := keystone.Service(instance, instance.Name, keystonePort)
 
 	// Set KeystoneAPI instance as the owner and controller
 	if err := controllerutil.SetControllerReference(instance, service, r.scheme); err != nil {
@@ -260,6 +263,28 @@ func (r *ReconcileKeystoneAPI) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, err
 	}
 
+	// Create the route if none exists
+	route := keystone.Route(instance, instance.Name)
+
+	// Set Keystone instance as the owner and controller
+	if err := controllerutil.SetControllerReference(instance, route, r.scheme); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Check if this Route already exists
+	foundRoute := &routev1.Route{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: route.Name, Namespace: route.Namespace}, foundRoute)
+	if err != nil && k8s_errors.IsNotFound(err) {
+		reqLogger.Info("Creating a new Route", "Route.Namespace", route.Namespace, "Route.Name", route.Name)
+		err = r.client.Create(context.TODO(), route)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		return reconcile.Result{RequeueAfter: time.Second * 5}, err
+	} else if err != nil {
+		return reconcile.Result{}, err
+	}
 	return reconcile.Result{}, nil
 
 }

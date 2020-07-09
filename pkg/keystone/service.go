@@ -7,7 +7,7 @@ import (
 )
 
 // Service func
-func Service(cr *comv1.KeystoneAPI, cmName string) *corev1.Service {
+func Service(cr *comv1.KeystoneAPI, cmName string, servicePort int32) *corev1.Service {
 
 	labels := map[string]string{
 		"app": "keystone-api",
@@ -21,7 +21,7 @@ func Service(cr *comv1.KeystoneAPI, cmName string) *corev1.Service {
 		Spec: corev1.ServiceSpec{
 			Selector: labels,
 			Ports: []corev1.ServicePort{
-				{Name: "api", Port: 5000, Protocol: corev1.ProtocolTCP},
+				{Name: "api", Port: servicePort, Protocol: corev1.ProtocolTCP},
 			},
 		},
 	}
