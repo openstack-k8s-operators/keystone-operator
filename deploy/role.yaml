@@ -62,5 +62,6 @@ rules:
   - keystone.openstack.org
   resources:
   - '*'
+  - keystoneendpoints
   verbs:
   - '*'

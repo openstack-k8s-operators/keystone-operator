@@ -1,0 +1,16 @@
+apiVersion: keystone.openstack.org/v1
+kind: KeystoneEndpoint
+metadata:
+  name: example
+spec:
+  adminURL: http://example-default.apps.ostest.test.metalkube.org
+  publicURL: http://example-default.apps.ostest.test.metalkube.org
+  internalURL: http://example-default.apps.ostest.test.metalkube.org
+  serviceType: example-type
+  serviceName: example
+  region: regionOne
+  project: admin
+  authURL: http://keystone-default.apps.ostest.test.metalkube.org
+  username: admin
+  password: foobar123
+  domainName: Default
