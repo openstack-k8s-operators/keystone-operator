@@ -8,8 +8,6 @@ spec:
   replicas: 1
   databasePassword: foobar123
   databaseHostname: openstack-db-mariadb
-  # used for keystone-manage bootstrap endpoints
-  apiEndpoint: http://keystone-test.apps.test.dprince/
   # used to create the DB schema
   databaseAdminUsername: root
   databaseAdminPassword: foobar123

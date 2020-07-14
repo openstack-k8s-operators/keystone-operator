@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	"strings"
 	"time"
 )
 
@@ -248,34 +249,6 @@ func (r *ReconcileKeystoneAPI) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, err
 	}
 
-	// Define a new BootStrap Job object
-	bootstrapJob := keystone.BootstrapJob(instance, instance.Name)
-	bootstrapHash, err := util.ObjectHash(bootstrapJob)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("error calculating bootstrap hash: %v", err)
-	}
-
-	// Set KeystoneAPI instance as the owner and controller
-	if instance.Status.BootstrapHash != bootstrapHash {
-		if err := controllerutil.SetControllerReference(instance, bootstrapJob, r.scheme); err != nil {
-			return reconcile.Result{}, err
-		}
-
-		requeue, err = EnsureJob(bootstrapJob, r, reqLogger)
-		if err != nil {
-			return reconcile.Result{}, err
-		} else if requeue {
-			return reconcile.Result{RequeueAfter: time.Second * 5}, err
-		}
-	}
-	// db sync completed... okay to store the hash to disable it
-	r.setBootstrapHash(instance, bootstrapHash)
-	// delete the job
-	requeue, err = DeleteJob(bootstrapJob, r, reqLogger)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
 	// Create the route if none exists
 	route := keystone.Route(instance, instance.Name)
 
@@ -298,6 +271,45 @@ func (r *ReconcileKeystoneAPI) Reconcile(request reconcile.Request) (reconcile.R
 	} else if err != nil {
 		return reconcile.Result{}, err
 	}
+
+	// Define a new BootStrap Job object
+
+	// Look at the generated route to get the value for the initial endpoint
+	// TODO (slagle): support/assume https
+	var apiEndpoint string
+	if !strings.HasPrefix(foundRoute.Spec.Host, "http") {
+		apiEndpoint = fmt.Sprintf("http://%s", foundRoute.Spec.Host)
+	} else {
+		apiEndpoint = foundRoute.Spec.Host
+	}
+
+	bootstrapJob := keystone.BootstrapJob(instance, instance.Name, apiEndpoint)
+	bootstrapHash, err := util.ObjectHash(bootstrapJob)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("error calculating bootstrap hash: %v", err)
+	}
+
+	// Set KeystoneAPI instance as the owner and controller
+	if instance.Status.BootstrapHash != bootstrapHash {
+		if err := controllerutil.SetControllerReference(instance, bootstrapJob, r.scheme); err != nil {
+			return reconcile.Result{}, err
+		}
+
+		requeue, err = EnsureJob(bootstrapJob, r, reqLogger)
+		if err != nil {
+			return reconcile.Result{}, err
+		} else if requeue {
+			return reconcile.Result{RequeueAfter: time.Second * 5}, err
+		}
+	}
+	// bootstrap completed... okay to store the hash to disable it
+	r.setBootstrapHash(instance, bootstrapHash)
+	// delete the job
+	requeue, err = DeleteJob(bootstrapJob, r, reqLogger)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	return reconcile.Result{}, nil
 
 }
