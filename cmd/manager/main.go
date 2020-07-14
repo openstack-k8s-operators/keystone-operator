@@ -11,6 +11,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 
+	routev1 "github.com/openshift/api/route/v1"
 	"github.com/openstack-k8s-operators/keystone-operator/pkg/apis"
 	"github.com/openstack-k8s-operators/keystone-operator/pkg/controller"
 
@@ -103,6 +104,12 @@ func main() {
 
 	// Setup Scheme for all resources
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	// Adding the routev1
+	if err := routev1.AddToScheme(mgr.GetScheme()); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
