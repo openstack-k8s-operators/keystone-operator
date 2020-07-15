@@ -3,11 +3,12 @@ package keystoneapi
 import (
 	"context"
 	"errors"
+	"fmt"
 	logr "github.com/go-logr/logr"
 	routev1 "github.com/openshift/api/route/v1"
 	comv1 "github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1"
 	keystone "github.com/openstack-k8s-operators/keystone-operator/pkg/keystone"
-	util "github.com/openstack-k8s-operators/keystone-operator/pkg/util"
+	util "github.com/openstack-k8s-operators/lib-common/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -141,7 +142,10 @@ func (r *ReconcileKeystoneAPI) Reconcile(request reconcile.Request) (reconcile.R
 
 	// Define a new Job object
 	job := keystone.DbSyncJob(instance, instance.Name)
-	dbSyncHash := util.ObjectHash(job)
+	dbSyncHash, err := util.ObjectHash(job)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("error calculating DB sync hash: %v", err)
+	}
 
 	requeue := true
 	if instance.Status.DbSyncHash != dbSyncHash {
@@ -167,10 +171,16 @@ func (r *ReconcileKeystoneAPI) Reconcile(request reconcile.Request) (reconcile.R
 	}
 
 	// Define a new Deployment object
-	configMapHash := util.ObjectHash(configMap)
+	configMapHash, err := util.ObjectHash(configMap)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("error calculating config map hash: %v", err)
+	}
 	reqLogger.Info("ConfigMapHash: ", "Data Hash:", configMapHash)
 	deployment := keystone.Deployment(instance, instance.Name, configMapHash)
-	deploymentHash := util.ObjectHash(deployment)
+	deploymentHash, err := util.ObjectHash(deployment)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("error deployment hash: %v", err)
+	}
 	reqLogger.Info("DeploymentHash: ", "Deployment Hash:", deploymentHash)
 
 	// Set KeystoneAPI instance as the owner and controller
@@ -240,7 +250,10 @@ func (r *ReconcileKeystoneAPI) Reconcile(request reconcile.Request) (reconcile.R
 
 	// Define a new BootStrap Job object
 	bootstrapJob := keystone.BootstrapJob(instance, instance.Name)
-	bootstrapHash := util.ObjectHash(bootstrapJob)
+	bootstrapHash, err := util.ObjectHash(bootstrapJob)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("error calculating bootstrap hash: %v", err)
+	}
 
 	// Set KeystoneAPI instance as the owner and controller
 	if instance.Status.BootstrapHash != bootstrapHash {
