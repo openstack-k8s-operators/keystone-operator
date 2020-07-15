@@ -1,8 +1,8 @@
 package keystone
 
 import (
-        util "github.com/openstack-k8s-operators/keystone-operator/pkg/util"
-        comv1 "github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1"
+	comv1 "github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1"
+	util "github.com/openstack-k8s-operators/lib-common/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
