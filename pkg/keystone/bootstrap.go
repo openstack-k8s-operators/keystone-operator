@@ -15,10 +15,10 @@ type bootstrapOptions struct {
 }
 
 // BootstrapJob func
-func BootstrapJob(cr *comv1.KeystoneAPI, configMapName string) *batchv1.Job {
+func BootstrapJob(cr *comv1.KeystoneAPI, configMapName string, APIEndpoint string) *batchv1.Job {
 
 	// NOTE: as a convention the configmap is name the same as the service
-	opts := bootstrapOptions{cr.Spec.AdminPassword, cr.Spec.APIEndpoint, configMapName}
+	opts := bootstrapOptions{cr.Spec.AdminPassword, APIEndpoint, configMapName}
 	runAsUser := int64(0)
 
 	job := &batchv1.Job{
