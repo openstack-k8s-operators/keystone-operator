@@ -9,13 +9,11 @@ Create the following resources to start the operator with a single KeystoneAPI
 instance:
 
 <pre>
-oc create -f keystone-operator/deploy/crds/keystone.openstack.org_keystoneapis_crd.yaml
-oc create -f keystone-operator/deploy/crds/keystone.openstack.org_keystoneapis_cr.yaml
-oc create -f keystone-operator/deploy/role.yaml
-oc create -f keystone-operator/deploy/role_binding.yaml
-oc create -f keystone-operator/deploy/service_account.yaml
-oc create -f keystone-operator/deploy/operator.yaml
-oc create -f keystone-operator/deploy/route.yaml
+oc create -f deploy/crds/keystone.openstack.org\_keystoneapis\_crd.yaml
+oc create -f deploy/role.yaml
+oc create -f deploy/role\_binding.yaml
+oc create -f deploy/service\_account.yaml
+oc create -f deploy/operator.yaml
 </pre>
 
 # API Example
