@@ -5,10 +5,13 @@ go 1.13
 require (
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.4
+	github.com/gophercloud/gophercloud v0.6.0
 	github.com/openshift/api v0.0.0-20200205133042-34f0ec8dab87
 	github.com/openstack-k8s-operators/lib-common v0.0.0-20200506095056-36244492b7a8
 	github.com/operator-framework/operator-sdk v0.17.0
 	github.com/spf13/pflag v1.0.5
+	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
+	golang.org/x/tools v0.0.0-20200721163027-5ea363182e19 // indirect
 	k8s.io/api v0.17.4
 	k8s.io/apimachinery v0.17.4
 	k8s.io/client-go v12.0.0+incompatible
