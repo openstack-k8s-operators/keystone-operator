@@ -2,11 +2,11 @@ package keystoneservice
 
 import (
 	"context"
-
 	gophercloud "github.com/gophercloud/gophercloud"
 	openstack "github.com/gophercloud/gophercloud/openstack"
 	services "github.com/gophercloud/gophercloud/openstack/identity/v3/services"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1"
+	keystone "github.com/openstack-k8s-operators/keystone-operator/pkg/keystone"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	"time"
 )
 
 var log = logf.Log.WithName("controller_keystoneservice")
@@ -86,9 +87,28 @@ func (r *ReconcileKeystoneService) Reconcile(request reconcile.Request) (reconci
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling KeystoneService")
 
+	keystoneAPI := keystone.API(request.Namespace, "keystone")
+	objectKey, err := client.ObjectKeyFromObject(keystoneAPI)
+	err = r.client.Get(context.TODO(), objectKey, keystoneAPI)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			// No KeystoneAPI instance running, return error
+			reqLogger.Error(err, "KeystoneAPI instance not found")
+			return reconcile.Result{}, err
+		}
+		// Error reading the object - requeue the request.
+		return reconcile.Result{}, err
+	}
+
+	if keystoneAPI.Status.BootstrapHash == "" {
+		reqLogger.Info("KeystoneAPI bootstrap not complete.", "BootstrapHash", keystoneAPI.Status.BootstrapHash)
+		return reconcile.Result{RequeueAfter: time.Second * 5}, err
+	}
+	reqLogger.Info("KeystoneAPI bootstrap complete.", "BootstrapHash", keystoneAPI.Status.BootstrapHash)
+
 	// Fetch the KeystoneService instance
 	instance := &keystonev1.KeystoneService{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	err = r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
