@@ -316,6 +316,7 @@ func (r *ReconcileKeystoneAPI) Reconcile(request reconcile.Request) (reconcile.R
 	} else {
 		apiEndpoint = foundRoute.Spec.Host
 	}
+	r.setAPIEndpoint(instance, apiEndpoint)
 
 	bootstrapJob := keystone.BootstrapJob(instance, instance.Name, apiEndpoint)
 	bootstrapHash, err := util.ObjectHash(bootstrapJob)
@@ -433,5 +434,17 @@ func DeleteJob(job *batchv1.Job, kr *ReconcileKeystoneAPI, reqLogger logr.Logger
 		return true, err
 	}
 	return false, nil
+}
+
+// setAPIEndpoint func
+func (r *ReconcileKeystoneAPI) setAPIEndpoint(instance *comv1.KeystoneAPI, apiEndpoint string) error {
+
+	if apiEndpoint != instance.Status.APIEndpoint {
+		instance.Status.APIEndpoint = apiEndpoint
+		if err := r.client.Status().Update(context.TODO(), instance); err != nil {
+			return err
+		}
+	}
+	return nil
 
 }

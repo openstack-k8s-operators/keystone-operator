@@ -34,10 +34,6 @@ spec:
             adminPassword:
               description: Keystone API Admin Password
               type: string
-            apiEndpoint:
-              description: Keystone API Endpoint, the http/https route configured
-                to access the Keystone API
-              type: string
             containerImage:
               description: Keystone Container Image URL
               type: string
@@ -66,6 +62,9 @@ spec:
         status:
           description: KeystoneAPIStatus defines the observed state of KeystoneAPI
           properties:
+            apiEndpoint:
+              description: API endpoint
+              type: string
             bootstrapHash:
               description: bootstrap completed
               type: string
@@ -77,6 +76,7 @@ spec:
               description: Deployment hash used to detect changes
               type: string
           required:
+          - apiEndpoint
           - bootstrapHash
           - dbSyncHash
           - deploymentHash
