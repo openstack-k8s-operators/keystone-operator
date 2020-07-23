@@ -36,6 +36,8 @@ type KeystoneAPIStatus struct {
 	DeploymentHash string `json:"deploymentHash"`
 	// bootstrap completed
 	BootstrapHash string `json:"bootstrapHash"`
+	// API endpoint
+	APIEndpoint string `json:"apiEndpoint"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
