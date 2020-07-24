@@ -240,7 +240,6 @@ func getOperatorRules() *[]rbacv1.PolicyRule {
 				"events",
 				"configmaps",
 				"secrets",
-				"secrets/finalizers",
 			},
 			Verbs: []string{
 				"*",
@@ -317,6 +316,7 @@ func getOperatorRules() *[]rbacv1.PolicyRule {
 				"keystone.openstack.org",
 			},
 			Resources: []string{
+				"*",
 				"keystoneapis",
 				"keystoneendpoints",
 				"keystoneservices",
