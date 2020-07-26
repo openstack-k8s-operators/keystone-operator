@@ -59,7 +59,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for changes to secondary resource Pods and requeue the owner KeystoneAPI
 
 	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForOwner{
-		IsController: false,
+		IsController: true,
 		OwnerType:    &comv1.KeystoneAPI{},
 	})
 	if err != nil {
@@ -67,7 +67,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	err = c.Watch(&source.Kind{Type: &corev1.ConfigMap{}}, &handler.EnqueueRequestForOwner{
-		IsController: false,
+		IsController: true,
 		OwnerType:    &comv1.KeystoneAPI{},
 	})
 	if err != nil {
@@ -75,7 +75,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	err = c.Watch(&source.Kind{Type: &batchv1.Job{}}, &handler.EnqueueRequestForOwner{
-		IsController: false,
+		IsController: true,
 		OwnerType:    &comv1.KeystoneAPI{},
 	})
 	if err != nil {
@@ -83,7 +83,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	err = c.Watch(&source.Kind{Type: &routev1.Route{}}, &handler.EnqueueRequestForOwner{
-		IsController: false,
+		IsController: true,
 		OwnerType:    &comv1.KeystoneAPI{},
 	})
 	if err != nil {
@@ -137,9 +137,6 @@ func (r *ReconcileKeystoneAPI) Reconcile(request reconcile.Request) (reconcile.R
 
 	// Secret
 	secret := keystone.FernetSecret(instance, instance.Name)
-	if err := controllerutil.SetControllerReference(instance, secret, r.scheme); err != nil {
-		return reconcile.Result{}, err
-	}
 	// Check if this Secret already exists
 	foundSecret := &corev1.Secret{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: secret.Name, Namespace: secret.Namespace}, foundSecret)
@@ -149,13 +146,13 @@ func (r *ReconcileKeystoneAPI) Reconcile(request reconcile.Request) (reconcile.R
 		if err != nil {
 			return reconcile.Result{}, err
 		}
+		if err := controllerutil.SetControllerReference(instance, secret, r.scheme); err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	// ConfigMap
 	configMap := keystone.ConfigMap(instance, instance.Name)
-	if err := controllerutil.SetControllerReference(instance, configMap, r.scheme); err != nil {
-		return reconcile.Result{}, err
-	}
 	// Check if this ConfigMap already exists
 	foundConfigMap := &corev1.ConfigMap{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: configMap.Name, Namespace: configMap.Namespace}, foundConfigMap)
@@ -163,6 +160,9 @@ func (r *ReconcileKeystoneAPI) Reconcile(request reconcile.Request) (reconcile.R
 		reqLogger.Info("Creating a new ConfigMap", "ConfigMap.Namespace", configMap.Namespace, "Job.Name", configMap.Name)
 		err = r.client.Create(context.TODO(), configMap)
 		if err != nil {
+			return reconcile.Result{}, err
+		}
+		if err := controllerutil.SetControllerReference(instance, configMap, r.scheme); err != nil {
 			return reconcile.Result{}, err
 		}
 	} else if !reflect.DeepEqual(configMap.Data, foundConfigMap.Data) {
@@ -184,21 +184,23 @@ func (r *ReconcileKeystoneAPI) Reconcile(request reconcile.Request) (reconcile.R
 
 	requeue := true
 	if instance.Status.DbSyncHash != dbSyncHash {
-		// Set KeystoneAPI instance as the owner and controller
-		if err := controllerutil.SetControllerReference(instance, job, r.scheme); err != nil {
-			return reconcile.Result{}, err
-		}
 		requeue, err = EnsureJob(job, r, reqLogger)
 		reqLogger.Info("Running DB sync")
 		if err != nil {
 			return reconcile.Result{}, err
 		} else if requeue {
 			reqLogger.Info("Waiting on DB sync")
+			// Set KeystoneAPI instance as the owner and controller
+			if err := controllerutil.SetControllerReference(instance, job, r.scheme); err != nil {
+				return reconcile.Result{}, err
+			}
 			return reconcile.Result{RequeueAfter: time.Second * 5}, err
 		}
 	}
 	// db sync completed... okay to store the hash to disable it
-	r.setDbSyncHash(instance, dbSyncHash)
+	if err := r.setDbSyncHash(instance, dbSyncHash); err != nil {
+		return reconcile.Result{}, err
+	}
 	// delete the job
 	requeue, err = DeleteJob(job, r, reqLogger)
 	if err != nil {
@@ -218,11 +220,6 @@ func (r *ReconcileKeystoneAPI) Reconcile(request reconcile.Request) (reconcile.R
 	}
 	reqLogger.Info("DeploymentHash: ", "Deployment Hash:", deploymentHash)
 
-	// Set KeystoneAPI instance as the owner and controller
-	if err := controllerutil.SetControllerReference(instance, deployment, r.scheme); err != nil {
-		return reconcile.Result{}, err
-	}
-
 	// Check if this Deployment already exists
 	foundDeployment := &appsv1.Deployment{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: deployment.Name, Namespace: deployment.Namespace}, foundDeployment)
@@ -233,7 +230,10 @@ func (r *ReconcileKeystoneAPI) Reconcile(request reconcile.Request) (reconcile.R
 			return reconcile.Result{}, err
 		}
 
-		// Deployment created successfully - don't requeue
+		// Set KeystoneAPI instance as the owner and controller
+		if err := controllerutil.SetControllerReference(instance, deployment, r.scheme); err != nil {
+			return reconcile.Result{}, err
+		}
 		return reconcile.Result{RequeueAfter: time.Second * 5}, err
 
 	} else if err != nil {
@@ -247,7 +247,10 @@ func (r *ReconcileKeystoneAPI) Reconcile(request reconcile.Request) (reconcile.R
 			if err != nil {
 				return reconcile.Result{}, err
 			}
-			r.setDeploymentHash(instance, deploymentHash)
+			if err := r.setDeploymentHash(instance, deploymentHash); err != nil {
+				return reconcile.Result{}, err
+			}
+
 			return reconcile.Result{RequeueAfter: time.Second * 10}, err
 		}
 		if foundDeployment.Status.ReadyReplicas == instance.Spec.Replicas {
@@ -263,11 +266,6 @@ func (r *ReconcileKeystoneAPI) Reconcile(request reconcile.Request) (reconcile.R
 	keystonePort = 5000
 	service := keystone.Service(instance, instance.Name, keystonePort)
 
-	// Set KeystoneAPI instance as the owner and controller
-	if err := controllerutil.SetControllerReference(instance, service, r.scheme); err != nil {
-		return reconcile.Result{}, err
-	}
-
 	// Check if this Service already exists
 	foundService := &corev1.Service{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: service.Name, Namespace: service.Namespace}, foundService)
@@ -275,6 +273,11 @@ func (r *ReconcileKeystoneAPI) Reconcile(request reconcile.Request) (reconcile.R
 		reqLogger.Info("Creating a new Service", "Service.Namespace", service.Namespace, "Service.Name", service.Name)
 		err = r.client.Create(context.TODO(), service)
 		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		// Set KeystoneAPI instance as the owner and controller
+		if err := controllerutil.SetControllerReference(instance, service, r.scheme); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -286,11 +289,6 @@ func (r *ReconcileKeystoneAPI) Reconcile(request reconcile.Request) (reconcile.R
 	// Create the route if none exists
 	route := keystone.Route(instance, instance.Name)
 
-	// Set Keystone instance as the owner and controller
-	if err := controllerutil.SetControllerReference(instance, route, r.scheme); err != nil {
-		return reconcile.Result{}, err
-	}
-
 	// Check if this Route already exists
 	foundRoute := &routev1.Route{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: route.Name, Namespace: route.Namespace}, foundRoute)
@@ -301,6 +299,10 @@ func (r *ReconcileKeystoneAPI) Reconcile(request reconcile.Request) (reconcile.R
 			return reconcile.Result{}, err
 		}
 
+		// Set Keystone instance as the owner and controller
+		if err := controllerutil.SetControllerReference(instance, route, r.scheme); err != nil {
+			return reconcile.Result{}, err
+		}
 		return reconcile.Result{RequeueAfter: time.Second * 5}, err
 	} else if err != nil {
 		return reconcile.Result{}, err
@@ -326,19 +328,23 @@ func (r *ReconcileKeystoneAPI) Reconcile(request reconcile.Request) (reconcile.R
 
 	// Set KeystoneAPI instance as the owner and controller
 	if instance.Status.BootstrapHash != bootstrapHash {
-		if err := controllerutil.SetControllerReference(instance, bootstrapJob, r.scheme); err != nil {
-			return reconcile.Result{}, err
-		}
 
 		requeue, err = EnsureJob(bootstrapJob, r, reqLogger)
 		if err != nil {
 			return reconcile.Result{}, err
 		} else if requeue {
+
+			if err := controllerutil.SetControllerReference(instance, bootstrapJob, r.scheme); err != nil {
+				return reconcile.Result{}, err
+			}
 			return reconcile.Result{RequeueAfter: time.Second * 5}, err
 		}
 	}
 	// bootstrap completed... okay to store the hash to disable it
-	r.setBootstrapHash(instance, bootstrapHash)
+	if err := r.setBootstrapHash(instance, bootstrapHash); err != nil {
+		return reconcile.Result{}, err
+	}
+
 	// delete the job
 	requeue, err = DeleteJob(bootstrapJob, r, reqLogger)
 	if err != nil {
