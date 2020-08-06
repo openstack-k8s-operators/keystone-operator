@@ -86,17 +86,10 @@ Install and configure OpenStack Keystone.
 		data.Verbosity,
 		data.ImagePullPolicy)
 
-	clusterRules := getOperatorClusterRules()
 	rules := getOperatorRules()
 	serviceRules := getServiceRules()
 
 	strategySpec := csvv1.StrategyDetailsDeployment{
-		ClusterPermissions: []csvv1.StrategyDeploymentPermissions{
-			{
-				ServiceAccountName: "keystone-operator",
-				Rules:              *clusterRules,
-			},
-		},
 		Permissions: []csvv1.StrategyDeploymentPermissions{
 			{
 				ServiceAccountName: "keystone-operator",
@@ -185,11 +178,11 @@ Install and configure OpenStack Keystone.
 				},
 				{
 					Type:      csvv1.InstallModeTypeMultiNamespace,
-					Supported: true,
+					Supported: false,
 				},
 				{
 					Type:      csvv1.InstallModeTypeAllNamespaces,
-					Supported: true,
+					Supported: false,
 				},
 			},
 			InstallStrategy: csvv1.NamedInstallStrategy{
@@ -353,151 +346,6 @@ func getServiceRules() *[]rbacv1.PolicyRule {
 			},
 			Verbs: []string{
 				"use",
-			},
-		},
-	}
-}
-
-func getOperatorClusterRules() *[]rbacv1.PolicyRule {
-	return &[]rbacv1.PolicyRule{
-		{
-			APIGroups: []string{
-				"rbac.authorization.k8s.io",
-			},
-			Resources: []string{
-				"roles",
-				"rolebindings",
-			},
-			ResourceNames: []string{
-				"keystone-operator",
-			},
-			Verbs: []string{
-				"*",
-			},
-		},
-		{
-			APIGroups: []string{
-				"",
-			},
-			Resources: []string{
-				"namespaces",
-			},
-			Verbs: []string{
-				"get",
-				"list",
-				"watch",
-				"patch",
-			},
-		},
-		{
-			APIGroups: []string{
-				"",
-			},
-			Resources: []string{
-				"events",
-			},
-			Verbs: []string{
-				"list",
-				"watch",
-				"create",
-				"patch",
-				"update",
-			},
-		},
-		{
-			APIGroups: []string{
-				"rbac.authorization.k8s.io",
-			},
-			Resources: []string{
-				"clusterrolebindings",
-			},
-			ResourceNames: []string{
-				"keystone-operator",
-			},
-			Verbs: []string{
-				"update",
-				"delete",
-			},
-		},
-		{
-			APIGroups: []string{
-				"rbac.authorization.k8s.io",
-			},
-			Resources: []string{
-				"clusterrolebindings",
-			},
-			Verbs: []string{
-				"list",
-				"get",
-				"watch",
-				"create",
-			},
-		},
-		{
-			APIGroups: []string{
-				"rbac.authorization.k8s.io",
-			},
-			Resources: []string{
-				"clusterroles",
-			},
-			ResourceNames: []string{
-				"keystone-operator",
-			},
-			Verbs: []string{
-				"update",
-				"delete",
-			},
-		},
-		{
-			APIGroups: []string{
-				"rbac.authorization.k8s.io",
-			},
-			Resources: []string{
-				"clusterroles",
-			},
-			Verbs: []string{
-				"list",
-				"get",
-				"watch",
-				"create",
-			},
-		},
-		{
-			APIGroups: []string{
-				"apps",
-			},
-			Resources: []string{
-				"deployments/finalizers",
-			},
-			ResourceNames: []string{
-				"keystone",
-			},
-			Verbs: []string{
-				"update",
-			},
-		},
-		{
-			APIGroups: []string{
-				"storage.k8s.io",
-			},
-			Resources: []string{
-				"storageclasses",
-			},
-			Verbs: []string{
-				"get",
-				"list",
-				"watch",
-			},
-		},
-		{
-			APIGroups: []string{
-				"",
-			},
-			Resources: []string{
-				"nodes",
-			},
-			Verbs: []string{
-				"get",
 			},
 		},
 	}
