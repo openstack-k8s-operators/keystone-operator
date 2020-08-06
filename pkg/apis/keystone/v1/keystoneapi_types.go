@@ -13,12 +13,6 @@ type KeystoneAPISpec struct {
 	DatabaseHostname string `json:"databaseHostname,omitempty"`
 	// Keystone Container Image URL
 	ContainerImage string `json:"containerImage,omitempty"`
-	// Mysql Container Image URL (used for database syncing)
-	MysqlContainerImage string `json:"mysqlContainerImage,omitempty"`
-	// Database Admin Username
-	DatabaseAdminUsername string `json:"databaseAdminUsername,omitempty"`
-	// Database Admin Password
-	DatabaseAdminPassword string `json:"databaseAdminPassword,omitempty"`
 	// Keystone API Admin Password
 	AdminPassword string `json:"adminPassword,omitempty"`
 	// Replicas

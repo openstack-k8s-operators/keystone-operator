@@ -2,22 +2,14 @@ package keystone
 
 import (
 	comv1 "github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1"
-	util "github.com/openstack-k8s-operators/lib-common/pkg/util"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type dbCreateOptions struct {
-	DatabasePassword      string
-	DatabaseHostname      string
-	DatabaseAdminUsername string
-}
-
 // DbSyncJob func
 func DbSyncJob(cr *comv1.KeystoneAPI, cmName string) *batchv1.Job {
 
-	opts := dbCreateOptions{cr.Spec.DatabasePassword, cr.Spec.DatabaseHostname, cr.Spec.DatabaseAdminUsername}
 	runAsUser := int64(0)
 
 	labels := map[string]string{
@@ -52,19 +44,6 @@ func DbSyncJob(cr *comv1.KeystoneAPI, cmName string) *batchv1.Job {
 								},
 							},
 							VolumeMounts: getVolumeMounts(),
-						},
-					},
-					InitContainers: []corev1.Container{
-						{
-							Name:    "keystone-db-create",
-							Image:   "docker.io/tripleomaster/centos-binary-mariadb:current-tripleo",
-							Command: []string{"/bin/sh", "-c", util.ExecuteTemplateFile("db_create.sh", &opts)},
-							Env: []corev1.EnvVar{
-								{
-									Name:  "MYSQL_PWD",
-									Value: cr.Spec.DatabaseAdminPassword,
-								},
-							},
 						},
 					},
 				},

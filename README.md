@@ -34,10 +34,6 @@ spec:
   databaseHostname: openstack-db-mariadb
   # used for keystone-manage bootstrap endpoints
   apiEndpoint: http://keystone-test.apps.test.dprince/
-  # used to create the DB schema
-  databaseAdminUsername: root
-  databaseAdminPassword: foobar123
-  mysqlContainerImage: docker.io/tripleomaster/centos-binary-mariadb:current-tripleo
 ``` 
 
 # Design
