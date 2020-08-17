@@ -2,7 +2,8 @@ package keystone
 
 import (
 	"encoding/base64"
-	comv1 "github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1"
+	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"math/rand"
@@ -19,7 +20,7 @@ func generateFernetKey() string {
 }
 
 // FernetSecret func
-func FernetSecret(cr *comv1.KeystoneAPI, name string) *corev1.Secret {
+func FernetSecret(cr *keystonev1beta1.KeystoneAPI, name string) *corev1.Secret {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,

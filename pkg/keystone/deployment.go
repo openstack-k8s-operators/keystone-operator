@@ -1,14 +1,14 @@
 package keystone
 
 import (
-	comv1 "github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1"
+	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Deployment func
-func Deployment(cr *comv1.KeystoneAPI, cmName string, configHash string) *appsv1.Deployment {
+func Deployment(cr *keystonev1beta1.KeystoneAPI, cmName string, configHash string) *appsv1.Deployment {
 	runAsUser := int64(0)
 
 	labels := map[string]string{

@@ -1,20 +1,11 @@
-# OpenStack Keystone Operator
+# keystone-operator
 
 A Kubernetes Operator built using the [Operator Framework](https://github.com/operator-framework) for Go. The Operator provides a way to easily install and manage an OpenStack Keystone installation
 on Kubernetes. This Operator was developed using [RDO](https://www.rdoproject.org/) containers for openStack.
 
-# Creating resources
+# Deployment
 
-Create the following resources to start the operator with a single KeystoneAPI
-instance:
-
-<pre>
-oc create -f deploy/crds/keystone.openstack.org\_keystoneapis\_crd.yaml
-oc create -f deploy/role.yaml
-oc create -f deploy/role\_binding.yaml
-oc create -f deploy/service\_account.yaml
-oc create -f deploy/operator.yaml
-</pre>
+The operator is intended to be deployed via OLM [Operator Lifecycle Manager](https://github.com/operator-framework/operator-lifecycle-manager)
 
 # API Example
 
@@ -38,7 +29,7 @@ spec:
   databaseAdminUsername: root
   databaseAdminPassword: foobar123
   mysqlContainerImage: docker.io/tripleomaster/centos-binary-mariadb:current-tripleo
-``` 
+```
 
 # Design
 The current design takes care of the following:

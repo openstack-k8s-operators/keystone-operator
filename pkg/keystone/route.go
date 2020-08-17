@@ -2,13 +2,14 @@ package keystone
 
 import (
 	routev1 "github.com/openshift/api/route/v1"
-	comv1 "github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1"
+	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // Route func
-func Route(cr *comv1.KeystoneAPI, cmName string) *routev1.Route {
+func Route(cr *keystonev1beta1.KeystoneAPI, cmName string) *routev1.Route {
 
 	labels := map[string]string{
 		"app": "keystone-api",

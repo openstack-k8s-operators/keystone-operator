@@ -1,7 +1,8 @@
 package keystone
 
 import (
-	comv1 "github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1"
+	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
+
 	util "github.com/openstack-k8s-operators/lib-common/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,7 +15,7 @@ type keystoneConfigOptions struct {
 }
 
 // ConfigMap custom keystone config map
-func ConfigMap(cr *comv1.KeystoneAPI, cmName string) *corev1.ConfigMap {
+func ConfigMap(cr *keystonev1beta1.KeystoneAPI, cmName string) *corev1.ConfigMap {
 	opts := keystoneConfigOptions{cr.Spec.DatabasePassword, cr.Spec.DatabaseHostname, cr.Spec.AdminPassword}
 
 	cm := &corev1.ConfigMap{

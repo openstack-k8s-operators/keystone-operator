@@ -1,7 +1,8 @@
 package keystone
 
 import (
-	comv1 "github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1"
+	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
+
 	util "github.com/openstack-k8s-operators/lib-common/pkg/util"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -15,7 +16,7 @@ type dbCreateOptions struct {
 }
 
 // DbSyncJob func
-func DbSyncJob(cr *comv1.KeystoneAPI, cmName string) *batchv1.Job {
+func DbSyncJob(cr *keystonev1beta1.KeystoneAPI, cmName string) *batchv1.Job {
 
 	opts := dbCreateOptions{cr.Spec.DatabasePassword, cr.Spec.DatabaseHostname, cr.Spec.DatabaseAdminUsername}
 	runAsUser := int64(0)

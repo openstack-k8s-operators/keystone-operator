@@ -1,13 +1,13 @@
 package keystone
 
 import (
-	comv1 "github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1"
+	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Service func
-func Service(cr *comv1.KeystoneAPI, cmName string, servicePort int32) *corev1.Service {
+func Service(cr *keystonev1beta1.KeystoneAPI, cmName string, servicePort int32) *corev1.Service {
 
 	labels := map[string]string{
 		"app": "keystone-api",

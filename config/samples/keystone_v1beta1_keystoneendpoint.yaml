@@ -1,0 +1,7 @@
+apiVersion: keystone.openstack.org/v1beta1
+kind: KeystoneEndpoint
+metadata:
+  name: keystoneendpoint-sample
+spec:
+  # Add fields here
+  foo: bar
