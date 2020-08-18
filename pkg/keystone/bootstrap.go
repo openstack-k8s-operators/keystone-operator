@@ -1,7 +1,8 @@
 package keystone
 
 import (
-	comv1 "github.com/openstack-k8s-operators/keystone-operator/pkg/apis/keystone/v1"
+	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
+
 	util "github.com/openstack-k8s-operators/lib-common/pkg/util"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -15,7 +16,7 @@ type bootstrapOptions struct {
 }
 
 // BootstrapJob func
-func BootstrapJob(cr *comv1.KeystoneAPI, configMapName string, APIEndpoint string) *batchv1.Job {
+func BootstrapJob(cr *keystonev1beta1.KeystoneAPI, configMapName string, APIEndpoint string) *batchv1.Job {
 
 	// NOTE: as a convention the configmap is name the same as the service
 	opts := bootstrapOptions{cr.Spec.AdminPassword, APIEndpoint, configMapName}

@@ -194,21 +194,21 @@ Install and configure OpenStack Keystone.
 				Owned: []csvv1.CRDDescription{
 					{
 						Name:        "keystoneapis.keystone.openstack.org",
-						Version:     "v1",
+						Version:     "v1beta1",
 						Kind:        "KeystoneAPI",
 						DisplayName: "KeystoneAPI",
 						Description: "Keystone API Instance",
 					},
 					{
 						Name:        "keystoneendpoints.keystone.openstack.org",
-						Version:     "v1",
+						Version:     "v1beta1",
 						Kind:        "KeystoneEndpoint",
 						DisplayName: "KeystoneEndpoint",
 						Description: "Keystone Endpoint",
 					},
 					{
 						Name:        "keystoneservices.keystone.openstack.org",
-						Version:     "v1",
+						Version:     "v1beta1",
 						Kind:        "KeystoneService",
 						DisplayName: "KeystoneService",
 						Description: "Keystone Service",
