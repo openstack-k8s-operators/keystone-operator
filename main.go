@@ -18,17 +18,16 @@ package main
 
 import (
 	"flag"
-	"os"
-
+	routev1 "github.com/openshift/api/route/v1"
+	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
+	"github.com/openstack-k8s-operators/keystone-operator/controllers"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
-	"github.com/openstack-k8s-operators/keystone-operator/controllers"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -41,6 +40,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(keystonev1beta1.AddToScheme(scheme))
+	utilruntime.Must(routev1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
