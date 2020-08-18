@@ -1,14 +1,15 @@
 # golang-builder is used in OSBS build
-ARG GOLANG_BUILDER=golang:1.13
-ARG OPERATOR_BASE_IMAGE=registry.access.redhat.com/ubi7/ubi-minimal:latest
+ARG GOLANG_BUILDER=openshift/golang-builder:1.13
+ARG OPERATOR_BASE_IMAGE=registry.redhat.io/ubi8/ubi-minimal:latest
 
 FROM ${GOLANG_BUILDER} AS builder
 
+# Intended to build in OSBS using cachito external sources bundle
 ARG REMOTE_SOURCE=.
-ARG REMOTE_SOURCE_DIR=keystone-operator
-ARG REMOTE_SOURCE_SUBDIR=.
+ARG REMOTE_SOURCE_DIR
+ARG REMOTE_SOURCE_SUBDIR=app
 ARG DEST_ROOT=/dest-root
-ARG GO_BUILD_EXTRA_ARGS="-v"
+ARG GO_BUILD_EXTRA_ARGS="-mod readonly -v "
 
 COPY $REMOTE_SOURCE $REMOTE_SOURCE_DIR
 WORKDIR ${REMOTE_SOURCE_DIR}/${REMOTE_SOURCE_SUBDIR}
