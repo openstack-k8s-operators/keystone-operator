@@ -10,16 +10,15 @@ import (
 )
 
 type bootstrapOptions struct {
-	AdminPassword string
-	APIEndpoint   string
-	ServiceName   string
+	APIEndpoint string
+	ServiceName string
 }
 
 // BootstrapJob func
 func BootstrapJob(cr *keystonev1beta1.KeystoneAPI, configMapName string, APIEndpoint string) *batchv1.Job {
 
 	// NOTE: as a convention the configmap is name the same as the service
-	opts := bootstrapOptions{cr.Spec.AdminPassword, APIEndpoint, configMapName}
+	opts := bootstrapOptions{APIEndpoint, configMapName}
 	runAsUser := int64(0)
 
 	job := &batchv1.Job{
@@ -32,6 +31,51 @@ func BootstrapJob(cr *keystonev1beta1.KeystoneAPI, configMapName string, APIEndp
 				Spec: corev1.PodSpec{
 					RestartPolicy:      "OnFailure",
 					ServiceAccountName: "keystone",
+
+					InitContainers: []corev1.Container{
+						{
+							Name:    "keystone-secrets",
+							Image:   cr.Spec.ContainerImage,
+							Command: []string{"/bin/sh", "-c", util.ExecuteTemplateFile("password_init.sh", nil)},
+							Env: []corev1.EnvVar{
+								{
+									Name:  "DatabaseHost",
+									Value: cr.Spec.DatabaseHostname,
+								},
+								{
+									Name:  "DatabaseUser",
+									Value: cr.Name,
+								},
+								{
+									Name:  "DatabaseSchema",
+									Value: cr.Name,
+								},
+								{
+									Name: "DatabasePassword",
+									ValueFrom: &corev1.EnvVarSource{
+										SecretKeyRef: &corev1.SecretKeySelector{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: cr.Spec.Secret,
+											},
+											Key: "DatabasePassword",
+										},
+									},
+								},
+								{
+									Name: "AdminPassword",
+									ValueFrom: &corev1.EnvVarSource{
+										SecretKeyRef: &corev1.SecretKeySelector{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: cr.Spec.Secret,
+											},
+											Key: "AdminPassword",
+										},
+									},
+								},
+							},
+							VolumeMounts: getInitVolumeMounts(),
+						},
+					},
 					Containers: []corev1.Container{
 						{
 							Name:    configMapName + "-bootstrap",
@@ -46,7 +90,7 @@ func BootstrapJob(cr *keystonev1beta1.KeystoneAPI, configMapName string, APIEndp
 									Value: "COPY_ALWAYS",
 								},
 							},
-							VolumeMounts: getVolumeMounts(),
+							VolumeMounts: getDbVolumeMounts(),
 						},
 					},
 				},

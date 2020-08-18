@@ -1,7 +1,10 @@
 apiVersion: keystone.openstack.org/v1beta1
 kind: KeystoneAPI
 metadata:
-  name: keystoneapi-sample
+  name: keystone
+  namespace: openstack
 spec:
-  # Add fields here
-  foo: bar
+  containerImage: docker.io/tripleotrain/centos-binary-keystone:current-tripleo
+  replicas: 1
+  databaseHostname: mariadb
+  secret: keystone-secret

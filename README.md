@@ -13,7 +13,7 @@ The Operator creates a custom KeystoneAPI resource that can be used to create Ke
 instances within the cluster. Example CR to create an Keystone API in your cluster:
 
 ```yaml
-apiVersion: keystone.openstack.org/v1
+apiVersion: keystone.openstack.org/v1beta1
 kind: KeystoneAPI
 metadata:
   name: keystone
@@ -21,14 +21,7 @@ spec:
   adminPassword: foobar123
   containerImage: docker.io/tripleostein/centos-binary-keystone:current-tripleo
   replicas: 1
-  databasePassword: foobar123
-  databaseHostname: openstack-db-mariadb
-  # used for keystone-manage bootstrap endpoints
-  apiEndpoint: http://keystone-test.apps.test.dprince/
-  # used to create the DB schema
-  databaseAdminUsername: root
-  databaseAdminPassword: foobar123
-  mysqlContainerImage: docker.io/tripleomaster/centos-binary-mariadb:current-tripleo
+  secret: keystone-secret
 ```
 
 # Design
@@ -40,7 +33,3 @@ The current design takes care of the following:
 - Generates Fernet keys (TODO: rotate them, and bounce the APIs upon rotation)
 - Keystone bootstrap, and db sync are executed automatically on install and updates
 - ConfigMap is recreated on any changes KeystoneAPI object changes and the Deployment updated.
-
-# Requirements
-
-- A MariaDB database. TODO move the db-create logic to a mariadb operator for OpenStack services

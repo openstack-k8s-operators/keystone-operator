@@ -33,6 +33,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -111,6 +112,30 @@ func (r *KeystoneAPIReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{RequeueAfter: time.Second * 5}, err
+	}
+
+	// Create the DB Schema (unstructured so we don't explicitly import mariadb-operator code)
+	schemaObj, err := keystone.SchemaObject(instance)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	foundSchema := &unstructured.Unstructured{}
+	foundSchema.SetGroupVersionKind(schemaObj.GroupVersionKind())
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: schemaObj.GetName(), Namespace: schemaObj.GetNamespace()}, foundSchema)
+	if err != nil && k8s_errors.IsNotFound(err) {
+		err := r.Client.Create(context.TODO(), &schemaObj)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	} else if err != nil {
+		return ctrl.Result{}, err
+	} else {
+		completed, _, err := unstructured.NestedBool(foundSchema.UnstructuredContent(), "status", "completed")
+		if !completed {
+			r.Log.Info("Waiting on DB to be created...")
+			return ctrl.Result{RequeueAfter: time.Second * 5}, err
+		}
 	}
 
 	// Define a new Job object
