@@ -2,23 +2,14 @@ package keystone
 
 import (
 	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
-
 	util "github.com/openstack-k8s-operators/lib-common/pkg/util"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type dbCreateOptions struct {
-	DatabasePassword      string
-	DatabaseHostname      string
-	DatabaseAdminUsername string
-}
-
 // DbSyncJob func
 func DbSyncJob(cr *keystonev1beta1.KeystoneAPI, cmName string) *batchv1.Job {
-
-	opts := dbCreateOptions{cr.Spec.DatabasePassword, cr.Spec.DatabaseHostname, cr.Spec.DatabaseAdminUsername}
 	runAsUser := int64(0)
 
 	labels := map[string]string{
@@ -52,20 +43,51 @@ func DbSyncJob(cr *keystonev1beta1.KeystoneAPI, cmName string) *batchv1.Job {
 									Value: "TRUE",
 								},
 							},
-							VolumeMounts: getVolumeMounts(),
+							VolumeMounts: getDbVolumeMounts(),
 						},
 					},
 					InitContainers: []corev1.Container{
 						{
-							Name:    "keystone-db-create",
-							Image:   "docker.io/tripleomaster/centos-binary-mariadb:current-tripleo",
-							Command: []string{"/bin/sh", "-c", util.ExecuteTemplateFile("db_create.sh", &opts)},
+							Name:    "keystone-secrets",
+							Image:   cr.Spec.ContainerImage,
+							Command: []string{"/bin/sh", "-c", util.ExecuteTemplateFile("password_init.sh", nil)},
 							Env: []corev1.EnvVar{
 								{
-									Name:  "MYSQL_PWD",
-									Value: cr.Spec.DatabaseAdminPassword,
+									Name:  "DatabaseHost",
+									Value: cr.Spec.DatabaseHostname,
+								},
+								{
+									Name:  "DatabaseUser",
+									Value: cr.Name,
+								},
+								{
+									Name:  "DatabaseSchema",
+									Value: cr.Name,
+								},
+								{
+									Name: "DatabasePassword",
+									ValueFrom: &corev1.EnvVarSource{
+										SecretKeyRef: &corev1.SecretKeySelector{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: cr.Spec.Secret,
+											},
+											Key: "DatabasePassword",
+										},
+									},
+								},
+								{
+									Name: "AdminPassword",
+									ValueFrom: &corev1.EnvVarSource{
+										SecretKeyRef: &corev1.SecretKeySelector{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: cr.Spec.Secret,
+											},
+											Key: "AdminPassword",
+										},
+									},
 								},
 							},
+							VolumeMounts: getInitVolumeMounts(),
 						},
 					},
 				},

@@ -1,0 +1,11 @@
+{
+  "command": "/bin/true",
+  "config_files": [
+    {
+      "source": "/var/lib/emptydir/keystone-passwords.conf",
+      "dest": "/etc/keystone/keystone-api.conf",
+      "owner": "keystone",
+      "perm": "0600"
+    }
+  ]
+}

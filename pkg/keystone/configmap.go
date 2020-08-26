@@ -9,14 +9,12 @@ import (
 )
 
 type keystoneConfigOptions struct {
-	DatabasePassword string
 	DatabaseHostname string
-	AdminPassword    string
 }
 
 // ConfigMap custom keystone config map
 func ConfigMap(cr *keystonev1beta1.KeystoneAPI, cmName string) *corev1.ConfigMap {
-	opts := keystoneConfigOptions{cr.Spec.DatabasePassword, cr.Spec.DatabaseHostname, cr.Spec.AdminPassword}
+	opts := keystoneConfigOptions{cr.Spec.DatabaseHostname}
 
 	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{

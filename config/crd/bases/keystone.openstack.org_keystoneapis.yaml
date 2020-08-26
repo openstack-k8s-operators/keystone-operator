@@ -36,26 +36,11 @@ spec:
         spec:
           description: KeystoneAPISpec defines the desired state of KeystoneAPI
           properties:
-            adminPassword:
-              description: Keystone API Admin Password
-              type: string
             containerImage:
-              description: Keystone Container Image URL
-              type: string
-            databaseAdminPassword:
-              description: Database Admin Password
-              type: string
-            databaseAdminUsername:
-              description: Database Admin Username
+              description: Keystone Secret containing DatabasePassword, AdminPassword
               type: string
             databaseHostname:
               description: Keystone Database Hostname String
-              type: string
-            databasePassword:
-              description: Keystone Database Password String
-              type: string
-            mysqlContainerImage:
-              description: Mysql Container Image URL (used for database syncing)
               type: string
             replicas:
               description: Replicas

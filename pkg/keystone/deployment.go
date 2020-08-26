@@ -2,6 +2,7 @@ package keystone
 
 import (
 	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
+	util "github.com/openstack-k8s-operators/lib-common/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,6 +49,50 @@ func Deployment(cr *keystonev1beta1.KeystoneAPI, cmName string, configHash strin
 								},
 							},
 							VolumeMounts: getVolumeMounts(),
+						},
+					},
+					InitContainers: []corev1.Container{
+						{
+							Name:    "keystone-secrets",
+							Image:   cr.Spec.ContainerImage,
+							Command: []string{"/bin/sh", "-c", util.ExecuteTemplateFile("password_init.sh", nil)},
+							Env: []corev1.EnvVar{
+								{
+									Name:  "DatabaseHost",
+									Value: cr.Spec.DatabaseHostname,
+								},
+								{
+									Name:  "DatabaseUser",
+									Value: cr.Name,
+								},
+								{
+									Name:  "DatabaseSchema",
+									Value: cr.Name,
+								},
+								{
+									Name: "DatabasePassword",
+									ValueFrom: &corev1.EnvVarSource{
+										SecretKeyRef: &corev1.SecretKeySelector{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: cr.Spec.Secret,
+											},
+											Key: "DatabasePassword",
+										},
+									},
+								},
+								{
+									Name: "AdminPassword",
+									ValueFrom: &corev1.EnvVarSource{
+										SecretKeyRef: &corev1.SecretKeySelector{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: cr.Spec.Secret,
+											},
+											Key: "AdminPassword",
+										},
+									},
+								},
+							},
+							VolumeMounts: getInitVolumeMounts(),
 						},
 					},
 				},

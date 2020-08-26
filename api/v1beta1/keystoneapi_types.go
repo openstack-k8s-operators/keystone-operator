@@ -22,20 +22,12 @@ import (
 
 // KeystoneAPISpec defines the desired state of KeystoneAPI
 type KeystoneAPISpec struct {
-	// Keystone Database Password String
-	DatabasePassword string `json:"databasePassword,omitempty"`
 	// Keystone Database Hostname String
 	DatabaseHostname string `json:"databaseHostname,omitempty"`
 	// Keystone Container Image URL
 	ContainerImage string `json:"containerImage,omitempty"`
-	// Mysql Container Image URL (used for database syncing)
-	MysqlContainerImage string `json:"mysqlContainerImage,omitempty"`
-	// Database Admin Username
-	DatabaseAdminUsername string `json:"databaseAdminUsername,omitempty"`
-	// Database Admin Password
-	DatabaseAdminPassword string `json:"databaseAdminPassword,omitempty"`
-	// Keystone API Admin Password
-	AdminPassword string `json:"adminPassword,omitempty"`
+	// Keystone Secret containing DatabasePassword, AdminPassword
+	Secret string `json:"secret,omitempty"`
 	// Replicas
 	Replicas int32 `json:"replicas"`
 }
