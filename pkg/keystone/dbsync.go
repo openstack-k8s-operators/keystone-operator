@@ -28,7 +28,8 @@ func DbSyncJob(cr *keystonev1beta1.KeystoneAPI, cmName string) *batchv1.Job {
 					ServiceAccountName: "keystone",
 					Containers: []corev1.Container{
 						{
-							Name:  "keystone-db-sync",
+							Name: "keystone-db-sync",
+							//Command: []string{"/bin/sleep", "7000"},
 							Image: cr.Spec.ContainerImage,
 							SecurityContext: &corev1.SecurityContext{
 								RunAsUser: &runAsUser,

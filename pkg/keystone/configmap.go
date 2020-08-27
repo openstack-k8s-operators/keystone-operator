@@ -26,10 +26,11 @@ func ConfigMap(cr *keystonev1beta1.KeystoneAPI, cmName string) *corev1.ConfigMap
 			Namespace: cr.Namespace,
 		},
 		Data: map[string]string{
-			"keystone.conf": util.ExecuteTemplateFile("keystone.conf", &opts),
-			"httpd.conf":    util.ExecuteTemplateFile("httpd.conf", nil),
-			"config.json":   util.ExecuteTemplateFile("kolla_config.json", nil),
-			"logging.conf":  util.ExecuteTemplateFile("logging.conf", nil),
+			"keystone.conf":       util.ExecuteTemplateFile("keystone.conf", &opts),
+			"httpd.conf":          util.ExecuteTemplateFile("httpd.conf", nil),
+			"config.json":         util.ExecuteTemplateFile("kolla_config.json", nil),
+			"logging.conf":        util.ExecuteTemplateFile("logging.conf", nil),
+			"db-sync-config.json": util.ExecuteTemplateFile("db-sync-config.json", nil),
 		},
 	}
 

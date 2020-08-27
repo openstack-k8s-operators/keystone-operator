@@ -37,7 +37,7 @@ spec:
           description: KeystoneAPISpec defines the desired state of KeystoneAPI
           properties:
             containerImage:
-              description: Keystone Secret containing DatabasePassword, AdminPassword
+              description: Keystone Container Image URL
               type: string
             databaseHostname:
               description: Keystone Database Hostname String
@@ -46,6 +46,9 @@ spec:
               description: Replicas
               format: int32
               type: integer
+            secret:
+              description: Keystone Secret containing DatabasePassword, AdminPassword
+              type: string
           required:
           - replicas
           type: object

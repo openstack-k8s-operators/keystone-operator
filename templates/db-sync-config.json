@@ -3,9 +3,15 @@
   "config_files": [
     {
       "source": "/var/lib/emptydir/keystone-passwords.conf",
-      "dest": "/etc/keystone/keystone-api.conf",
+      "dest": "/etc/keystone/keystone.conf",
       "owner": "keystone",
       "perm": "0600"
+    },
+    {
+        "source": "/var/lib/fernet-keys",
+        "dest": "/etc/keystone/",
+        "owner": "keystone:keystone",
+        "perm": "0700"
     }
   ]
 }

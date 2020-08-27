@@ -6,4 +6,4 @@ metadata:
     dbName: {{.DatabaseHostname}}
 spec:
   name: {{.SchemaName}}
-  password: {{.Secret}}
+  secret: {{.Secret}}

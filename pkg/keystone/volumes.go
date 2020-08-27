@@ -109,7 +109,7 @@ func getVolumeMounts() []corev1.VolumeMount {
 
 }
 
-// common Keystone API VolumeMounts (db-kolla-config mounts passwords directly as keystone-api.conf)
+// common Keystone API VolumeMounts (db-kolla-config mounts passwords directly as keystone.conf)
 func getDbVolumeMounts() []corev1.VolumeMount {
 	return []corev1.VolumeMount{
 		{
@@ -121,6 +121,11 @@ func getDbVolumeMounts() []corev1.VolumeMount {
 			MountPath: "/var/lib/kolla/config_files",
 			ReadOnly:  true,
 			Name:      "db-kolla-config",
+		},
+		{
+			MountPath: "/var/lib/fernet-keys",
+			ReadOnly:  true,
+			Name:      "fernet-keys",
 		},
 		{
 			MountPath: "/var/lib/emptydir",

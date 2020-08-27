@@ -89,6 +89,17 @@ func BootstrapJob(cr *keystonev1beta1.KeystoneAPI, configMapName string, APIEndp
 									Name:  "KOLLA_CONFIG_STRATEGY",
 									Value: "COPY_ALWAYS",
 								},
+								{
+									Name: "AdminPassword",
+									ValueFrom: &corev1.EnvVarSource{
+										SecretKeyRef: &corev1.SecretKeySelector{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: cr.Spec.Secret,
+											},
+											Key: "AdminPassword",
+										},
+									},
+								},
 							},
 							VolumeMounts: getDbVolumeMounts(),
 						},
