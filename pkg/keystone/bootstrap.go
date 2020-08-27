@@ -101,7 +101,7 @@ func BootstrapJob(cr *keystonev1beta1.KeystoneAPI, configMapName string, APIEndp
 									},
 								},
 							},
-							VolumeMounts: getDbVolumeMounts(),
+							VolumeMounts: getVolumeMounts(),
 						},
 					},
 				},

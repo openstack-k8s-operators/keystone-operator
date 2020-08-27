@@ -2,7 +2,7 @@
     "command": "/usr/sbin/httpd",
     "config_files": [
         {
-            "source": "/var/lib/config-data/keystone.conf",
+            "source": "/var/lib/emptydir/keystone.conf",
             "dest": "/etc/keystone/keystone.conf",
             "owner": "keystone",
             "perm": "0600"

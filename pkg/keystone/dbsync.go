@@ -44,7 +44,7 @@ func DbSyncJob(cr *keystonev1beta1.KeystoneAPI, cmName string) *batchv1.Job {
 									Value: "TRUE",
 								},
 							},
-							VolumeMounts: getDbVolumeMounts(),
+							VolumeMounts: getVolumeMounts(),
 						},
 					},
 					InitContainers: []corev1.Container{
