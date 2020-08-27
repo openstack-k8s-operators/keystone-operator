@@ -318,6 +318,18 @@ func getOperatorRules() *[]rbacv1.PolicyRule {
 				"*",
 			},
 		},
+		{
+			APIGroups: []string{
+				"database.openstack.org",
+			},
+			Resources: []string{
+				"mariadbschemas",
+			},
+			Verbs: []string{
+				"get",
+				"create",
+			},
+		},
 	}
 }
 
