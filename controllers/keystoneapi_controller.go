@@ -33,9 +33,11 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -44,8 +46,9 @@ import (
 // KeystoneAPIReconciler reconciles a KeystoneAPI object
 type KeystoneAPIReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Kclient kubernetes.Interface
+	Log     logr.Logger
+	Scheme  *runtime.Scheme
 }
 
 // Reconcile reconcile keystone API requests
@@ -407,7 +410,8 @@ func DeleteJob(job *batchv1.Job, kr *KeystoneAPIReconciler) (bool, error) {
 	err := kr.Client.Get(context.TODO(), types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, foundJob)
 	if err == nil {
 		kr.Log.Info("Deleting Job", "Job.Namespace", job.Namespace, "Job.Name", job.Name)
-		err = kr.Client.Delete(context.TODO(), foundJob)
+		background := metav1.DeletePropagationBackground
+		err = kr.Kclient.BatchV1().Jobs(job.Namespace).Delete(context.TODO(), job.Name, metav1.DeleteOptions{PropagationPolicy: &background})
 		if err != nil {
 			return false, err
 		}
