@@ -5,5 +5,5 @@ bootstrap --bootstrap-password $AdminPassword \
 --bootstrap-role-name admin \
 --bootstrap-admin-url {{.APIEndpoint}} \
 --bootstrap-public-url {{.APIEndpoint}} \
---bootstrap-internal-url http://{{.ServiceName}}/  \
+--bootstrap-internal-url http://{{.ServiceName}}:5000/  \
 --bootstrap-region-id regionOne
