@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -30,10 +29,8 @@ import (
 	keystone "github.com/openstack-k8s-operators/keystone-operator/pkg/keystone"
 	util "github.com/openstack-k8s-operators/lib-common/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
-	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -150,7 +147,7 @@ func (r *KeystoneAPIReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 
 	requeue := true
 	if instance.Status.DbSyncHash != dbSyncHash {
-		requeue, err = EnsureJob(job, r)
+		requeue, err = util.EnsureJob(job, r.Client, r.Log)
 		r.Log.Info("Running DB sync")
 		if err != nil {
 			return ctrl.Result{}, err
@@ -168,7 +165,7 @@ func (r *KeystoneAPIReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 		return ctrl.Result{}, err
 	}
 	// delete the job
-	requeue, err = DeleteJob(job, r)
+	requeue, err = util.DeleteJob(job, r.Kclient, r.Log)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -295,7 +292,7 @@ func (r *KeystoneAPIReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	// Set KeystoneAPI instance as the owner and controller
 	if instance.Status.BootstrapHash != bootstrapHash {
 
-		requeue, err = EnsureJob(bootstrapJob, r)
+		requeue, err = util.EnsureJob(bootstrapJob, r.Client, r.Log)
 		if err != nil {
 			return ctrl.Result{}, err
 		} else if requeue {
@@ -312,7 +309,7 @@ func (r *KeystoneAPIReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	}
 
 	// delete the job
-	requeue, err = DeleteJob(bootstrapJob, r)
+	requeue, err = util.DeleteJob(bootstrapJob, r.Kclient, r.Log)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -366,58 +363,6 @@ func (r *KeystoneAPIReconciler) setDeploymentHash(instance *keystonev1beta1.Keys
 	}
 	return nil
 
-}
-
-// EnsureJob func
-func EnsureJob(job *batchv1.Job, kr *KeystoneAPIReconciler) (bool, error) {
-	// Check if this Job already exists
-	foundJob := &batchv1.Job{}
-	err := kr.Client.Get(context.TODO(), types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, foundJob)
-	if err != nil && k8s_errors.IsNotFound(err) {
-		kr.Log.Info("Creating a new Job", "Job.Namespace", job.Namespace, "Job.Name", job.Name)
-		err = kr.Client.Create(context.TODO(), job)
-		if err != nil {
-			return false, err
-		}
-		return true, err
-	} else if err != nil {
-		kr.Log.Info("EnsureJob err")
-		return true, err
-	} else if foundJob != nil {
-		kr.Log.Info("EnsureJob foundJob")
-		if foundJob.Status.Active > 0 {
-			kr.Log.Info("Job Status Active... requeuing")
-			return true, err
-		} else if foundJob.Status.Failed > 0 {
-			kr.Log.Info("Job Status Failed")
-			return true, k8s_errors.NewInternalError(errors.New("Job Failed. Check job logs"))
-		} else if foundJob.Status.Succeeded > 0 {
-			kr.Log.Info("Job Status Successful")
-		} else {
-			kr.Log.Info("Job Status incomplete... requeuing")
-			return true, err
-		}
-	}
-	return false, nil
-
-}
-
-// DeleteJob func
-func DeleteJob(job *batchv1.Job, kr *KeystoneAPIReconciler) (bool, error) {
-
-	// Check if this Job already exists
-	foundJob := &batchv1.Job{}
-	err := kr.Client.Get(context.TODO(), types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, foundJob)
-	if err == nil {
-		kr.Log.Info("Deleting Job", "Job.Namespace", job.Namespace, "Job.Name", job.Name)
-		background := metav1.DeletePropagationBackground
-		err = kr.Kclient.BatchV1().Jobs(job.Namespace).Delete(context.TODO(), job.Name, metav1.DeleteOptions{PropagationPolicy: &background})
-		if err != nil {
-			return false, err
-		}
-		return true, err
-	}
-	return false, nil
 }
 
 // setAPIEndpoint func
