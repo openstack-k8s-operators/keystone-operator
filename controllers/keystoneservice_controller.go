@@ -18,11 +18,13 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
 	gophercloud "github.com/gophercloud/gophercloud"
 	openstack "github.com/gophercloud/gophercloud/openstack"
+	endpoints "github.com/gophercloud/gophercloud/openstack/identity/v3/endpoints"
 	services "github.com/gophercloud/gophercloud/openstack/identity/v3/services"
 	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	keystone "github.com/openstack-k8s-operators/keystone-operator/pkg/keystone"
@@ -140,6 +142,10 @@ func (r *KeystoneServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		}
 	}
 
+	serviceID := instance.Status.ServiceID
+	reconcileEndpoint(identityClient, serviceID, instance.Spec.ServiceName, instance.Spec.Region, "admin", instance.Spec.AdminURL)
+	reconcileEndpoint(identityClient, serviceID, instance.Spec.ServiceName, instance.Spec.Region, "internal", instance.Spec.InternalURL)
+	reconcileEndpoint(identityClient, serviceID, instance.Spec.ServiceName, instance.Spec.Region, "public", instance.Spec.PublicURL)
 	return ctrl.Result{}, nil
 }
 
@@ -148,4 +154,70 @@ func (r *KeystoneServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&keystonev1beta1.KeystoneService{}).
 		Complete(r)
+}
+
+func reconcileEndpoint(client *gophercloud.ServiceClient, serviceID string, serviceName string, region string, endpointInterface string, url string) error {
+	// Return if url is empty, likely wasn't specified in the request
+	if url == "" {
+		return nil
+	}
+
+	var availability gophercloud.Availability
+	if endpointInterface == "admin" {
+		availability = gophercloud.AvailabilityAdmin
+	} else if endpointInterface == "internal" {
+		availability = gophercloud.AvailabilityInternal
+	} else if endpointInterface == "public" {
+		availability = gophercloud.AvailabilityPublic
+	} else {
+		return fmt.Errorf("Endpoint interface %s not known", endpointInterface)
+	}
+
+	// Fetch existing endpoint and check it's value if it exists
+	listOpts := endpoints.ListOpts{
+		ServiceID:    serviceID,
+		Availability: availability,
+		RegionID:     region,
+	}
+	allPages, err := endpoints.List(client, listOpts).AllPages()
+	if err != nil {
+		return err
+	}
+	allEndpoints, err := endpoints.ExtractEndpoints(allPages)
+	if err != nil {
+		return err
+	}
+	if len(allEndpoints) == 1 {
+		endpoint := allEndpoints[0]
+		if url != endpoint.URL {
+			// Update the endpoint
+			updateOpts := endpoints.UpdateOpts{
+				Availability: availability,
+				Name:         serviceName,
+				Region:       region,
+				ServiceID:    serviceID,
+				URL:          url,
+			}
+			_, err := endpoints.Update(client, endpoint.ID, updateOpts).Extract()
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		// Create the endpoint
+		createOpts := endpoints.CreateOpts{
+			Availability: availability,
+			Name:         serviceName,
+			Region:       region,
+			ServiceID:    serviceID,
+			URL:          url,
+		}
+		_, err := endpoints.Create(client, createOpts).Extract()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+
 }

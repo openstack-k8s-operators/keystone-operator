@@ -36,15 +36,21 @@ spec:
         spec:
           description: KeystoneServiceSpec defines the desired state of KeystoneService
           properties:
+            adminURL:
+              type: string
             authURL:
               type: string
             domainName:
               type: string
             enabled:
               type: boolean
+            internalURL:
+              type: string
             password:
               type: string
             project:
+              type: string
+            publicURL:
               type: string
             region:
               type: string

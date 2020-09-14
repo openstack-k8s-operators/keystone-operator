@@ -33,6 +33,9 @@ type KeystoneServiceSpec struct {
 	Username           string `json:"username,omitempty"`
 	Password           string `json:"password,omitempty"`
 	DomainName         string `json:"domainName,omitempty"`
+	AdminURL           string `json:"adminURL,omitempty"`
+	PublicURL          string `json:"publicURL,omitempty"`
+	InternalURL        string `json:"internalURL,omitempty"`
 }
 
 // KeystoneServiceStatus defines the observed state of KeystoneService

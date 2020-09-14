@@ -96,14 +96,6 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "KeystoneAPI")
 		os.Exit(1)
 	}
-	if err = (&controllers.KeystoneEndpointReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("KeystoneEndpoint"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "KeystoneEndpoint")
-		os.Exit(1)
-	}
 	if err = (&controllers.KeystoneServiceReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("KeystoneService"),
