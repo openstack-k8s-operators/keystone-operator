@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -25,10 +26,13 @@ import (
 	gophercloud "github.com/gophercloud/gophercloud"
 	openstack "github.com/gophercloud/gophercloud/openstack"
 	endpoints "github.com/gophercloud/gophercloud/openstack/identity/v3/endpoints"
+	projects "github.com/gophercloud/gophercloud/openstack/identity/v3/projects"
+	roles "github.com/gophercloud/gophercloud/openstack/identity/v3/roles"
 	services "github.com/gophercloud/gophercloud/openstack/identity/v3/services"
+	users "github.com/gophercloud/gophercloud/openstack/identity/v3/users"
 	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	keystone "github.com/openstack-k8s-operators/keystone-operator/pkg/keystone"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,7 +50,7 @@ type KeystoneServiceReconciler struct {
 // +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneservices/status,verbs=get;update;patch
 func (r *KeystoneServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
-	_ = r.Log.WithValues("keystoneservice", req.NamespacedName)
+	reqLogger := r.Log.WithValues("keystoneservice", req.NamespacedName)
 
 	// your logic here
 
@@ -54,7 +58,7 @@ func (r *KeystoneServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	objectKey, err := client.ObjectKeyFromObject(keystoneAPI)
 	err = r.Client.Get(context.TODO(), objectKey, keystoneAPI)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if k8s_errors.IsNotFound(err) {
 			// No KeystoneAPI instance running, return error
 			r.Log.Error(err, "KeystoneAPI instance not found")
 			return ctrl.Result{}, err
@@ -73,7 +77,7 @@ func (r *KeystoneServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	instance := &keystonev1beta1.KeystoneService{}
 	err = r.Client.Get(context.TODO(), req.NamespacedName, instance)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if k8s_errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
@@ -146,6 +150,13 @@ func (r *KeystoneServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	reconcileEndpoint(identityClient, serviceID, instance.Spec.ServiceName, instance.Spec.Region, "admin", instance.Spec.AdminURL)
 	reconcileEndpoint(identityClient, serviceID, instance.Spec.ServiceName, instance.Spec.Region, "internal", instance.Spec.InternalURL)
 	reconcileEndpoint(identityClient, serviceID, instance.Spec.ServiceName, instance.Spec.Region, "public", instance.Spec.PublicURL)
+
+	err = reconcileUser(reqLogger, identityClient, instance.Spec.ServiceName)
+	if err != nil {
+		r.Log.Error(err, "error")
+		return ctrl.Result{}, err
+	}
+
 	return ctrl.Result{}, nil
 }
 
@@ -220,4 +231,66 @@ func reconcileEndpoint(client *gophercloud.ServiceClient, serviceID string, serv
 
 	return nil
 
+}
+
+func reconcileUser(reqLogger logr.Logger, client *gophercloud.ServiceClient, username string) error {
+	reqLogger.Info("Reconciling User.", "Username", username)
+
+	var serviceProjectID string
+	allPages, err := projects.List(client, projects.ListOpts{Name: "service"}).AllPages()
+	if err != nil {
+		return err
+	}
+	allProjects, err := projects.ExtractProjects(allPages)
+	if err != nil {
+		return err
+	}
+	if len(allProjects) == 1 {
+		serviceProjectID = allProjects[0].ID
+	} else {
+		return errors.New("Multiple projects named \"service\" found")
+	}
+
+	allPages, err = users.List(client, users.ListOpts{Name: username}).AllPages()
+	if err != nil {
+		return err
+	}
+	allUsers, err := users.ExtractUsers(allPages)
+	if err != nil {
+		return err
+	}
+	var userID string
+	if len(allUsers) == 1 {
+		userID = allUsers[0].ID
+	} else {
+		createOpts := users.CreateOpts{
+			Name:             username,
+			DefaultProjectID: serviceProjectID,
+		}
+		user, err := users.Create(client, createOpts).Extract()
+		if err != nil {
+			return err
+		}
+		reqLogger.Info("User Created", "Username", user.Name, "User ID", user.ID)
+		userID = user.ID
+	}
+
+	var adminRoleID string
+	allPages, err = roles.List(client, roles.ListOpts{
+		Name: "admin"}).AllPages()
+	allRoles, err := roles.ExtractRoles(allPages)
+	if len(allRoles) == 1 {
+		adminRoleID = allRoles[0].ID
+	} else {
+		return errors.New("Could not lookup admin role ID")
+	}
+
+	err = roles.Assign(client, adminRoleID, roles.AssignOpts{
+		UserID:    userID,
+		ProjectID: serviceProjectID}).ExtractErr()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
