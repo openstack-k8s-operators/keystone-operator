@@ -114,24 +114,24 @@ func (r *KeystoneAPIReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 		return ctrl.Result{RequeueAfter: time.Second * 5}, err
 	}
 
-	// Create the DB Schema (unstructured so we don't explicitly import mariadb-operator code)
-	schemaObj, err := keystone.SchemaObject(instance)
+	// Create the database (unstructured so we don't explicitly import mariadb-operator code)
+	databaseObj, err := keystone.DatabaseObject(instance)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	foundSchema := &unstructured.Unstructured{}
-	foundSchema.SetGroupVersionKind(schemaObj.GroupVersionKind())
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: schemaObj.GetName(), Namespace: schemaObj.GetNamespace()}, foundSchema)
+	foundDatabase := &unstructured.Unstructured{}
+	foundDatabase.SetGroupVersionKind(databaseObj.GroupVersionKind())
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: databaseObj.GetName(), Namespace: databaseObj.GetNamespace()}, foundDatabase)
 	if err != nil && k8s_errors.IsNotFound(err) {
-		err := r.Client.Create(context.TODO(), &schemaObj)
+		err := r.Client.Create(context.TODO(), &databaseObj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 	} else if err != nil {
 		return ctrl.Result{}, err
 	} else {
-		completed, _, err := unstructured.NestedBool(foundSchema.UnstructuredContent(), "status", "completed")
+		completed, _, err := unstructured.NestedBool(foundDatabase.UnstructuredContent(), "status", "completed")
 		if !completed {
 			r.Log.Info("Waiting on DB to be created...")
 			return ctrl.Result{RequeueAfter: time.Second * 5}, err

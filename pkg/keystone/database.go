@@ -9,17 +9,17 @@ import (
 	"strings"
 )
 
-type schemaOptions struct {
+type databaseOptions struct {
 	DatabaseHostname string
-	SchemaName       string
+	DatabaseName     string
 	Secret           string
 }
 
-// SchemaObject func
-func SchemaObject(cr *keystonev1beta1.KeystoneAPI) (unstructured.Unstructured, error) {
-	opts := schemaOptions{cr.Spec.DatabaseHostname, cr.Name, cr.Spec.Secret}
+// DatabaseObject func
+func DatabaseObject(cr *keystonev1beta1.KeystoneAPI) (unstructured.Unstructured, error) {
+	opts := databaseOptions{cr.Spec.DatabaseHostname, cr.Name, cr.Spec.Secret}
 
-	decoder := yaml.NewYAMLOrJSONDecoder(strings.NewReader(util.ExecuteTemplateFile("mariadb_schema.yaml", &opts)), 4096)
+	decoder := yaml.NewYAMLOrJSONDecoder(strings.NewReader(util.ExecuteTemplateFile("mariadb_database.yaml", &opts)), 4096)
 	u := unstructured.Unstructured{}
 	err := decoder.Decode(&u)
 	u.SetNamespace(cr.Namespace)
