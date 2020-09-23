@@ -32,8 +32,13 @@ import (
 	users "github.com/gophercloud/gophercloud/openstack/identity/v3/users"
 	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	keystone "github.com/openstack-k8s-operators/keystone-operator/pkg/keystone"
+	"gopkg.in/yaml.v2"
+	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -41,8 +46,9 @@ import (
 // KeystoneServiceReconciler reconciles a KeystoneService object
 type KeystoneServiceReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Kclient kubernetes.Interface
+	Log     logr.Logger
+	Scheme  *runtime.Scheme
 }
 
 // Reconcile keystone service requests
@@ -87,12 +93,59 @@ func (r *KeystoneServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		return ctrl.Result{}, err
 	}
 
+	openStackConfigMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "openstack-config",
+			Namespace: instance.Namespace,
+		},
+	}
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: openStackConfigMap.Name, Namespace: instance.Namespace}, openStackConfigMap)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	oscm := keystone.OpenStackConfig{}
+	err = yaml.Unmarshal([]byte(openStackConfigMap.Data["clouds.yaml"]), &oscm)
+	r.Log.Info("openStackConfigMap binary data", "binary", openStackConfigMap.BinaryData)
+	r.Log.Info("openStackConfigMap data", "data", openStackConfigMap.Data)
+	r.Log.Info("oscm", "oscm", oscm)
+
+	openStackConfigSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "openstack-config-secret",
+			Namespace: instance.Namespace,
+		},
+	}
+	err = r.Client.Get(
+		context.TODO(),
+		types.NamespacedName{
+			Name:      openStackConfigSecret.Name,
+			Namespace: instance.Namespace},
+		openStackConfigSecret)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	oscmSecret := keystone.OpenStackConfigSecret{}
+	sec, err := r.Kclient.CoreV1().Secrets(instance.Namespace).Get(context.TODO(), openStackConfigSecret.Name, metav1.GetOptions{})
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	r.Log.Info("sec", "sec", fmt.Sprintf("%s", sec.Data["secure.yaml"]))
+
+	err = yaml.Unmarshal([]byte(fmt.Sprintf("%s", sec.Data["secure.yaml"])), &oscmSecret)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	r.Log.Info("oscmSecret", "secret", oscmSecret)
+
 	opts := gophercloud.AuthOptions{
-		IdentityEndpoint: instance.Spec.AuthURL,
-		Username:         instance.Spec.Username,
-		Password:         instance.Spec.Password,
-		TenantName:       instance.Spec.Project,
-		DomainName:       instance.Spec.DomainName,
+		IdentityEndpoint: oscm.Clouds.Default.Auth.AuthURL,
+		Username:         oscm.Clouds.Default.Auth.UserName,
+		Password:         oscmSecret.Clouds.Default.Auth.Password,
+		TenantName:       oscm.Clouds.Default.Auth.ProjectName,
+		DomainName:       oscm.Clouds.Default.Auth.UserDomainName,
 	}
 
 	provider, err := openstack.AuthenticatedClient(opts)
@@ -247,6 +300,17 @@ func reconcileUser(reqLogger logr.Logger, client *gophercloud.ServiceClient, use
 	}
 	if len(allProjects) == 1 {
 		serviceProjectID = allProjects[0].ID
+	} else if len(allProjects) == 0 {
+		createOpts := projects.CreateOpts{
+			Name:        "service",
+			Description: "service",
+		}
+		reqLogger.Info("Creating service project")
+		project, err := projects.Create(client, createOpts).Extract()
+		if err != nil {
+			return err
+		}
+		serviceProjectID = project.ID
 	} else {
 		return errors.New("Multiple projects named \"service\" found")
 	}

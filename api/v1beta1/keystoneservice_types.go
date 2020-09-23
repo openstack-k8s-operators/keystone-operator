@@ -28,11 +28,6 @@ type KeystoneServiceSpec struct {
 	ServiceDescription string `json:"serviceDescription,omitempty"`
 	Enabled            bool   `json:"enabled,omitempty"`
 	Region             string `json:"region,omitempty"`
-	Project            string `json:"project,omitempty"`
-	AuthURL            string `json:"authURL,omitempty"`
-	Username           string `json:"username,omitempty"`
-	Password           string `json:"password,omitempty"`
-	DomainName         string `json:"domainName,omitempty"`
 	AdminURL           string `json:"adminURL,omitempty"`
 	PublicURL          string `json:"publicURL,omitempty"`
 	InternalURL        string `json:"internalURL,omitempty"`

@@ -38,17 +38,9 @@ spec:
           properties:
             adminURL:
               type: string
-            authURL:
-              type: string
-            domainName:
-              type: string
             enabled:
               type: boolean
             internalURL:
-              type: string
-            password:
-              type: string
-            project:
               type: string
             publicURL:
               type: string
@@ -61,8 +53,6 @@ spec:
             serviceName:
               type: string
             serviceType:
-              type: string
-            username:
               type: string
           type: object
         status:
