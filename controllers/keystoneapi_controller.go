@@ -28,9 +28,11 @@ import (
 	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	keystone "github.com/openstack-k8s-operators/keystone-operator/pkg/keystone"
 	util "github.com/openstack-k8s-operators/lib-common/pkg/util"
+	"gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -314,6 +316,11 @@ func (r *KeystoneAPIReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 		return ctrl.Result{}, err
 	}
 
+	err = r.reconcileConfigMap(instance)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	return ctrl.Result{}, nil
 }
 
@@ -376,4 +383,83 @@ func (r *KeystoneAPIReconciler) setAPIEndpoint(instance *keystonev1beta1.Keyston
 	}
 	return nil
 
+}
+
+func (r *KeystoneAPIReconciler) reconcileConfigMap(instance *keystonev1beta1.KeystoneAPI) error {
+
+	configMapName := "openstack-config"
+	var openStackConfig keystone.OpenStackConfig
+	openStackConfig.Clouds.Default.Auth.AuthURL = instance.Status.APIEndpoint
+	openStackConfig.Clouds.Default.Auth.ProjectName = "admin"
+	openStackConfig.Clouds.Default.Auth.UserName = "admin"
+	openStackConfig.Clouds.Default.Auth.UserDomainName = "Default"
+	openStackConfig.Clouds.Default.Auth.ProjectDomainName = "Default"
+	openStackConfig.Clouds.Default.RegionName = "regionOne"
+
+	cloudsYamlVal, err := yaml.Marshal(&openStackConfig)
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      configMapName,
+			Namespace: instance.Namespace,
+		},
+	}
+
+	r.Log.Info("Reconciling ConfigMap", "ConfigMap.Namespace", instance.Namespace, "configMap.Name", configMapName)
+	_, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, cm, func() error {
+		cm.TypeMeta = metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ConfigMap",
+		}
+		cm.ObjectMeta = metav1.ObjectMeta{
+			Name:      configMapName,
+			Namespace: instance.Namespace,
+		}
+		cm.Data = map[string]string{
+			"clouds.yaml": string(cloudsYamlVal),
+			"OS_CLOUD":    "default",
+		}
+		return nil
+	})
+
+	keystoneSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      instance.Spec.Secret,
+			Namespace: instance.Namespace,
+		},
+		Type: "Opaque",
+	}
+
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: keystoneSecret.Name, Namespace: instance.Namespace}, keystoneSecret)
+	if err != nil {
+		return err
+	}
+
+	secretName := "openstack-config-secret"
+	var openStackConfigSecret keystone.OpenStackConfigSecret
+	openStackConfigSecret.Clouds.Default.Auth.Password = string(keystoneSecret.Data["AdminPassword"])
+
+	secretVal, err := yaml.Marshal(&openStackConfigSecret)
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: instance.Namespace,
+		},
+	}
+
+	_, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, secret, func() error {
+		secret.TypeMeta = metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ConfigMap",
+		}
+		secret.ObjectMeta = metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: instance.Namespace,
+		}
+		secret.StringData = map[string]string{
+			"secure.yaml": string(secretVal),
+		}
+		return nil
+	})
+
+	return err
 }
