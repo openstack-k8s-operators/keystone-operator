@@ -1,0 +1,16 @@
+pipeline {
+    agent none
+    stages {
+        stage('Run after pull request is merged') {
+        when {
+            allOf {
+                environment name: 'CHANGE_ID', value: ''
+                branch 'master'
+            }
+        }
+        steps {
+            build job: 'DFG-converged-openstack-k8s-keystone-operator-merge'
+        }
+        }
+    }
+}
