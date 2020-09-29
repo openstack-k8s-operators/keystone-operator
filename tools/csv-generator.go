@@ -200,13 +200,6 @@ Install and configure OpenStack Keystone.
 						Description: "Keystone API Instance",
 					},
 					{
-						Name:        "keystoneendpoints.keystone.openstack.org",
-						Version:     "v1beta1",
-						Kind:        "KeystoneEndpoint",
-						DisplayName: "KeystoneEndpoint",
-						Description: "Keystone Endpoint",
-					},
-					{
 						Name:        "keystoneservices.keystone.openstack.org",
 						Version:     "v1beta1",
 						Kind:        "KeystoneService",
@@ -311,7 +304,6 @@ func getOperatorRules() *[]rbacv1.PolicyRule {
 			Resources: []string{
 				"*",
 				"keystoneapis",
-				"keystoneendpoints",
 				"keystoneservices",
 			},
 			Verbs: []string{
