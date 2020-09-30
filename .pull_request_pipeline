@@ -14,6 +14,14 @@ pipeline {
                                   ]
                     }
                 }
+                stage('DFG-converged-openstack-k8s-keystone-operator-buildah') {
+                    steps {
+                        build job: 'DFG-converged-openstack-k8s-keystone-operator-buildah',
+                                  parameters: [
+                                      string(name: 'GITHUB_PULL_REQUEST_ID', value: String.valueOf(CHANGE_ID))
+                                  ]
+                    }
+                }
             }
         }
         stage('Pull request merged jobs') {
