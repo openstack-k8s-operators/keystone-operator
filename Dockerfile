@@ -25,7 +25,6 @@ RUN cp -r templates ${DEST_ROOT}/templates
 # prep the bundle
 RUN mkdir -p ${DEST_ROOT}/bundle
 RUN cp config/crd/bases/keystone.openstack.org_keystoneapis.yaml ${DEST_ROOT}/bundle/keystone.openstack.org_keystoneapis_crd.yaml
-RUN cp config/crd/bases/keystone.openstack.org_keystoneendpoints.yaml ${DEST_ROOT}/bundle/keystone.openstack.org_keystoneendpoints_crd.yaml
 RUN cp config/crd/bases/keystone.openstack.org_keystoneservices.yaml ${DEST_ROOT}/bundle/keystone.openstack.org_keystoneservices_crd.yaml
 
 # strip top 2 lines (this resolves parsing in opm which handles this badly)
