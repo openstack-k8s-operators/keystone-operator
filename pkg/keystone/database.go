@@ -3,6 +3,7 @@ package keystone
 import (
 	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	util "github.com/openstack-k8s-operators/lib-common/pkg/util"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"k8s.io/apimachinery/pkg/util/yaml"
@@ -23,5 +24,9 @@ func DatabaseObject(cr *keystonev1beta1.KeystoneAPI) (unstructured.Unstructured,
 	u := unstructured.Unstructured{}
 	err := decoder.Decode(&u)
 	u.SetNamespace(cr.Namespace)
+	// set owner reference
+	oref := metav1.NewControllerRef(cr, cr.GroupVersionKind())
+	u.SetOwnerReferences([]metav1.OwnerReference{*oref})
+
 	return u, err
 }
