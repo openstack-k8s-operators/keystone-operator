@@ -34,8 +34,8 @@ FROM ${OPERATOR_BASE_IMAGE}
 ARG DEST_ROOT=/dest-root
 
 LABEL   com.redhat.component="keystone-operator-container" \
-        name="keystone-operator" \
-        version="1.0" \
+        name="cn-osp/keystone-operator" \
+        version="0.0.2" \
         summary="Keystone Operator" \
         io.k8s.name="keystone-operator" \
         io.k8s.description="This image includes the keystone-operator"
