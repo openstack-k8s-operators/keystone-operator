@@ -204,7 +204,23 @@ func (r *KeystoneServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	reconcileEndpoint(identityClient, serviceID, instance.Spec.ServiceName, instance.Spec.Region, "internal", instance.Spec.InternalURL)
 	reconcileEndpoint(identityClient, serviceID, instance.Spec.ServiceName, instance.Spec.Region, "public", instance.Spec.PublicURL)
 
-	err = reconcileUser(reqLogger, identityClient, instance.Spec.ServiceName)
+	var username string
+	if instance.Spec.Username == "" {
+		username = instance.Spec.ServiceName
+	} else {
+		username = instance.Spec.Username
+	}
+
+	var password string
+	if instance.Spec.Password == "" {
+		// TODO (slagle) use our default password for now until we have
+		// generation.
+		password = "foobar123"
+	} else {
+		password = instance.Spec.Password
+	}
+
+	err = reconcileUser(reqLogger, identityClient, username, password)
 	if err != nil {
 		r.Log.Error(err, "error")
 		return ctrl.Result{}, err
@@ -286,7 +302,7 @@ func reconcileEndpoint(client *gophercloud.ServiceClient, serviceID string, serv
 
 }
 
-func reconcileUser(reqLogger logr.Logger, client *gophercloud.ServiceClient, username string) error {
+func reconcileUser(reqLogger logr.Logger, client *gophercloud.ServiceClient, username string, password string) error {
 	reqLogger.Info("Reconciling User.", "Username", username)
 
 	var serviceProjectID string
@@ -330,6 +346,7 @@ func reconcileUser(reqLogger logr.Logger, client *gophercloud.ServiceClient, use
 		createOpts := users.CreateOpts{
 			Name:             username,
 			DefaultProjectID: serviceProjectID,
+			Password:         password,
 		}
 		user, err := users.Create(client, createOpts).Extract()
 		if err != nil {

@@ -42,6 +42,8 @@ spec:
               type: boolean
             internalURL:
               type: string
+            password:
+              type: string
             publicURL:
               type: string
             region:
@@ -53,6 +55,8 @@ spec:
             serviceName:
               type: string
             serviceType:
+              type: string
+            username:
               type: string
           type: object
         status:
