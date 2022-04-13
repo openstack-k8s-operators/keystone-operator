@@ -1,0 +1,52 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: '[]'
+    capabilities: Basic Install
+  name: keystone-operator.v0.0.0
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: KeystoneAPI is the Schema for the keystoneapis API
+      displayName: Keystone API
+      kind: KeystoneAPI
+      name: keystoneapis.keystone.openstack.org
+      version: v1beta1
+    - description: KeystoneService is the Schema for the keystoneservices API
+      displayName: Keystone Service
+      kind: KeystoneService
+      name: keystoneservices.keystone.openstack.org
+      version: v1beta1
+  description: Keystone Operator
+  displayName: Keystone Operator
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      deployments: null
+    strategy: ""
+  installModes:
+  - supported: false
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - OpenStack
+  - Identity
+  - Keystone
+  links:
+  - name: Keystone Operator
+    url: https://keystone-operator.domain
+  maturity: alpha
+  provider:
+    name: Red Hat Inc.
+    url: https://redhat.com/
+  version: 0.0.0
