@@ -1,5 +1,4 @@
 /*
-Copyright 2022.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,45 +17,453 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+	"reflect"
+	"strings"
+	"time"
 
+	"github.com/go-logr/logr"
+	routev1 "github.com/openshift/api/route/v1"
+	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
+	keystone "github.com/openstack-k8s-operators/keystone-operator/pkg/keystone"
+	util "github.com/openstack-k8s-operators/lib-common/pkg/util"
+	"gopkg.in/yaml.v2"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // KeystoneAPIReconciler reconciles a KeystoneAPI object
 type KeystoneAPIReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Kclient kubernetes.Interface
+	Log     logr.Logger
+	Scheme  *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis/finalizers,verbs=update
-
+// Reconcile reconcile keystone API requests
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the KeystoneAPI object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.11.0/pkg/reconcile
-func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+// +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis/finalizers,verbs=update
+// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;create;update;delete;
+// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;create;update;delete;
+// +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;create;update;delete;
+// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;create;update;delete;
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;create;update;delete;
 
-	// TODO(user): your logic here
+func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	_ = r.Log.WithValues("keystoneapi", req.NamespacedName)
+
+	// Fetch the KeystoneAPI instance
+	instance := &keystonev1beta1.KeystoneAPI{}
+	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			// Request object not found, could have been deleted after reconcile request.
+			// Owned objects are automatically garbage collected.
+			// For additional cleanup logic use finalizers. Return and don't requeue.
+			return ctrl.Result{}, nil
+		}
+		// Error reading the object - requeue the request.
+		return ctrl.Result{}, err
+	}
+
+	// Secret
+	secret := keystone.FernetSecret(instance, instance.Name)
+	// Check if this Secret already exists
+	foundSecret := &corev1.Secret{}
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: secret.Name, Namespace: secret.Namespace}, foundSecret)
+	if err != nil && k8s_errors.IsNotFound(err) {
+		r.Log.Info("Creating a new Secret", "Secret.Namespace", secret.Namespace, "Job.Name", secret.Name)
+		err = r.Client.Create(context.TODO(), secret)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if err := controllerutil.SetControllerReference(instance, secret, r.Scheme); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	// ConfigMap
+	configMap := keystone.ConfigMap(instance, instance.Name)
+	// Check if this ConfigMap already exists
+	foundConfigMap := &corev1.ConfigMap{}
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: configMap.Name, Namespace: configMap.Namespace}, foundConfigMap)
+	if err != nil && k8s_errors.IsNotFound(err) {
+		r.Log.Info("Creating a new ConfigMap", "ConfigMap.Namespace", configMap.Namespace, "Job.Name", configMap.Name)
+		err = r.Client.Create(context.TODO(), configMap)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if err := controllerutil.SetControllerReference(instance, configMap, r.Scheme); err != nil {
+			return ctrl.Result{}, err
+		}
+	} else if !reflect.DeepEqual(configMap.Data, foundConfigMap.Data) {
+		r.Log.Info("Updating ConfigMap")
+		foundConfigMap.Data = configMap.Data
+		err = r.Client.Update(context.TODO(), foundConfigMap)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{RequeueAfter: time.Second * 5}, err
+	}
+
+	// Create the database (unstructured so we don't explicitly import mariadb-operator code)
+	databaseObj, err := keystone.DatabaseObject(instance)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	foundDatabase := &unstructured.Unstructured{}
+	foundDatabase.SetGroupVersionKind(databaseObj.GroupVersionKind())
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: databaseObj.GetName(), Namespace: databaseObj.GetNamespace()}, foundDatabase)
+	if err != nil && k8s_errors.IsNotFound(err) {
+		err := r.Client.Create(context.TODO(), &databaseObj)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	} else if err != nil {
+		return ctrl.Result{}, err
+	} else {
+		completed, _, err := unstructured.NestedBool(foundDatabase.UnstructuredContent(), "status", "completed")
+		if !completed {
+			r.Log.Info("Waiting on DB to be created...")
+			return ctrl.Result{RequeueAfter: time.Second * 5}, err
+		}
+	}
+
+	// Define a new Job object
+	job := keystone.DbSyncJob(instance, instance.Name)
+	dbSyncHash, err := util.ObjectHash(job)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("error calculating DB sync hash: %v", err)
+	}
+
+	requeue := true
+	if instance.Status.DbSyncHash != dbSyncHash {
+		requeue, err = util.EnsureJob(job, r.Client, r.Log)
+		r.Log.Info("Running DB sync")
+		if err != nil {
+			return ctrl.Result{}, err
+		} else if requeue {
+			r.Log.Info("Waiting on DB sync")
+			// Set KeystoneAPI instance as the owner and controller
+			if err := controllerutil.SetControllerReference(instance, job, r.Scheme); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{RequeueAfter: time.Second * 5}, err
+		}
+	}
+	// db sync completed... okay to store the hash to disable it
+	if err := r.setDbSyncHash(instance, dbSyncHash); err != nil {
+		return ctrl.Result{}, err
+	}
+	// delete the job
+	requeue, err = util.DeleteJob(job, r.Kclient, r.Log)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Define a new Deployment object
+	configMapHash, err := util.ObjectHash(configMap)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("error calculating config map hash: %v", err)
+	}
+	r.Log.Info("ConfigMapHash: ", "Data Hash:", configMapHash)
+	deployment := keystone.Deployment(instance, instance.Name, configMapHash)
+	deploymentHash, err := util.ObjectHash(deployment)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("error deployment hash: %v", err)
+	}
+	r.Log.Info("DeploymentHash: ", "Deployment Hash:", deploymentHash)
+
+	// Check if this Deployment already exists
+	foundDeployment := &appsv1.Deployment{}
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: deployment.Name, Namespace: deployment.Namespace}, foundDeployment)
+	if err != nil && k8s_errors.IsNotFound(err) {
+		r.Log.Info("Creating a new Deployment", "Deployment.Namespace", deployment.Namespace, "Deployment.Name", deployment.Name)
+		err = r.Client.Create(context.TODO(), deployment)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		// Set KeystoneAPI instance as the owner and controller
+		if err := controllerutil.SetControllerReference(instance, deployment, r.Scheme); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{RequeueAfter: time.Second * 5}, err
+
+	} else if err != nil {
+		return ctrl.Result{}, err
+	} else {
+
+		if instance.Status.DeploymentHash != deploymentHash {
+			r.Log.Info("Deployment Updated")
+			foundDeployment.Spec = deployment.Spec
+			err = r.Client.Update(context.TODO(), foundDeployment)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+			if err := r.setDeploymentHash(instance, deploymentHash); err != nil {
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{RequeueAfter: time.Second * 10}, err
+		}
+		if foundDeployment.Status.ReadyReplicas == instance.Spec.Replicas {
+			r.Log.Info("Deployment Replicas running:", "Replicas", foundDeployment.Status.ReadyReplicas)
+		} else {
+			r.Log.Info("Waiting on Keystone Deployment...")
+			return ctrl.Result{RequeueAfter: time.Second * 5}, err
+		}
+	}
+
+	// Create the service if none exists
+	var keystonePort int32
+	keystonePort = 5000
+	service := keystone.Service(instance, instance.Name, keystonePort)
+
+	// Check if this Service already exists
+	foundService := &corev1.Service{}
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: service.Name, Namespace: service.Namespace}, foundService)
+	if err != nil && k8s_errors.IsNotFound(err) {
+		r.Log.Info("Creating a new Service", "Service.Namespace", service.Namespace, "Service.Name", service.Name)
+		err = r.Client.Create(context.TODO(), service)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		// Set KeystoneAPI instance as the owner and controller
+		if err := controllerutil.SetControllerReference(instance, service, r.Scheme); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		return ctrl.Result{RequeueAfter: time.Second * 5}, err
+	} else if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Create the route if none exists
+	route := keystone.Route(instance, instance.Name)
+
+	// Check if this Route already exists
+	foundRoute := &routev1.Route{}
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: route.Name, Namespace: route.Namespace}, foundRoute)
+	if err != nil && k8s_errors.IsNotFound(err) {
+		r.Log.Info("Creating a new Route", "Route.Namespace", route.Namespace, "Route.Name", route.Name)
+		err = r.Client.Create(context.TODO(), route)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		// Set Keystone instance as the owner and controller
+		if err := controllerutil.SetControllerReference(instance, route, r.Scheme); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{RequeueAfter: time.Second * 5}, err
+	} else if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Define a new BootStrap Job object
+
+	// Look at the generated route to get the value for the initial endpoint
+	// TODO (slagle): support/assume https
+	var apiEndpoint string
+	if !strings.HasPrefix(foundRoute.Spec.Host, "http") {
+		apiEndpoint = fmt.Sprintf("http://%s", foundRoute.Spec.Host)
+	} else {
+		apiEndpoint = foundRoute.Spec.Host
+	}
+	r.setAPIEndpoint(instance, apiEndpoint)
+
+	bootstrapJob := keystone.BootstrapJob(instance, instance.Name, apiEndpoint)
+	bootstrapHash, err := util.ObjectHash(bootstrapJob)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("error calculating bootstrap hash: %v", err)
+	}
+
+	// Set KeystoneAPI instance as the owner and controller
+	if instance.Status.BootstrapHash != bootstrapHash {
+
+		requeue, err = util.EnsureJob(bootstrapJob, r.Client, r.Log)
+		if err != nil {
+			return ctrl.Result{}, err
+		} else if requeue {
+
+			if err := controllerutil.SetControllerReference(instance, bootstrapJob, r.Scheme); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{RequeueAfter: time.Second * 5}, err
+		}
+	}
+	// bootstrap completed... okay to store the hash to disable it
+	if err := r.setBootstrapHash(instance, bootstrapHash); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// delete the job
+	requeue, err = util.DeleteJob(bootstrapJob, r.Kclient, r.Log)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	err = r.reconcileConfigMap(instance)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
 }
 
-// SetupWithManager sets up the controller with the Manager.
+// SetupWithManager x
 func (r *KeystoneAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&keystonev1beta1.KeystoneAPI{}).
+		Owns(&corev1.Service{}).
+		Owns(&corev1.Secret{}).
+		Owns(&corev1.ConfigMap{}).
+		Owns(&appsv1.Deployment{}).
+		Owns(&routev1.Route{}).
 		Complete(r)
+}
+
+func (r *KeystoneAPIReconciler) setDbSyncHash(instance *keystonev1beta1.KeystoneAPI, hashStr string) error {
+
+	if hashStr != instance.Status.DbSyncHash {
+		instance.Status.DbSyncHash = hashStr
+		if err := r.Client.Status().Update(context.TODO(), instance); err != nil {
+			return err
+		}
+	}
+	return nil
+
+}
+
+func (r *KeystoneAPIReconciler) setBootstrapHash(instance *keystonev1beta1.KeystoneAPI, hashStr string) error {
+
+	if hashStr != instance.Status.BootstrapHash {
+		instance.Status.BootstrapHash = hashStr
+		if err := r.Client.Status().Update(context.TODO(), instance); err != nil {
+			return err
+		}
+	}
+	return nil
+
+}
+
+func (r *KeystoneAPIReconciler) setDeploymentHash(instance *keystonev1beta1.KeystoneAPI, hashStr string) error {
+
+	if hashStr != instance.Status.DeploymentHash {
+		instance.Status.DeploymentHash = hashStr
+		if err := r.Client.Status().Update(context.TODO(), instance); err != nil {
+			return err
+		}
+	}
+	return nil
+
+}
+
+// setAPIEndpoint func
+func (r *KeystoneAPIReconciler) setAPIEndpoint(instance *keystonev1beta1.KeystoneAPI, apiEndpoint string) error {
+
+	if apiEndpoint != instance.Status.APIEndpoint {
+		instance.Status.APIEndpoint = apiEndpoint
+		if err := r.Client.Status().Update(context.TODO(), instance); err != nil {
+			return err
+		}
+	}
+	return nil
+
+}
+
+func (r *KeystoneAPIReconciler) reconcileConfigMap(instance *keystonev1beta1.KeystoneAPI) error {
+
+	configMapName := "openstack-config"
+	var openStackConfig keystone.OpenStackConfig
+	openStackConfig.Clouds.Default.Auth.AuthURL = instance.Status.APIEndpoint
+	openStackConfig.Clouds.Default.Auth.ProjectName = "admin"
+	openStackConfig.Clouds.Default.Auth.UserName = "admin"
+	openStackConfig.Clouds.Default.Auth.UserDomainName = "Default"
+	openStackConfig.Clouds.Default.Auth.ProjectDomainName = "Default"
+	openStackConfig.Clouds.Default.RegionName = "regionOne"
+
+	cloudsYamlVal, err := yaml.Marshal(&openStackConfig)
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      configMapName,
+			Namespace: instance.Namespace,
+		},
+	}
+
+	r.Log.Info("Reconciling ConfigMap", "ConfigMap.Namespace", instance.Namespace, "configMap.Name", configMapName)
+	_, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, cm, func() error {
+		cm.TypeMeta = metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ConfigMap",
+		}
+		cm.ObjectMeta = metav1.ObjectMeta{
+			Name:      configMapName,
+			Namespace: instance.Namespace,
+		}
+		cm.Data = map[string]string{
+			"clouds.yaml": string(cloudsYamlVal),
+			"OS_CLOUD":    "default",
+		}
+		return nil
+	})
+
+	keystoneSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      instance.Spec.Secret,
+			Namespace: instance.Namespace,
+		},
+		Type: "Opaque",
+	}
+
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: keystoneSecret.Name, Namespace: instance.Namespace}, keystoneSecret)
+	if err != nil {
+		return err
+	}
+
+	secretName := "openstack-config-secret"
+	var openStackConfigSecret keystone.OpenStackConfigSecret
+	openStackConfigSecret.Clouds.Default.Auth.Password = string(keystoneSecret.Data["AdminPassword"])
+
+	secretVal, err := yaml.Marshal(&openStackConfigSecret)
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: instance.Namespace,
+		},
+	}
+
+	_, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, secret, func() error {
+		secret.TypeMeta = metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ConfigMap",
+		}
+		secret.ObjectMeta = metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: instance.Namespace,
+		}
+		secret.StringData = map[string]string{
+			"secure.yaml": string(secretVal),
+		}
+		return nil
+	})
+
+	return err
 }
