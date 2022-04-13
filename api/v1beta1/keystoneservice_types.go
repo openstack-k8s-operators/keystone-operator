@@ -22,22 +22,22 @@ import (
 
 // KeystoneServiceSpec defines the desired state of KeystoneService
 type KeystoneServiceSpec struct {
-        ServiceID          string `json:"serviceID,omitempty"`
-        ServiceType        string `json:"serviceType,omitempty"`
-        ServiceName        string `json:"serviceName,omitempty"`
-        ServiceDescription string `json:"serviceDescription,omitempty"`
-        Enabled            bool   `json:"enabled,omitempty"`
-        Region             string `json:"region,omitempty"`
-        AdminURL           string `json:"adminURL,omitempty"`
-        PublicURL          string `json:"publicURL,omitempty"`
-        InternalURL        string `json:"internalURL,omitempty"`
-        Username           string `json:"username,omitempty"`
-        Password           string `json:"password,omitempty"`
+	ServiceID          string `json:"serviceID,omitempty"`
+	ServiceType        string `json:"serviceType,omitempty"`
+	ServiceName        string `json:"serviceName,omitempty"`
+	ServiceDescription string `json:"serviceDescription,omitempty"`
+	Enabled            bool   `json:"enabled,omitempty"`
+	Region             string `json:"region,omitempty"`
+	AdminURL           string `json:"adminURL,omitempty"`
+	PublicURL          string `json:"publicURL,omitempty"`
+	InternalURL        string `json:"internalURL,omitempty"`
+	Username           string `json:"username,omitempty"`
+	Password           string `json:"password,omitempty"`
 }
 
 // KeystoneServiceStatus defines the observed state of KeystoneService
 type KeystoneServiceStatus struct {
-        ServiceID string `json:"serviceID,omitempty"`
+	ServiceID string `json:"serviceID,omitempty"`
 }
 
 //+kubebuilder:object:root=true
