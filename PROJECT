@@ -1,0 +1,9 @@
+domain: openstack.org
+layout:
+- go.kubebuilder.io/v3
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+projectName: keystone-operator
+repo: github.com/openstack-k8s-operators/keystone-operator
+version: "3"
