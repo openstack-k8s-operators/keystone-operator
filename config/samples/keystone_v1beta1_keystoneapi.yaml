@@ -3,4 +3,7 @@ kind: KeystoneAPI
 metadata:
   name: keystoneapi-sample
 spec:
-  # TODO(user): Add fields here
+  containerImage: docker.io/tripleotrain/centos-binary-keystone:current-tripleo
+  replicas: 1
+  databaseHostname: mariadb
+  secret: keystone-secret

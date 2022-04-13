@@ -20,22 +20,28 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // KeystoneAPISpec defines the desired state of KeystoneAPI
 type KeystoneAPISpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of KeystoneAPI. Edit keystoneapi_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// Keystone Database Hostname String
+	DatabaseHostname string `json:"databaseHostname,omitempty"`
+	// Keystone Container Image URL
+	ContainerImage string `json:"containerImage,omitempty"`
+	// Keystone Secret containing DatabasePassword, AdminPassword
+	Secret string `json:"secret,omitempty"`
+	// Replicas
+	Replicas int32 `json:"replicas"`
 }
 
 // KeystoneAPIStatus defines the observed state of KeystoneAPI
 type KeystoneAPIStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// DbSync hash
+	DbSyncHash string `json:"dbSyncHash"`
+	// Deployment hash used to detect changes
+	DeploymentHash string `json:"deploymentHash"`
+	// bootstrap completed
+	BootstrapHash string `json:"bootstrapHash"`
+	// API endpoint
+	APIEndpoint string `json:"apiEndpoint"`
 }
 
 //+kubebuilder:object:root=true
