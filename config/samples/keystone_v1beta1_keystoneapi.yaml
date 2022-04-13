@@ -1,0 +1,6 @@
+apiVersion: keystone.openstack.org/v1beta1
+kind: KeystoneAPI
+metadata:
+  name: keystoneapi-sample
+spec:
+  # TODO(user): Add fields here
