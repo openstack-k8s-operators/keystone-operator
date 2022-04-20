@@ -49,11 +49,6 @@ type KeystoneAPIReconciler struct {
 	Scheme  *runtime.Scheme
 }
 
-// Reconcile reconcile keystone API requests
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.11.0/pkg/reconcile
 // +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis/finalizers,verbs=update
@@ -63,6 +58,7 @@ type KeystoneAPIReconciler struct {
 // +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;create;update;delete;
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;create;update;delete;
 
+// Reconcile reconcile keystone API requests
 func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("keystoneapi", req.NamespacedName)
 
@@ -151,9 +147,8 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, fmt.Errorf("error calculating DB sync hash: %v", err)
 	}
 
-	requeue := true
 	if instance.Status.DbSyncHash != dbSyncHash {
-		requeue, err = util.EnsureJob(job, r.Client, r.Log)
+		requeue, err := util.EnsureJob(job, r.Client, r.Log)
 		r.Log.Info("Running DB sync")
 		if err != nil {
 			return ctrl.Result{}, err
@@ -171,7 +166,7 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 	// delete the job
-	requeue, err = util.DeleteJob(job, r.Kclient, r.Log)
+	_, err = util.DeleteJob(job, r.Kclient, r.Log)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -231,8 +226,7 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// Create the service if none exists
-	var keystonePort int32
-	keystonePort = 5000
+	var keystonePort int32 = 5000
 	service := keystone.Service(instance, instance.Name, keystonePort)
 
 	// Check if this Service already exists
@@ -277,18 +271,20 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
-	// Define a new BootStrap Job object
-
 	// Look at the generated route to get the value for the initial endpoint
-	// TODO (slagle): support/assume https
+	// FIXME: need to support https default here
 	var apiEndpoint string
 	if !strings.HasPrefix(foundRoute.Spec.Host, "http") {
 		apiEndpoint = fmt.Sprintf("http://%s", foundRoute.Spec.Host)
 	} else {
 		apiEndpoint = foundRoute.Spec.Host
 	}
-	r.setAPIEndpoint(instance, apiEndpoint)
+	err = r.setAPIEndpoint(instance, apiEndpoint)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
+	// Define a new BootStrap Job object
 	bootstrapJob := keystone.BootstrapJob(instance, instance.Name, apiEndpoint)
 	bootstrapHash, err := util.ObjectHash(bootstrapJob)
 	if err != nil {
@@ -298,7 +294,7 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// Set KeystoneAPI instance as the owner and controller
 	if instance.Status.BootstrapHash != bootstrapHash {
 
-		requeue, err = util.EnsureJob(bootstrapJob, r.Client, r.Log)
+		requeue, err := util.EnsureJob(bootstrapJob, r.Client, r.Log)
 		if err != nil {
 			return ctrl.Result{}, err
 		} else if requeue {
@@ -315,7 +311,7 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// delete the job
-	requeue, err = util.DeleteJob(bootstrapJob, r.Kclient, r.Log)
+	_, err = util.DeleteJob(bootstrapJob, r.Kclient, r.Log)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -401,6 +397,9 @@ func (r *KeystoneAPIReconciler) reconcileConfigMap(instance *keystonev1beta1.Key
 	openStackConfig.Clouds.Default.RegionName = "regionOne"
 
 	cloudsYamlVal, err := yaml.Marshal(&openStackConfig)
+	if err != nil {
+		return err
+	}
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      configMapName,
@@ -424,6 +423,9 @@ func (r *KeystoneAPIReconciler) reconcileConfigMap(instance *keystonev1beta1.Key
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 
 	keystoneSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -448,6 +450,9 @@ func (r *KeystoneAPIReconciler) reconcileConfigMap(instance *keystonev1beta1.Key
 			Name:      secretName,
 			Namespace: instance.Namespace,
 		},
+	}
+	if err != nil {
+		return err
 	}
 
 	_, err = controllerutil.CreateOrUpdate(context.TODO(), r.Client, secret, func() error {
