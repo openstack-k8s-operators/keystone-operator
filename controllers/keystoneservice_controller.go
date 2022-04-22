@@ -51,14 +51,11 @@ type KeystoneServiceReconciler struct {
 	Scheme  *runtime.Scheme
 }
 
-// Reconcile keystone service requests
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// For more details, check Reconcile and its Result here:
 // +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneservices,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneservices/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneservices/finalizers,verbs=update
 
+// Reconcile keystone service requests
 func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("keystoneservice", req.NamespacedName)
 	keystoneAPI := keystone.API(req.Namespace, "keystone")
@@ -107,6 +104,9 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	oscm := keystone.OpenStackConfig{}
 	err = yaml.Unmarshal([]byte(openStackConfigMap.Data["clouds.yaml"]), &oscm)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 	r.Log.Info("openStackConfigMap binary data", "binary", openStackConfigMap.BinaryData)
 	r.Log.Info("openStackConfigMap data", "data", openStackConfigMap.Data)
 	r.Log.Info("oscm", "oscm", oscm)
@@ -132,9 +132,9 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	r.Log.Info("sec", "sec", fmt.Sprintf("%s", sec.Data["secure.yaml"]))
+	r.Log.Info("sec", "sec", string(sec.Data["secure.yaml"]))
 
-	err = yaml.Unmarshal([]byte(fmt.Sprintf("%s", sec.Data["secure.yaml"])), &oscmSecret)
+	err = yaml.Unmarshal([]byte(string(sec.Data["secure.yaml"])), &oscmSecret)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -155,6 +155,9 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 	endpointOpts := gophercloud.EndpointOpts{Type: "identity", Region: instance.Spec.Region}
 	identityClient, err := openstack.NewIdentityV3(provider, endpointOpts)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	// Create new service if ServiceID is not already set
 	if instance.Status.ServiceID == "" {
@@ -201,9 +204,18 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	serviceID := instance.Status.ServiceID
-	reconcileEndpoint(identityClient, serviceID, instance.Spec.ServiceName, instance.Spec.Region, "admin", instance.Spec.AdminURL)
-	reconcileEndpoint(identityClient, serviceID, instance.Spec.ServiceName, instance.Spec.Region, "internal", instance.Spec.InternalURL)
-	reconcileEndpoint(identityClient, serviceID, instance.Spec.ServiceName, instance.Spec.Region, "public", instance.Spec.PublicURL)
+	err = reconcileEndpoint(identityClient, serviceID, instance.Spec.ServiceName, instance.Spec.Region, "admin", instance.Spec.AdminURL)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	err = reconcileEndpoint(identityClient, serviceID, instance.Spec.ServiceName, instance.Spec.Region, "internal", instance.Spec.InternalURL)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	err = reconcileEndpoint(identityClient, serviceID, instance.Spec.ServiceName, instance.Spec.Region, "public", instance.Spec.PublicURL)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	var username string
 	if instance.Spec.Username == "" {
@@ -214,8 +226,7 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	var password string
 	if instance.Spec.Password == "" {
-		// TODO (slagle) use our default password for now until we have
-		// generation.
+		// FIXME: use our default password for now until we have generation.
 		password = "foobar123"
 	} else {
 		password = instance.Spec.Password
@@ -251,7 +262,7 @@ func reconcileEndpoint(client *gophercloud.ServiceClient, serviceID string, serv
 	} else if endpointInterface == "public" {
 		availability = gophercloud.AvailabilityPublic
 	} else {
-		return fmt.Errorf("Endpoint interface %s not known", endpointInterface)
+		return fmt.Errorf("endpoint interface %s not known", endpointInterface)
 	}
 
 	// Fetch existing endpoint and check it's value if it exists
@@ -329,7 +340,7 @@ func reconcileUser(reqLogger logr.Logger, client *gophercloud.ServiceClient, use
 		}
 		serviceProjectID = project.ID
 	} else {
-		return errors.New("Multiple projects named \"service\" found")
+		return errors.New("multiple projects named \"service\" found")
 	}
 
 	allPages, err = users.List(client, users.ListOpts{Name: username}).AllPages()
@@ -360,11 +371,17 @@ func reconcileUser(reqLogger logr.Logger, client *gophercloud.ServiceClient, use
 	var adminRoleID string
 	allPages, err = roles.List(client, roles.ListOpts{
 		Name: "admin"}).AllPages()
+	if err != nil {
+		return err
+	}
 	allRoles, err := roles.ExtractRoles(allPages)
+	if err != nil {
+		return err
+	}
 	if len(allRoles) == 1 {
 		adminRoleID = allRoles[0].ID
 	} else {
-		return errors.New("Could not lookup admin role ID")
+		return errors.New("could not lookup admin role ID")
 	}
 
 	err = roles.Assign(client, adminRoleID, roles.AssignOpts{
