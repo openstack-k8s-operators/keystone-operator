@@ -47,7 +47,6 @@ spec:
   - name: Keystone Operator
     url: https://github.com/openstack-k8s-operators/keystone-operator
   maturity: beta
-  minKubeVersion: "1.21"
   provider:
     name: Red Hat Inc.
     url: https://redhat.com/
