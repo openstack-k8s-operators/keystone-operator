@@ -52,11 +52,11 @@ type KeystoneAPIReconciler struct {
 // +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis/finalizers,verbs=update
-// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;create;update;delete;
-// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;create;update;delete;
-// +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;create;update;delete;
-// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;create;update;delete;
-// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;create;update;delete;
+// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;update;delete;
+// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;delete;
+// +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;delete;
+// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;delete;
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;delete;
 
 // Reconcile reconcile keystone API requests
 func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
