@@ -1,4 +1,4 @@
-apiVersion: database.openstack.org/v1beta1
+apiVersion: mariadb.openstack.org/v1beta1
 kind: MariaDBDatabase
 metadata:
   name: {{.DatabaseName}}
