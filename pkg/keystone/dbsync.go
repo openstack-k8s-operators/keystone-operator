@@ -2,15 +2,20 @@ package keystone
 
 import (
 	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
-	util "github.com/openstack-k8s-operators/lib-common/pkg/util"
+	common "github.com/openstack-k8s-operators/lib-common/pkg/common"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // DbSyncJob func
-func DbSyncJob(cr *keystonev1beta1.KeystoneAPI, cmName string) *batchv1.Job {
+func DbSyncJob(cr *keystonev1beta1.KeystoneAPI, cmName string) (*batchv1.Job, error) {
 	runAsUser := int64(0)
+
+	passwordInitCmd, err := common.ExecuteTemplateFile("password_init.sh", nil)
+	if err != nil {
+		return nil, err
+	}
 
 	labels := map[string]string{
 		"app": "keystone-api",
@@ -25,7 +30,7 @@ func DbSyncJob(cr *keystonev1beta1.KeystoneAPI, cmName string) *batchv1.Job {
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					RestartPolicy:      "OnFailure",
-					ServiceAccountName: "keystone",
+					ServiceAccountName: "keystone-operator-keystone",
 					Containers: []corev1.Container{
 						{
 							Name: "keystone-db-sync",
@@ -51,7 +56,7 @@ func DbSyncJob(cr *keystonev1beta1.KeystoneAPI, cmName string) *batchv1.Job {
 						{
 							Name:    "keystone-secrets",
 							Image:   cr.Spec.ContainerImage,
-							Command: []string{"/bin/sh", "-c", util.ExecuteTemplateFile("password_init.sh", nil)},
+							Command: []string{"/bin/sh", "-c", passwordInitCmd},
 							Env: []corev1.EnvVar{
 								{
 									Name:  "DatabaseHost",
@@ -96,5 +101,5 @@ func DbSyncJob(cr *keystonev1beta1.KeystoneAPI, cmName string) *batchv1.Job {
 		},
 	}
 	job.Spec.Template.Spec.Volumes = getVolumes(cmName)
-	return job
+	return job, nil
 }

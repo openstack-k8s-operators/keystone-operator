@@ -2,15 +2,19 @@ package keystone
 
 import (
 	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
-	util "github.com/openstack-k8s-operators/lib-common/pkg/util"
+	common "github.com/openstack-k8s-operators/lib-common/pkg/common"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Deployment func
-func Deployment(cr *keystonev1beta1.KeystoneAPI, cmName string, configHash string) *appsv1.Deployment {
+func Deployment(cr *keystonev1beta1.KeystoneAPI, cmName string, configHash string) (*appsv1.Deployment, error) {
 	runAsUser := int64(0)
+	passwordInitCmd, err := common.ExecuteTemplateFile("password_init.sh", nil)
+	if err != nil {
+		return nil, err
+	}
 
 	labels := map[string]string{
 		"app": "keystone-api",
@@ -30,7 +34,7 @@ func Deployment(cr *keystonev1beta1.KeystoneAPI, cmName string, configHash strin
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: "keystone",
+					ServiceAccountName: "keystone-operator-keystone",
 					Containers: []corev1.Container{
 						{
 							Name:  "keystone-api",
@@ -55,7 +59,7 @@ func Deployment(cr *keystonev1beta1.KeystoneAPI, cmName string, configHash strin
 						{
 							Name:    "keystone-secrets",
 							Image:   cr.Spec.ContainerImage,
-							Command: []string{"/bin/sh", "-c", util.ExecuteTemplateFile("password_init.sh", nil)},
+							Command: []string{"/bin/sh", "-c", passwordInitCmd},
 							Env: []corev1.EnvVar{
 								{
 									Name:  "DatabaseHost",
@@ -100,5 +104,5 @@ func Deployment(cr *keystonev1beta1.KeystoneAPI, cmName string, configHash strin
 		},
 	}
 	deployment.Spec.Template.Spec.Volumes = getVolumes(cmName)
-	return deployment
+	return deployment, nil
 }

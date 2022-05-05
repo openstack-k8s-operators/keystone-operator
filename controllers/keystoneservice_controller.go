@@ -54,32 +54,42 @@ type KeystoneServiceReconciler struct {
 // +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneservices,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneservices/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneservices/finalizers,verbs=update
+// +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis,verbs=get;list;watch
 
 // Reconcile keystone service requests
 func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("keystoneservice", req.NamespacedName)
-	keystoneAPI := keystone.API(req.Namespace, "keystone")
-	objectKey := client.ObjectKeyFromObject(keystoneAPI)
-	err := r.Client.Get(context.TODO(), objectKey, keystoneAPI)
-	if err != nil {
-		if k8s_errors.IsNotFound(err) {
-			// No KeystoneAPI instance running, return error
-			r.Log.Error(err, "KeystoneAPI instance not found")
-			return ctrl.Result{}, err
-		}
-		// Error reading the object - requeue the request.
+
+	// Select the 1st KeystoneAPI instance
+	var keystoneAPIInstance keystonev1beta1.KeystoneAPI
+	keystoneAPIList := &keystonev1beta1.KeystoneAPIList{}
+	listOpts := []client.ListOption{
+		client.InNamespace(req.Namespace),
+	}
+
+	if err := r.Client.List(ctx, keystoneAPIList, listOpts...); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	if keystoneAPI.Status.BootstrapHash == "" {
-		r.Log.Info("KeystoneAPI bootstrap not complete.", "BootstrapHash", keystoneAPI.Status.BootstrapHash)
-		return ctrl.Result{RequeueAfter: time.Second * 5}, err
+	if len(keystoneAPIList.Items) == 1 {
+		keystoneAPIInstance = keystoneAPIList.Items[0]
+	} else if len(keystoneAPIList.Items) > 1 {
+		r.Log.Info("Multiple KeystoneAPI instances found.")
+		return ctrl.Result{RequeueAfter: time.Second * 5}, nil
+	} else {
+		r.Log.Info("No KeystoneAPI instances found")
+		return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 	}
-	r.Log.Info("KeystoneAPI bootstrap complete.", "BootstrapHash", keystoneAPI.Status.BootstrapHash)
+
+	if keystoneAPIInstance.Status.BootstrapHash == "" {
+		r.Log.Info("KeystoneAPI bootstrap not complete.", "BootstrapHash", keystoneAPIInstance.Status.BootstrapHash)
+		return ctrl.Result{RequeueAfter: time.Second * 5}, nil
+	}
+	r.Log.Info("KeystoneAPI bootstrap complete.", "BootstrapHash", keystoneAPIInstance.Status.BootstrapHash)
 
 	// Fetch the KeystoneService instance
 	instance := &keystonev1beta1.KeystoneService{}
-	err = r.Client.Get(context.TODO(), req.NamespacedName, instance)
+	err := r.Client.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -97,7 +107,7 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			Namespace: instance.Namespace,
 		},
 	}
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: openStackConfigMap.Name, Namespace: instance.Namespace}, openStackConfigMap)
+	err = r.Client.Get(ctx, types.NamespacedName{Name: openStackConfigMap.Name, Namespace: instance.Namespace}, openStackConfigMap)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -118,7 +128,7 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		},
 	}
 	err = r.Client.Get(
-		context.TODO(),
+		ctx,
 		types.NamespacedName{
 			Name:      openStackConfigSecret.Name,
 			Namespace: instance.Namespace},
@@ -128,7 +138,7 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	oscmSecret := keystone.OpenStackConfigSecret{}
-	sec, err := r.Kclient.CoreV1().Secrets(instance.Namespace).Get(context.TODO(), openStackConfigSecret.Name, metav1.GetOptions{})
+	sec, err := r.Kclient.CoreV1().Secrets(instance.Namespace).Get(ctx, openStackConfigSecret.Name, metav1.GetOptions{})
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -181,7 +191,7 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		r.Log.Info("service.ID", "service.ID", service.ID)
 		if instance.Status.ServiceID != service.ID {
 			instance.Status.ServiceID = service.ID
-			if err := r.Client.Status().Update(context.TODO(), instance); err != nil {
+			if err := r.Client.Status().Update(ctx, instance); err != nil {
 				r.Log.Error(err, "error")
 				return ctrl.Result{}, err
 			}

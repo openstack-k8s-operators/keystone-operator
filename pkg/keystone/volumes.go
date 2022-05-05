@@ -19,7 +19,7 @@ func getVolumes(name string) []corev1.Volume {
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: name,
+						Name: "keystone-" + name,
 					},
 					Items: []corev1.KeyToPath{
 						{
@@ -35,7 +35,7 @@ func getVolumes(name string) []corev1.Volume {
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: name,
+						Name: "keystone-" + name,
 					},
 					Items: []corev1.KeyToPath{
 						{
@@ -54,7 +54,7 @@ func getVolumes(name string) []corev1.Volume {
 			Name: "fernet-keys",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: name,
+					SecretName: "keystone-" + name,
 				},
 			},
 		},

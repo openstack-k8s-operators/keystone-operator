@@ -3,7 +3,7 @@ package keystone
 import (
 	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 
-	util "github.com/openstack-k8s-operators/lib-common/pkg/util"
+	common "github.com/openstack-k8s-operators/lib-common/pkg/common"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,11 +15,20 @@ type bootstrapOptions struct {
 }
 
 // BootstrapJob func
-func BootstrapJob(cr *keystonev1beta1.KeystoneAPI, configMapName string, APIEndpoint string) *batchv1.Job {
+func BootstrapJob(cr *keystonev1beta1.KeystoneAPI, configMapName string, APIEndpoint string) (*batchv1.Job, error) {
 
 	// NOTE: as a convention the configmap is name the same as the service
 	opts := bootstrapOptions{APIEndpoint, configMapName}
 	runAsUser := int64(0)
+
+	passwordInitCmd, err := common.ExecuteTemplateFile("password_init.sh", &opts)
+	if err != nil {
+		return nil, err
+	}
+	bootstrapCmd, err := common.ExecuteTemplateFile("bootstrap.sh", &opts)
+	if err != nil {
+		return nil, err
+	}
 
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -30,13 +39,13 @@ func BootstrapJob(cr *keystonev1beta1.KeystoneAPI, configMapName string, APIEndp
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					RestartPolicy:      "OnFailure",
-					ServiceAccountName: "keystone",
+					ServiceAccountName: "keystone-operator-keystone",
 
 					InitContainers: []corev1.Container{
 						{
 							Name:    "keystone-secrets",
 							Image:   cr.Spec.ContainerImage,
-							Command: []string{"/bin/sh", "-c", util.ExecuteTemplateFile("password_init.sh", nil)},
+							Command: []string{"/bin/sh", "-c", passwordInitCmd},
 							Env: []corev1.EnvVar{
 								{
 									Name:  "DatabaseHost",
@@ -80,7 +89,7 @@ func BootstrapJob(cr *keystonev1beta1.KeystoneAPI, configMapName string, APIEndp
 						{
 							Name:    configMapName + "-bootstrap",
 							Image:   cr.Spec.ContainerImage,
-							Command: []string{"/bin/bash", "-c", util.ExecuteTemplateFile("bootstrap.sh", &opts)},
+							Command: []string{"/bin/bash", "-c", bootstrapCmd},
 							SecurityContext: &corev1.SecurityContext{
 								RunAsUser: &runAsUser,
 							},
@@ -109,5 +118,5 @@ func BootstrapJob(cr *keystonev1beta1.KeystoneAPI, configMapName string, APIEndp
 		},
 	}
 	job.Spec.Template.Spec.Volumes = getVolumes(configMapName)
-	return job
+	return job, nil
 }
