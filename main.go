@@ -95,6 +95,7 @@ func main() {
 		Client:  mgr.GetClient(),
 		Scheme:  mgr.GetScheme(),
 		Kclient: kclient,
+		Log:     ctrl.Log.WithName("controllers").WithName("KeystoneAPI"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "KeystoneAPI")
 		os.Exit(1)
@@ -104,6 +105,7 @@ func main() {
 		Client:  mgr.GetClient(),
 		Scheme:  mgr.GetScheme(),
 		Kclient: kclient,
+		Log:     ctrl.Log.WithName("controllers").WithName("KeystoneService"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "KeystoneService")
 		os.Exit(1)
