@@ -5,5 +5,5 @@ metadata:
 spec:
   containerImage: docker.io/tripleotrain/centos-binary-keystone:current-tripleo
   replicas: 1
-  databaseHostname: mariadb
+  databaseHostname: openstack
   secret: keystone-secret

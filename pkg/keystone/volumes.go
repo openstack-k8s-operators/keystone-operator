@@ -23,7 +23,7 @@ func getVolumes(name string) []corev1.Volume {
 					},
 					Items: []corev1.KeyToPath{
 						{
-							Key:  "config.json",
+							Key:  "kolla_config.json",
 							Path: "config.json",
 						},
 					},

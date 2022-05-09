@@ -443,7 +443,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	cmLabels := keystone.GetLabels(instance.Name)
 	templateParameters := make(map[string]interface{})
 
-	// ConfigMaps for mariadb
+	// ConfigMaps for keystoneapi
 	cms := []common.Template{
 		// ScriptsConfigMap
 		{
