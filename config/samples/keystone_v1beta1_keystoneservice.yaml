@@ -1,7 +1,7 @@
 apiVersion: keystone.openstack.org/v1beta1
 kind: KeystoneService
 metadata:
-  name: keystoneservice-sample
+  name: openstack
 spec:
   username: admin
   password: foobar123
