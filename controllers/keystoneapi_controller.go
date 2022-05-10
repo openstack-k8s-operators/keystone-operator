@@ -381,8 +381,8 @@ func (r *KeystoneAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&appsv1.Deployment{}).
+		Owns(&routev1.Route{}).
 		Complete(r)
-		//Owns(&routev1.Route{}).
 }
 
 func (r *KeystoneAPIReconciler) setDbSyncHash(ctx context.Context, instance *keystonev1beta1.KeystoneAPI, hashStr string) error {
