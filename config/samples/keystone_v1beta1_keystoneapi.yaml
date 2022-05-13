@@ -1,7 +1,7 @@
 apiVersion: keystone.openstack.org/v1beta1
 kind: KeystoneAPI
 metadata:
-  name: openstack
+  name: keystone
 spec:
   containerImage: quay.io/tripleotraincentos8/centos-binary-keystone:current-tripleo
   replicas: 1
