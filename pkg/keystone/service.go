@@ -14,7 +14,7 @@ func Service(cr *keystonev1beta1.KeystoneAPI, cmName string, servicePort int32) 
 	}
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cmName,
+			Name:      "keystone-" + cmName,
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},

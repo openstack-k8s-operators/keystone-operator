@@ -19,7 +19,7 @@ type databaseOptions struct {
 
 // DatabaseObject func
 func DatabaseObject(cr *keystonev1beta1.KeystoneAPI) (unstructured.Unstructured, error) {
-	opts := databaseOptions{cr.Spec.DatabaseHostname, cr.Name, cr.Spec.Secret}
+	opts := databaseOptions{cr.Spec.DatabaseHostname, "keystone-" + cr.Name, cr.Spec.Secret}
 	u := unstructured.Unstructured{}
 	dbYAML, err := common.ExecuteTemplateFile("mariadb_database.yaml", &opts)
 	if err != nil {

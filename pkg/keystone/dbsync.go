@@ -22,7 +22,7 @@ func DbSyncJob(cr *keystonev1beta1.KeystoneAPI, cmName string) (*batchv1.Job, er
 	}
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cmName + "-db-sync",
+			Name:      "keystone-db-sync-" + cmName,
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},

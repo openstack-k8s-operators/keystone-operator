@@ -23,7 +23,7 @@ func Route(cr *keystonev1beta1.KeystoneAPI, cmName string) *routev1.Route {
 	}
 	route := &routev1.Route{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cmName,
+			Name:      "keystone-" + cmName,
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},

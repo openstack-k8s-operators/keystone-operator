@@ -21,7 +21,7 @@ func Deployment(cr *keystonev1beta1.KeystoneAPI, cmName string, configHash strin
 	}
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cmName,
+			Name:      "keystone-" + cmName,
 			Namespace: cr.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
