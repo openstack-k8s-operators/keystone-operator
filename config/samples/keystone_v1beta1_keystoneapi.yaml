@@ -3,7 +3,20 @@ kind: KeystoneAPI
 metadata:
   name: keystone
 spec:
+  adminProject: admin
+  adminRole: admin
+  adminUser: admin
   containerImage: quay.io/tripleotraincentos8/centos-binary-keystone:current-tripleo
+  customServiceConfig: |
+    [DEFAULT]
+    debug = true
+  databaseInstance: openstack
+  databaseUser: keystone
+  debug:
+    bootstrap: false
+    dbSync: false
+    service: false
+  preserveJobs: false
+  region: regionOne
   replicas: 1
-  databaseHostname: openstack
   secret: keystone-secret

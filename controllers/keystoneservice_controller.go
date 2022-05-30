@@ -30,7 +30,7 @@ import (
 	roles "github.com/gophercloud/gophercloud/openstack/identity/v3/roles"
 	services "github.com/gophercloud/gophercloud/openstack/identity/v3/services"
 	users "github.com/gophercloud/gophercloud/openstack/identity/v3/users"
-	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
+	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	keystone "github.com/openstack-k8s-operators/keystone-operator/pkg/keystone"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
@@ -61,8 +61,8 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	_ = r.Log.WithValues("keystoneservice", req.NamespacedName)
 
 	// Select the 1st KeystoneAPI instance
-	var keystoneAPIInstance keystonev1beta1.KeystoneAPI
-	keystoneAPIList := &keystonev1beta1.KeystoneAPIList{}
+	var keystoneAPIInstance keystonev1.KeystoneAPI
+	keystoneAPIList := &keystonev1.KeystoneAPIList{}
 	listOpts := []client.ListOption{
 		client.InNamespace(req.Namespace),
 	}
@@ -81,14 +81,14 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 	}
 
-	if keystoneAPIInstance.Status.BootstrapHash == "" {
-		r.Log.Info("KeystoneAPI bootstrap not complete.", "BootstrapHash", keystoneAPIInstance.Status.BootstrapHash)
+	if hash, ok := keystoneAPIInstance.Status.Hash[keystonev1.BootstrapHash]; !ok {
+		r.Log.Info("KeystoneAPI bootstrap not complete.", "BootstrapHash", hash)
 		return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 	}
-	r.Log.Info("KeystoneAPI bootstrap complete.", "BootstrapHash", keystoneAPIInstance.Status.BootstrapHash)
+	r.Log.Info("KeystoneAPI bootstrap complete.", "BootstrapHash", keystoneAPIInstance.Status.Hash[keystonev1.BootstrapHash])
 
 	// Fetch the KeystoneService instance
-	instance := &keystonev1beta1.KeystoneService{}
+	instance := &keystonev1.KeystoneService{}
 	err := r.Client.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
@@ -254,7 +254,7 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 // SetupWithManager x
 func (r *KeystoneServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&keystonev1beta1.KeystoneService{}).
+		For(&keystonev1.KeystoneService{}).
 		Complete(r)
 }
 
