@@ -16,58 +16,55 @@ limitations under the License.
 package keystone
 
 import (
-	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
-	common "github.com/openstack-k8s-operators/lib-common/pkg/common"
+	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 
-	appsv1 "k8s.io/api/apps/v1"
+	common "github.com/openstack-k8s-operators/lib-common/pkg/common"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
-	// ServiceCommand -
-	ServiceCommand = "/usr/local/bin/kolla_set_configs && /usr/local/bin/kolla_start"
+	// DBSyncCommand -
+	DBSyncCommand = "/usr/local/bin/kolla_set_configs && /usr/local/bin/kolla_start"
 )
 
-// Deployment func
-func Deployment(
-	instance *keystonev1beta1.KeystoneAPI,
-	configHash string,
-	labels map[string]string,
-) *appsv1.Deployment {
+// DbSyncJob func
+func DbSyncJob(
+	instance *keystonev1.KeystoneAPI,
+) *batchv1.Job {
 	runAsUser := int64(0)
 
+	labels := map[string]string{
+		"app": "keystone-api",
+	}
+
 	args := []string{"-c"}
-	if instance.Spec.Debug.Service {
+	if instance.Spec.Debug.DBSync {
 		args = append(args, DebugCommand)
 	} else {
-		args = append(args, ServiceCommand)
+		args = append(args, DBSyncCommand)
 	}
 
 	envVars := map[string]common.EnvSetter{}
 	envVars["KOLLA_CONFIG_FILE"] = common.EnvValue(KollaConfig)
 	envVars["KOLLA_CONFIG_STRATEGY"] = common.EnvValue("COPY_ALWAYS")
-	envVars["CONFIG_HASH"] = common.EnvValue(configHash)
+	envVars["KOLLA_BOOTSTRAP"] = common.EnvValue("true")
 
-	deployment := &appsv1.Deployment{
+	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      ServiceName,
+			Name:      ServiceName + "-db-sync",
 			Namespace: instance.Namespace,
+			Labels:    labels,
 		},
-		Spec: appsv1.DeploymentSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
-			},
-			Replicas: &instance.Spec.Replicas,
+		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
-				},
 				Spec: corev1.PodSpec{
+					RestartPolicy:      "OnFailure",
 					ServiceAccountName: ServiceAccount,
 					Containers: []corev1.Container{
 						{
-							Name: ServiceName + "-api",
+							Name: ServiceName + "-db-sync",
 							Command: []string{
 								"/bin/bash",
 							},
@@ -84,20 +81,8 @@ func Deployment(
 			},
 		},
 	}
-	deployment.Spec.Template.Spec.Volumes = getVolumes(instance.Name)
-	// If possible two pods of the same service should not
-	// run on the same worker node. If this is not possible
-	// the get still created on the same worker node.
-	deployment.Spec.Template.Spec.Affinity = common.DistributePods(
-		AppSelector,
-		[]string{
-			ServiceName,
-		},
-		corev1.LabelHostname,
-	)
-	if instance.Spec.NodeSelector != nil && len(instance.Spec.NodeSelector) > 0 {
-		deployment.Spec.Template.Spec.NodeSelector = instance.Spec.NodeSelector
-	}
+
+	job.Spec.Template.Spec.Volumes = getVolumes(ServiceName)
 
 	initContainerDetails := APIDetails{
 		ContainerImage: instance.Spec.ContainerImage,
@@ -107,7 +92,7 @@ func Deployment(
 		OSPSecret:      instance.Spec.Secret,
 		VolumeMounts:   getInitVolumeMounts(),
 	}
-	deployment.Spec.Template.Spec.InitContainers = initContainer(initContainerDetails)
+	job.Spec.Template.Spec.InitContainers = initContainer(initContainerDetails)
 
-	return deployment
+	return job
 }

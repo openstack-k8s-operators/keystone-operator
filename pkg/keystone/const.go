@@ -42,15 +42,6 @@ const (
 
 	// KollaConfig -
 	KollaConfig = "/var/lib/config-data/merged/keystone-api-config.json"
-
-	// InitContainerCommand -
-	InitContainerCommand = "/usr/local/bin/container-scripts/init.sh"
-	// DBSyncCommand -
-	DBSyncCommand = "/usr/local/bin/kolla_set_configs && /usr/local/bin/kolla_start"
-	// BootStrapCommand -
-	BootStrapCommand = "/usr/local/bin/kolla_set_configs && keystone-manage bootstrap"
-	// ServiceCommand -
-	ServiceCommand = "/usr/local/bin/kolla_set_configs && /usr/local/bin/kolla_start"
 	// DebugCommand -
 	DebugCommand = "/usr/local/bin/kolla_set_configs && /bin/sleep infinity"
 )

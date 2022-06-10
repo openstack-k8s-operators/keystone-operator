@@ -31,6 +31,11 @@ type APIDetails struct {
 	VolumeMounts   []corev1.VolumeMount
 }
 
+const (
+	// InitContainerCommand -
+	InitContainerCommand = "/usr/local/bin/container-scripts/init.sh"
+)
+
 // initContainer - init container for keystone api pods
 func initContainer(init APIDetails) []corev1.Container {
 	runAsUser := int64(0)
