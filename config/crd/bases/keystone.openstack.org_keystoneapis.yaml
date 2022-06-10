@@ -35,42 +35,140 @@ spec:
           spec:
             description: KeystoneAPISpec defines the desired state of KeystoneAPI
             properties:
+              adminProject:
+                default: admin
+                description: AdminProject - admin project name
+                type: string
+              adminRole:
+                default: admin
+                description: AdminRole - admin role name
+                type: string
+              adminUser:
+                default: admin
+                description: AdminUser - admin user name
+                type: string
               containerImage:
                 description: Keystone Container Image URL
                 type: string
-              databaseHostname:
-                description: Keystone Database Hostname String
+              customServiceConfig:
+                default: '# add your customization here'
+                description: CustomServiceConfig - customize the service config using
+                  this parameter to change service defaults, or overwrite rendered
+                  information using raw OpenStack config format. The content gets
+                  added to to /etc/<service>/<service>.conf.d directory as custom.conf
+                  file.
+                type: string
+              databaseInstance:
+                description: MariaDB instance name Right now required by the maridb-operator
+                  to get the credentials from the instance to create the DB Might
+                  not be required in future
+                type: string
+              databaseUser:
+                default: keystone
+                description: 'DatabaseUser - optional username used for keystone DB,
+                  defaults to keystone TODO: -> implement needs work in mariadb-operator,
+                  right now only keystone'
+                type: string
+              debug:
+                description: Debug - enable debug for different deploy stages. If
+                  an init container is used, it runs and the actual action pod gets
+                  started with sleep infinity
+                properties:
+                  bootstrap:
+                    default: false
+                    description: ReadyCount enable debug
+                    type: boolean
+                  dbSync:
+                    default: false
+                    description: DBSync enable debug
+                    type: boolean
+                  service:
+                    default: false
+                    description: Service enable debug
+                    type: boolean
+                type: object
+              defaultConfigOverwrite:
+                additionalProperties:
+                  type: string
+                description: 'ConfigOverwrite - interface to overwrite default config
+                  files like e.g. logging.conf or policy.json. But can also be used
+                  to add additional files. Those get added to the service config dir
+                  in /etc/<service> . TODO: -> implement'
+                type: object
+              nodeSelector:
+                additionalProperties:
+                  type: string
+                description: NodeSelector to target subset of worker nodes running
+                  this service
+                type: object
+              preserveJobs:
+                default: false
+                description: PreserveJobs - do not delete jobs after they finished
+                  e.g. to check logs
+                type: boolean
+              region:
+                default: regionOne
+                description: Region - optional region name for the keystone service
                 type: string
               replicas:
-                description: Replicas
+                default: 1
+                description: Replicas of keystone API to run
                 format: int32
+                maximum: 32
+                minimum: 0
                 type: integer
               secret:
-                description: Keystone Secret containing DatabasePassword, AdminPassword
+                description: Secret containing OpenStack password information for
+                  keystone KeystoneDatabasePassword, AdminPassword
                 type: string
-            required:
-            - replicas
             type: object
           status:
             description: KeystoneAPIStatus defines the observed state of KeystoneAPI
             properties:
               apiEndpoint:
+                additionalProperties:
+                  type: string
                 description: API endpoint
+                type: object
+              conditions:
+                description: Conditions
+                items:
+                  description: Condition - A particular overall condition of a certain
+                    resource
+                  properties:
+                    lastHearbeatTime:
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      description: Reason - Why a particular condition is true, false
+                        or unknown
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      description: Type - A summarizing name for a given condition
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              databaseHostname:
+                description: Keystone Database Hostname
                 type: string
-              bootstrapHash:
-                description: bootstrap completed
-                type: string
-              dbSyncHash:
-                description: DbSync hash
-                type: string
-              deploymentHash:
-                description: Deployment hash used to detect changes
-                type: string
-            required:
-            - apiEndpoint
-            - bootstrapHash
-            - dbSyncHash
-            - deploymentHash
+              hash:
+                additionalProperties:
+                  type: string
+                description: Map of hashes to track e.g. job status
+                type: object
+              readyCount:
+                description: ReadyCount of keystone API instances
+                type: integer
             type: object
         type: object
     served: true

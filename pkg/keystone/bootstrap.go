@@ -1,3 +1,18 @@
+/*
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package keystone
 
 import (
@@ -9,101 +24,73 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type bootstrapOptions struct {
-	APIEndpoint string
-	ServiceName string
-}
+const (
+	// BootstrapCommand -
+	BootstrapCommand = "/usr/local/bin/kolla_set_configs && keystone-manage bootstrap"
+)
 
 // BootstrapJob func
-func BootstrapJob(cr *keystonev1beta1.KeystoneAPI, configMapName string, APIEndpoint string) (*batchv1.Job, error) {
-
-	// NOTE: as a convention the configmap is name the same as the service
-	opts := bootstrapOptions{APIEndpoint, configMapName}
+func BootstrapJob(
+	instance *keystonev1beta1.KeystoneAPI,
+	endpoints map[string]string,
+) *batchv1.Job {
 	runAsUser := int64(0)
 
-	passwordInitCmd, err := common.ExecuteTemplateFile("password_init.sh", &opts)
-	if err != nil {
-		return nil, err
+	args := []string{"-c"}
+	if instance.Spec.Debug.Bootstrap {
+		args = append(args, DebugCommand)
+	} else {
+		args = append(args, BootstrapCommand)
 	}
-	bootstrapCmd, err := common.ExecuteTemplateFile("bootstrap.sh", &opts)
-	if err != nil {
-		return nil, err
+
+	envVars := map[string]common.EnvSetter{}
+	envVars["KOLLA_CONFIG_FILE"] = common.EnvValue(KollaConfig)
+	envVars["KOLLA_CONFIG_STRATEGY"] = common.EnvValue("COPY_ALWAYS")
+	envVars["KOLLA_BOOTSTRAP"] = common.EnvValue("true")
+	envVars["OS_BOOTSTRAP_USERNAME"] = common.EnvValue(instance.Spec.AdminUser)
+	envVars["OS_BOOTSTRAP_PROJECT_NAME"] = common.EnvValue(instance.Spec.AdminProject)
+	envVars["OS_BOOTSTRAP_ROLE_NAME"] = common.EnvValue(instance.Spec.AdminRole)
+	envVars["OS_BOOTSTRAP_SERVICE_NAME"] = common.EnvValue(ServiceName)
+	envVars["OS_BOOTSTRAP_REGION_ID"] = common.EnvValue(instance.Spec.Region)
+
+	if _, ok := endpoints["admin"]; ok {
+		envVars["OS_BOOTSTRAP_ADMIN_URL"] = common.EnvValue(endpoints["admin"])
+	}
+	if _, ok := endpoints["internal"]; ok {
+		envVars["OS_BOOTSTRAP_INTERNAL_URL"] = common.EnvValue(endpoints["internal"])
+	}
+	if _, ok := endpoints["public"]; ok {
+		envVars["OS_BOOTSTRAP_PUBLIC_URL"] = common.EnvValue(endpoints["public"])
 	}
 
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      configMapName + "-bootstrap",
-			Namespace: cr.Namespace,
+			Name:      ServiceName + "-bootstrap",
+			Namespace: instance.Namespace,
 		},
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					RestartPolicy:      "OnFailure",
-					ServiceAccountName: "keystone-operator-keystone",
-
-					InitContainers: []corev1.Container{
-						{
-							Name:    "keystone-secrets",
-							Image:   cr.Spec.ContainerImage,
-							Command: []string{"/bin/sh", "-c", passwordInitCmd},
-							Env: []corev1.EnvVar{
-								{
-									Name:  "DatabaseHost",
-									Value: cr.Spec.DatabaseHostname,
-								},
-								{
-									Name:  "DatabaseUser",
-									Value: cr.Name,
-								},
-								{
-									Name:  "DatabaseSchema",
-									Value: cr.Name,
-								},
-								{
-									Name: "DatabasePassword",
-									ValueFrom: &corev1.EnvVarSource{
-										SecretKeyRef: &corev1.SecretKeySelector{
-											LocalObjectReference: corev1.LocalObjectReference{
-												Name: cr.Spec.Secret,
-											},
-											Key: "DatabasePassword",
-										},
-									},
-								},
-								{
-									Name: "AdminPassword",
-									ValueFrom: &corev1.EnvVarSource{
-										SecretKeyRef: &corev1.SecretKeySelector{
-											LocalObjectReference: corev1.LocalObjectReference{
-												Name: cr.Spec.Secret,
-											},
-											Key: "AdminPassword",
-										},
-									},
-								},
-							},
-							VolumeMounts: getInitVolumeMounts(),
-						},
-					},
+					ServiceAccountName: ServiceAccount,
 					Containers: []corev1.Container{
 						{
-							Name:    configMapName + "-bootstrap",
-							Image:   cr.Spec.ContainerImage,
-							Command: []string{"/bin/bash", "-c", bootstrapCmd},
+							Name:  ServiceName + "-bootstrap",
+							Image: instance.Spec.ContainerImage,
+							Command: []string{
+								"/bin/bash",
+							},
+							Args: args,
 							SecurityContext: &corev1.SecurityContext{
 								RunAsUser: &runAsUser,
 							},
 							Env: []corev1.EnvVar{
 								{
-									Name:  "KOLLA_CONFIG_STRATEGY",
-									Value: "COPY_ALWAYS",
-								},
-								{
-									Name: "AdminPassword",
+									Name: "OS_BOOTSTRAP_PASSWORD",
 									ValueFrom: &corev1.EnvVarSource{
 										SecretKeyRef: &corev1.SecretKeySelector{
 											LocalObjectReference: corev1.LocalObjectReference{
-												Name: cr.Spec.Secret,
+												Name: instance.Spec.Secret,
 											},
 											Key: "AdminPassword",
 										},
@@ -117,6 +104,18 @@ func BootstrapJob(cr *keystonev1beta1.KeystoneAPI, configMapName string, APIEndp
 			},
 		},
 	}
-	job.Spec.Template.Spec.Volumes = getVolumes(configMapName)
-	return job, nil
+	job.Spec.Template.Spec.Containers[0].Env = common.MergeEnvs(job.Spec.Template.Spec.Containers[0].Env, envVars)
+	job.Spec.Template.Spec.Volumes = getVolumes(instance.Name)
+
+	initContainerDetails := APIDetails{
+		ContainerImage: instance.Spec.ContainerImage,
+		DatabaseHost:   instance.Status.DatabaseHostname,
+		DatabaseUser:   instance.Spec.DatabaseUser,
+		DatabaseName:   DatabaseName,
+		OSPSecret:      instance.Spec.Secret,
+		VolumeMounts:   getInitVolumeMounts(),
+	}
+	job.Spec.Template.Spec.InitContainers = initContainer(initContainerDetails)
+
+	return job
 }

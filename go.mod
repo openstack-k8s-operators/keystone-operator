@@ -8,7 +8,8 @@ require (
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.17.0
 	github.com/openshift/api v3.9.0+incompatible
-	github.com/openstack-k8s-operators/lib-common v0.0.0-20220429114812-00cd552b97fa
+	github.com/openstack-k8s-operators/lib-common v0.0.0-20220610142542-c4d437657639
+	github.com/openstack-k8s-operators/mariadb-operator v0.0.0-20220516121356-119f8d825a71
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.23.6
 	k8s.io/apimachinery v0.23.6
@@ -75,3 +76,9 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
+
+// 1. push your code to github.com/fork/somelib @ dev branch
+// 2. modify your go.mod file, add a line replace github.com/original/somelib => github.com/fork/somelib dev
+// 3. execute go mod tidy command. After done these, go will auto replace the dev in go.mod to a suitiable pseudo-version.
+// replace github.com/openstack-k8s-operators/lib-common => github.com/<account>/lib-common v0.0.0-20220610121238-abedf5879ca4
+// replace github.com/openstack-k8s-operators/lib-common => /path/to/local/repo

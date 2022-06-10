@@ -2,21 +2,27 @@
     "command": "/usr/sbin/httpd",
     "config_files": [
         {
-            "source": "/var/lib/emptydir/keystone.conf",
+            "source": "/var/lib/config-data/merged/keystone.conf",
             "dest": "/etc/keystone/keystone.conf",
             "owner": "keystone",
             "perm": "0600"
         },
         {
-            "source": "/var/lib/config-data/httpd.conf",
+            "source": "/var/lib/config-data/merged/custom.conf",
+            "dest": "/etc/keystone/keystone.conf.d/custom.conf",
+            "owner": "keystone",
+            "perm": "0600"
+        },
+        {
+            "source": "/var/lib/config-data/merged/httpd.conf",
             "dest": "/etc/httpd/conf/httpd.conf",
             "owner": "root",
             "perm": "0644"
         },
         {
-            "source": "/var/lib/config-data/logging.conf",
+            "source": "/var/lib/config-data/merged/logging.conf",
             "dest": "/etc/keystone/logging.conf",
-            "owner": "keystone",
+            "owner": "root",
             "perm": "0644"
         },
         {
