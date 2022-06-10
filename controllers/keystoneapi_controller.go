@@ -79,7 +79,7 @@ type KeystoneAPIReconciler struct {
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete;
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete;
 // +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete;
-// +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete;
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete;
 // +kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get;list;watch;create;update;patch;delete;
 // +kubebuilder:rbac:groups=mariadb.openstack.org,resources=mariadbdatabases,verbs=get;list;watch;create;update;patch;delete;
 
@@ -158,7 +158,7 @@ func (r *KeystoneAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Service{}).
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.ConfigMap{}).
-		Owns(&appsv1.StatefulSet{}).
+		Owns(&appsv1.Deployment{}).
 		Owns(&routev1.Route{}).
 		Complete(r)
 }
@@ -370,19 +370,19 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 		keystone.AppSelector: keystone.ServiceName,
 	}
 
-	// Define a new StatefulSet object
-	sfs := common.NewStatefulSet(
-		keystone.StatefulSet(instance, inputHash, endpointLabels),
+	// Define a new Deployment object
+	depl := common.NewDeployment(
+		keystone.Deployment(instance, inputHash, endpointLabels),
 		5,
 	)
 
-	ctrlResult, err = sfs.CreateOrPatch(ctx, helper)
+	ctrlResult, err = depl.CreateOrPatch(ctx, helper)
 	if err != nil {
 		return ctrlResult, err
 	} else if (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, nil
 	}
-	// create statefulset - end
+	// create Deployment - end
 
 	//
 	// expose the service (create service, route and return the created endpoint URLs)

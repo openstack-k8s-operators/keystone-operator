@@ -80,4 +80,4 @@ require (
 // 1. push your code to github.com/fork/somelib @ dev branch
 // 2. modify your go.mod file, add a line replace github.com/original/somelib => github.com/fork/somelib dev
 // 3. execute go mod tidy command. After done these, go will auto replace the dev in go.mod to a suitiable pseudo-version.
-replace github.com/openstack-k8s-operators/lib-common => github.com/stuggi/lib-common v0.0.0-20220609154431-ce6d282845fb
+replace github.com/openstack-k8s-operators/lib-common => github.com/stuggi/lib-common v0.0.0-20220610121238-abedf5879ca4

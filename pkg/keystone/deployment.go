@@ -24,12 +24,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// StatefulSet func
-func StatefulSet(
+// Deployment func
+func Deployment(
 	instance *keystonev1beta1.KeystoneAPI,
 	configHash string,
 	labels map[string]string,
-) *appsv1.StatefulSet {
+) *appsv1.Deployment {
 	runAsUser := int64(0)
 
 	args := []string{"-c"}
@@ -44,12 +44,12 @@ func StatefulSet(
 	envVars["KOLLA_CONFIG_STRATEGY"] = common.EnvValue("COPY_ALWAYS")
 	envVars["CONFIG_HASH"] = common.EnvValue(configHash)
 
-	statefulSet := &appsv1.StatefulSet{
+	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ServiceName,
 			Namespace: instance.Namespace,
 		},
-		Spec: appsv1.StatefulSetSpec{
+		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
 			},
@@ -79,11 +79,11 @@ func StatefulSet(
 			},
 		},
 	}
-	statefulSet.Spec.Template.Spec.Volumes = getVolumes(instance.Name)
+	deployment.Spec.Template.Spec.Volumes = getVolumes(instance.Name)
 	// If possible two pods of the same service should not
 	// run on the same worker node. If this is not possible
 	// the get still created on the same worker node.
-	statefulSet.Spec.Template.Spec.Affinity = common.DistributePods(
+	deployment.Spec.Template.Spec.Affinity = common.DistributePods(
 		AppSelector,
 		[]string{
 			ServiceName,
@@ -91,7 +91,7 @@ func StatefulSet(
 		corev1.LabelHostname,
 	)
 	if instance.Spec.NodeSelector != nil && len(instance.Spec.NodeSelector) > 0 {
-		statefulSet.Spec.Template.Spec.NodeSelector = instance.Spec.NodeSelector
+		deployment.Spec.Template.Spec.NodeSelector = instance.Spec.NodeSelector
 	}
 
 	initContainerDetails := APIDetails{
@@ -102,7 +102,7 @@ func StatefulSet(
 		OSPSecret:      instance.Spec.Secret,
 		VolumeMounts:   getInitVolumeMounts(),
 	}
-	statefulSet.Spec.Template.Spec.InitContainers = initContainer(initContainerDetails)
+	deployment.Spec.Template.Spec.InitContainers = initContainer(initContainerDetails)
 
-	return statefulSet
+	return deployment
 }
