@@ -78,6 +78,7 @@ func Deployment(
 							},
 							Env:          common.MergeEnvs([]corev1.EnvVar{}, envVars),
 							VolumeMounts: getVolumeMounts(),
+							Resources:    instance.Spec.Resources,
 						},
 					},
 				},
