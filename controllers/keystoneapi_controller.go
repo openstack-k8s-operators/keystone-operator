@@ -176,7 +176,12 @@ func (r *KeystoneAPIReconciler) reconcileDelete(ctx context.Context, instance *k
 	return ctrl.Result{}, nil
 }
 
-func (r *KeystoneAPIReconciler) reconcileInit(ctx context.Context, instance *keystonev1.KeystoneAPI, helper *helper.Helper) (ctrl.Result, error) {
+func (r *KeystoneAPIReconciler) reconcileInit(
+	ctx context.Context,
+	instance *keystonev1.KeystoneAPI,
+	helper *helper.Helper,
+	endpointLabels map[string]string,
+) (ctrl.Result, error) {
 	r.Log.Info("Reconciling Service init")
 
 	//
@@ -249,6 +254,72 @@ func (r *KeystoneAPIReconciler) reconcileInit(ctx context.Context, instance *key
 	}
 
 	// run keystone db sync - end
+
+	//
+	// expose the service (create service, route and return the created endpoint URLs)
+	//
+	var keystonePorts = map[string]int32{
+		"admin":    keystone.KeystoneAdminPort,
+		"public":   keystone.KeystonePublicPort,
+		"internal": keystone.KeystoneInternalPort,
+	}
+
+	apiEndpoints, ctrlResult, err := common.ExposeEndpoints(
+		ctx,
+		helper,
+		keystone.ServiceName,
+		endpointLabels,
+		keystonePorts,
+	)
+	if err != nil {
+		return ctrlResult, err
+	} else if (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, nil
+	}
+
+	//
+	// Update instance status with service endpoint url from route host information
+	//
+	// TODO: need to support https default here
+	if instance.Status.APIEndpoints == nil {
+		instance.Status.APIEndpoints = map[string]string{}
+	}
+	instance.Status.APIEndpoints = apiEndpoints
+
+	// expose service - end
+
+	//
+	// BootStrap Job
+	//
+	jobDef = keystone.BootstrapJob(instance, instance.Status.APIEndpoints)
+	bootstrapjob := common.NewJob(
+		jobDef,
+		keystonev1.BootstrapHash,
+		instance.Spec.PreserveJobs,
+		5,
+		instance.Status.Hash[keystonev1.BootstrapHash],
+	)
+	ctrlResult, err = bootstrapjob.DoJob(
+		ctx,
+		helper,
+	)
+	if (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, nil
+	}
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if bootstrapjob.HasChanged() {
+		instance.Status.Hash[keystonev1.BootstrapHash] = bootstrapjob.GetHash()
+		if err := r.Client.Status().Update(ctx, instance); err != nil {
+			return ctrl.Result{}, err
+		}
+		r.Log.Info(fmt.Sprintf("Job %s hash added - %s", jobDef.Name, instance.Status.Hash[keystonev1.BootstrapHash]))
+	}
+	if (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, nil
+	}
+	// run keystone bootstrap - end
 
 	r.Log.Info("Reconciled Service init successfully")
 	return ctrl.Result{}, nil
@@ -339,8 +410,12 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	// TODO check when/if Init, Update, or Upgrade should/could be skipped
 	//
 
+	endpointLabels := map[string]string{
+		keystone.AppSelector: keystone.ServiceName,
+	}
+
 	// Handle service init
-	ctrlResult, err := r.reconcileInit(ctx, instance, helper)
+	ctrlResult, err := r.reconcileInit(ctx, instance, helper, endpointLabels)
 	if err != nil {
 		return ctrlResult, err
 	} else if (ctrlResult != ctrl.Result{}) {
@@ -366,9 +441,6 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	//
 	// normal reconcile tasks
 	//
-	endpointLabels := map[string]string{
-		keystone.AppSelector: keystone.ServiceName,
-	}
 
 	// Define a new Deployment object
 	depl := common.NewDeployment(
@@ -383,72 +455,6 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 		return ctrlResult, nil
 	}
 	// create Deployment - end
-
-	//
-	// expose the service (create service, route and return the created endpoint URLs)
-	//
-	var keystonePorts = map[string]int32{
-		"admin":    keystone.KeystoneAdminPort,
-		"public":   keystone.KeystonePublicPort,
-		"internal": keystone.KeystoneInternalPort,
-	}
-
-	apiEndpoints, ctrlResult, err := common.ExposeEndpoints(
-		ctx,
-		helper,
-		keystone.ServiceName,
-		endpointLabels,
-		keystonePorts,
-	)
-	if err != nil {
-		return ctrlResult, err
-	} else if (ctrlResult != ctrl.Result{}) {
-		return ctrlResult, nil
-	}
-
-	//
-	// Update instance status with service endpoint url from route host information
-	//
-	// TODO: need to support https default here
-	if instance.Status.APIEndpoints == nil {
-		instance.Status.APIEndpoints = map[string]string{}
-	}
-	instance.Status.APIEndpoints = apiEndpoints
-
-	// expose service - end
-
-	//
-	// BootStrap Job
-	//
-	jobDef := keystone.BootstrapJob(instance, instance.Status.APIEndpoints)
-	bootstrapjob := common.NewJob(
-		jobDef,
-		keystonev1.BootstrapHash,
-		instance.Spec.PreserveJobs,
-		5,
-		instance.Status.Hash[keystonev1.BootstrapHash],
-	)
-	ctrlResult, err = bootstrapjob.DoJob(
-		ctx,
-		helper,
-	)
-	if (ctrlResult != ctrl.Result{}) {
-		return ctrlResult, nil
-	}
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if bootstrapjob.HasChanged() {
-		instance.Status.Hash[keystonev1.BootstrapHash] = bootstrapjob.GetHash()
-		if err := r.Client.Status().Update(ctx, instance); err != nil {
-			return ctrl.Result{}, err
-		}
-		r.Log.Info(fmt.Sprintf("Job %s hash added - %s", jobDef.Name, instance.Status.Hash[keystonev1.BootstrapHash]))
-	}
-	if (ctrlResult != ctrl.Result{}) {
-		return ctrlResult, nil
-	}
-	// run keystone bootstrap - end
 
 	//
 	// create OpenStackClient config
