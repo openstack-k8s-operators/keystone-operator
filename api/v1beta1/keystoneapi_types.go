@@ -174,15 +174,3 @@ type KeystoneAPIList struct {
 func init() {
 	SchemeBuilder.Register(&KeystoneAPI{}, &KeystoneAPIList{})
 }
-
-/*
-// GetConditions returns the set of conditions for this object.
-func (k *KeystoneAPI) GetConditions() Conditions {
-	return k.Status.Conditions
-}
-
-// SetConditions sets the conditions on this object.
-func (k *KeystoneAPI) SetConditions(conditions Conditions) {
-	k.Status.Conditions = conditions
-}
-*/
