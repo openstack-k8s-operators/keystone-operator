@@ -22,6 +22,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const (
@@ -37,11 +38,43 @@ func Deployment(
 ) *appsv1.Deployment {
 	runAsUser := int64(0)
 
+	livenessProbe := &corev1.Probe{
+		// TODO might need tuning
+		PeriodSeconds:       3,
+		InitialDelaySeconds: 3,
+	}
+	readinessProbe := &corev1.Probe{
+		// TODO might need tuning
+		PeriodSeconds:       5,
+		InitialDelaySeconds: 5,
+	}
+
 	args := []string{"-c"}
 	if instance.Spec.Debug.Service {
 		args = append(args, DebugCommand)
+		livenessProbe.Exec = &corev1.ExecAction{
+			Command: []string{
+				"/bin/true",
+			},
+		}
+
+		readinessProbe.Exec = &corev1.ExecAction{
+			Command: []string{
+				"/bin/true",
+			},
+		}
 	} else {
 		args = append(args, ServiceCommand)
+
+		//
+		// https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+		//
+		livenessProbe.HTTPGet = &corev1.HTTPGetAction{
+			Port: intstr.IntOrString{Type: intstr.Int, IntVal: int32(KeystonePublicPort)},
+		}
+		readinessProbe.HTTPGet = &corev1.HTTPGetAction{
+			Port: intstr.IntOrString{Type: intstr.Int, IntVal: int32(KeystonePublicPort)},
+		}
 	}
 
 	envVars := map[string]common.EnvSetter{}
@@ -76,9 +109,11 @@ func Deployment(
 							SecurityContext: &corev1.SecurityContext{
 								RunAsUser: &runAsUser,
 							},
-							Env:          common.MergeEnvs([]corev1.EnvVar{}, envVars),
-							VolumeMounts: getVolumeMounts(),
-							Resources:    instance.Spec.Resources,
+							Env:            common.MergeEnvs([]corev1.EnvVar{}, envVars),
+							VolumeMounts:   getVolumeMounts(),
+							Resources:      instance.Spec.Resources,
+							ReadinessProbe: readinessProbe,
+							LivenessProbe:  livenessProbe,
 						},
 					},
 				},
