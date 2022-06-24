@@ -258,10 +258,10 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	//
 	// expose the service (create service, route and return the created endpoint URLs)
 	//
-	var keystonePorts = map[string]int32{
-		"admin":    keystone.KeystoneAdminPort,
-		"public":   keystone.KeystonePublicPort,
-		"internal": keystone.KeystoneInternalPort,
+	var keystonePorts = map[common.Endpoint]int32{
+		common.EndpointAdmin:    keystone.KeystoneAdminPort,
+		common.EndpointPublic:   keystone.KeystonePublicPort,
+		common.EndpointInternal: keystone.KeystoneInternalPort,
 	}
 
 	apiEndpoints, ctrlResult, err := common.ExposeEndpoints(
@@ -534,12 +534,16 @@ func (r *KeystoneAPIReconciler) reconcileConfigMap(ctx context.Context, instance
 
 	configMapName := "openstack-config"
 	var openStackConfig keystone.OpenStackConfig
-	openStackConfig.Clouds.Default.Auth.AuthURL = instance.Status.APIEndpoints["public"]
-	openStackConfig.Clouds.Default.Auth.ProjectName = "admin"
-	openStackConfig.Clouds.Default.Auth.UserName = "admin"
+	authURL, err := instance.GetEndpoint(common.EndpointPublic)
+	if err != nil {
+		return err
+	}
+	openStackConfig.Clouds.Default.Auth.AuthURL = authURL
+	openStackConfig.Clouds.Default.Auth.ProjectName = instance.Spec.AdminProject
+	openStackConfig.Clouds.Default.Auth.UserName = instance.Spec.AdminUser
 	openStackConfig.Clouds.Default.Auth.UserDomainName = "Default"
 	openStackConfig.Clouds.Default.Auth.ProjectDomainName = "Default"
-	openStackConfig.Clouds.Default.RegionName = "regionOne"
+	openStackConfig.Clouds.Default.RegionName = instance.Spec.Region
 
 	cloudsYamlVal, err := yaml.Marshal(&openStackConfig)
 	if err != nil {
