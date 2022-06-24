@@ -27,9 +27,6 @@ const (
 	// AdminPassword - ref name to get the admin password from osp-secret
 	AdminPassword = "AdminPassword"
 
-	// InputHashName -Name of the hash of hashes of all resources used to indentify an input change
-	InputHashName = "input"
-
 	// KeystoneAdminPort -
 	KeystoneAdminPort int32 = 35357
 	// KeystonePublicPort -
@@ -37,11 +34,6 @@ const (
 	// KeystoneInternalPort -
 	KeystoneInternalPort int32 = 5000
 
-	// AppSelector -
-	AppSelector = "app"
-
 	// KollaConfig -
 	KollaConfig = "/var/lib/config-data/merged/keystone-api-config.json"
-	// DebugCommand -
-	DebugCommand = "/usr/local/bin/kolla_set_configs && /bin/sleep infinity"
 )

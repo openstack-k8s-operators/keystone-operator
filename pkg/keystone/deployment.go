@@ -51,7 +51,7 @@ func Deployment(
 
 	args := []string{"-c"}
 	if instance.Spec.Debug.Service {
-		args = append(args, DebugCommand)
+		args = append(args, common.DebugCommand)
 		livenessProbe.Exec = &corev1.ExecAction{
 			Command: []string{
 				"/bin/true",
@@ -125,7 +125,7 @@ func Deployment(
 	// run on the same worker node. If this is not possible
 	// the get still created on the same worker node.
 	deployment.Spec.Template.Spec.Affinity = common.DistributePods(
-		AppSelector,
+		common.AppSelector,
 		[]string{
 			ServiceName,
 		},

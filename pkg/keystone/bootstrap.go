@@ -32,13 +32,14 @@ const (
 // BootstrapJob func
 func BootstrapJob(
 	instance *keystonev1beta1.KeystoneAPI,
+	labels map[string]string,
 	endpoints map[string]string,
 ) *batchv1.Job {
 	runAsUser := int64(0)
 
 	args := []string{"-c"}
 	if instance.Spec.Debug.Bootstrap {
-		args = append(args, DebugCommand)
+		args = append(args, common.DebugCommand)
 	} else {
 		args = append(args, BootstrapCommand)
 	}
@@ -67,6 +68,7 @@ func BootstrapJob(
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ServiceName + "-bootstrap",
 			Namespace: instance.Namespace,
+			Labels:    labels,
 		},
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{

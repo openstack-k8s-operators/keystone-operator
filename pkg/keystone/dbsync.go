@@ -32,16 +32,13 @@ const (
 // DbSyncJob func
 func DbSyncJob(
 	instance *keystonev1.KeystoneAPI,
+	labels map[string]string,
 ) *batchv1.Job {
 	runAsUser := int64(0)
 
-	labels := map[string]string{
-		"app": "keystone-api",
-	}
-
 	args := []string{"-c"}
 	if instance.Spec.Debug.DBSync {
-		args = append(args, DebugCommand)
+		args = append(args, common.DebugCommand)
 	} else {
 		args = append(args, DBSyncCommand)
 	}
