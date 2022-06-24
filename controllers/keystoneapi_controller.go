@@ -180,7 +180,7 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	ctx context.Context,
 	instance *keystonev1.KeystoneAPI,
 	helper *helper.Helper,
-	endpointLabels map[string]string,
+	serviceLabels map[string]string,
 ) (ctrl.Result, error) {
 	r.Log.Info("Reconciling Service init")
 
@@ -268,7 +268,7 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 		ctx,
 		helper,
 		keystone.ServiceName,
-		endpointLabels,
+		serviceLabels,
 		keystonePorts,
 	)
 	if err != nil {
@@ -410,12 +410,12 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	// TODO check when/if Init, Update, or Upgrade should/could be skipped
 	//
 
-	endpointLabels := map[string]string{
-		keystone.AppSelector: keystone.ServiceName,
+	serviceLabels := map[string]string{
+		common.AppSelector: keystone.ServiceName,
 	}
 
 	// Handle service init
-	ctrlResult, err := r.reconcileInit(ctx, instance, helper, endpointLabels)
+	ctrlResult, err := r.reconcileInit(ctx, instance, helper, serviceLabels)
 	if err != nil {
 		return ctrlResult, err
 	} else if (ctrlResult != ctrl.Result{}) {
@@ -444,7 +444,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 
 	// Define a new Deployment object
 	depl := common.NewDeployment(
-		keystone.Deployment(instance, inputHash, endpointLabels),
+		keystone.Deployment(instance, inputHash, serviceLabels),
 		5,
 	)
 
@@ -490,7 +490,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	// custom.conf is going to /etc/<service>/<service>.conf.d
 	// all other files get placed into /etc/<service> to allow overwrite of e.g. logging.conf or policy.json
 	// TODO: make sure custom.conf can not be overwritten
-	customData := map[string]string{"custom.conf": instance.Spec.CustomServiceConfig}
+	customData := map[string]string{common.CustomServiceConfigFileName: instance.Spec.CustomServiceConfig}
 	for key, data := range instance.Spec.DefaultConfigOverwrite {
 		customData[key] = data
 	}
@@ -679,12 +679,12 @@ func (r *KeystoneAPIReconciler) createHashOfInputHashes(
 	if err != nil {
 		return hash, err
 	}
-	if hashMap, changed := common.SetHash(instance.Status.Hash, keystone.InputHashName, hash); changed {
+	if hashMap, changed := common.SetHash(instance.Status.Hash, common.InputHashName, hash); changed {
 		instance.Status.Hash = hashMap
 		if err := r.Client.Status().Update(ctx, instance); err != nil {
 			return hash, err
 		}
-		r.Log.Info(fmt.Sprintf("Input maps hash %s - %s", keystone.InputHashName, hash))
+		r.Log.Info(fmt.Sprintf("Input maps hash %s - %s", common.InputHashName, hash))
 	}
 	return hash, nil
 }

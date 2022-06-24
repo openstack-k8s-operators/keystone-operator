@@ -41,7 +41,7 @@ func DbSyncJob(
 
 	args := []string{"-c"}
 	if instance.Spec.Debug.DBSync {
-		args = append(args, DebugCommand)
+		args = append(args, common.DebugCommand)
 	} else {
 		args = append(args, DBSyncCommand)
 	}

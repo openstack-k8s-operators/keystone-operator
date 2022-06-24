@@ -38,7 +38,7 @@ func BootstrapJob(
 
 	args := []string{"-c"}
 	if instance.Spec.Debug.Bootstrap {
-		args = append(args, DebugCommand)
+		args = append(args, common.DebugCommand)
 	} else {
 		args = append(args, BootstrapCommand)
 	}
