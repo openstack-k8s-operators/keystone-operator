@@ -227,7 +227,7 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	// run keystone db sync
 	//
 	dbSyncHash := instance.Status.Hash[keystonev1.DbSyncHash]
-	jobDef := keystone.DbSyncJob(instance)
+	jobDef := keystone.DbSyncJob(instance, serviceLabels)
 	dbSyncjob := common.NewJob(
 		jobDef,
 		keystonev1.DbSyncHash,
@@ -291,7 +291,7 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	//
 	// BootStrap Job
 	//
-	jobDef = keystone.BootstrapJob(instance, instance.Status.APIEndpoints)
+	jobDef = keystone.BootstrapJob(instance, serviceLabels, instance.Status.APIEndpoints)
 	bootstrapjob := common.NewJob(
 		jobDef,
 		keystonev1.BootstrapHash,
