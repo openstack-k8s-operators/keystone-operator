@@ -23,12 +23,14 @@ import (
 
 // APIDetails information
 type APIDetails struct {
-	ContainerImage string
-	DatabaseHost   string
-	DatabaseUser   string
-	DatabaseName   string
-	OSPSecret      string
-	VolumeMounts   []corev1.VolumeMount
+	ContainerImage       string
+	DatabaseHost         string
+	DatabaseUser         string
+	DatabaseName         string
+	OSPSecret            string
+	DBPasswordSelector   string
+	UserPasswordSelector string
+	VolumeMounts         []corev1.VolumeMount
 }
 
 const (
@@ -58,7 +60,7 @@ func initContainer(init APIDetails) []corev1.Container {
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: init.OSPSecret,
 					},
-					Key: KeystoneDatabasePassword,
+					Key: init.DBPasswordSelector,
 				},
 			},
 		},
@@ -69,7 +71,7 @@ func initContainer(init APIDetails) []corev1.Container {
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: init.OSPSecret,
 					},
-					Key: AdminPassword,
+					Key: init.UserPasswordSelector,
 				},
 			},
 		},

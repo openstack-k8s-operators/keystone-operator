@@ -110,6 +110,22 @@ spec:
                 description: NodeSelector to target subset of worker nodes running
                   this service
                 type: object
+              passwordSelectors:
+                description: PasswordSelectors - Selectors to identify the DB and
+                  AdminUser password from the Secret
+                properties:
+                  admin:
+                    default: AdminPassword
+                    description: Database - Selector to get the keystone Database
+                      user password from the Secret
+                    type: string
+                  database:
+                    default: KeystoneDatabasePassword
+                    description: 'Database - Selector to get the keystone Database
+                      user password from the Secret TODO: not used, need change in
+                      mariadb-operator'
+                    type: string
+                type: object
               preserveJobs:
                 default: false
                 description: PreserveJobs - do not delete jobs after they finished
@@ -204,6 +220,7 @@ spec:
                 type: object
               readyCount:
                 description: ReadyCount of keystone API instances
+                format: int32
                 type: integer
             type: object
         type: object
