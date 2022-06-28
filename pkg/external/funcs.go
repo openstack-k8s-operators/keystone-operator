@@ -18,17 +18,21 @@ package external
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/openstack-k8s-operators/lib-common/pkg/common"
 	"github.com/openstack-k8s-operators/lib-common/pkg/condition"
 	"github.com/openstack-k8s-operators/lib-common/pkg/helper"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gophercloud "github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -119,4 +123,129 @@ func GetAdminServiceClient(
 	}
 
 	return identityClient, condition.Condition{}, ctrl.Result{}, nil
+}
+
+// NewKeystoneService returns an initialized NewKeystoneService.
+func NewKeystoneService(
+	spec keystonev1.KeystoneServiceSpec,
+	namespace string,
+	labels map[string]string,
+	timeout int,
+) *KeystoneService {
+	service := &keystonev1.KeystoneService{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      spec.ServiceName,
+			Namespace: namespace,
+		},
+		Spec: spec,
+	}
+
+	return &KeystoneService{
+		service: service,
+		timeout: timeout,
+		labels:  labels,
+	}
+}
+
+// CreateOrPatch - creates or patches a KeystoneService, reconciles after Xs if object won't exist.
+func (ks *KeystoneService) CreateOrPatch(
+	ctx context.Context,
+	h *helper.Helper,
+) (ctrl.Result, error) {
+	service := &keystonev1.KeystoneService{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ks.service.Name,
+			Namespace: ks.service.Namespace,
+		},
+	}
+
+	// add finalizer
+	controllerutil.AddFinalizer(service, h.GetFinalizer())
+
+	op, err := controllerutil.CreateOrPatch(ctx, h.GetClient(), service, func() error {
+		service.Spec = ks.service.Spec
+		service.Labels = common.MergeStringMaps(service.Labels, ks.service.Labels)
+
+		err := controllerutil.SetControllerReference(h.GetBeforeObject(), service, h.GetScheme())
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			h.GetLogger().Info(fmt.Sprintf("KeystoneService %s not found, reconcile in %ds", service.Name, ks.timeout))
+			return ctrl.Result{RequeueAfter: time.Duration(ks.timeout) * time.Second}, nil
+		}
+		return ctrl.Result{}, err
+	}
+	if op != controllerutil.OperationResultNone {
+		h.GetLogger().Info(fmt.Sprintf("KeystoneService %s - %s", service.Name, op))
+	}
+
+	// update the service object of the KeystoneService type
+	ks.service, err = GetKeystoneServiceWithName(ctx, h, service.GetName(), service.GetNamespace())
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	ks.id = ks.service.Status.ServiceID
+
+	return ctrl.Result{}, nil
+}
+
+// GetServiceID - returns the openstack service ID
+func (ks *KeystoneService) GetServiceID() string {
+	return ks.id
+}
+
+// Delete - deletes a KeystoneService if it exists.
+func (ks *KeystoneService) Delete(
+	ctx context.Context,
+	h *helper.Helper,
+) error {
+
+	service, err := GetKeystoneServiceWithName(ctx, h, ks.service.Name, ks.service.Namespace)
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+
+	err = h.GetClient().Delete(ctx, service, &client.DeleteOptions{})
+	if err != nil && !k8s_errors.IsNotFound(err) {
+		return err
+	}
+
+	// Service is deleted so remove the finalizer.
+	controllerutil.RemoveFinalizer(service, h.GetFinalizer())
+	if err := h.GetClient().Update(ctx, service); err != nil && !k8s_errors.IsNotFound(err) {
+		return err
+	}
+
+	h.GetLogger().Info(fmt.Sprintf("KeystoneService %s in namespace %s deleted", service.Name, service.Namespace))
+
+	return nil
+}
+
+// GetKeystoneServiceWithName func
+func GetKeystoneServiceWithName(
+	ctx context.Context,
+	h *helper.Helper,
+	name string,
+	namespace string,
+) (*keystonev1.KeystoneService, error) {
+
+	ks := &keystonev1.KeystoneService{}
+	err := h.GetClient().Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, ks)
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			return ks, err
+		}
+		return ks, err
+	}
+
+	return ks, nil
 }
