@@ -18,30 +18,44 @@ package controllers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
-	gophercloud "github.com/gophercloud/gophercloud"
-	openstack "github.com/gophercloud/gophercloud/openstack"
-	endpoints "github.com/gophercloud/gophercloud/openstack/identity/v3/endpoints"
-	projects "github.com/gophercloud/gophercloud/openstack/identity/v3/projects"
-	roles "github.com/gophercloud/gophercloud/openstack/identity/v3/roles"
-	services "github.com/gophercloud/gophercloud/openstack/identity/v3/services"
-	users "github.com/gophercloud/gophercloud/openstack/identity/v3/users"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
-	keystone "github.com/openstack-k8s-operators/keystone-operator/pkg/keystone"
-	"gopkg.in/yaml.v2"
-	corev1 "k8s.io/api/core/v1"
+	external "github.com/openstack-k8s-operators/keystone-operator/pkg/external"
+	common "github.com/openstack-k8s-operators/lib-common/pkg/common"
+	helper "github.com/openstack-k8s-operators/lib-common/pkg/helper"
+
+	openstack "github.com/openstack-k8s-operators/lib-common/pkg/openstack"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
+// GetClient -
+func (r *KeystoneServiceReconciler) GetClient() client.Client {
+	return r.Client
+}
+
+// GetKClient -
+func (r *KeystoneServiceReconciler) GetKClient() kubernetes.Interface {
+	return r.Kclient
+}
+
+// GetLogger -
+func (r *KeystoneServiceReconciler) GetLogger() logr.Logger {
+	return r.Log
+}
+
+// GetScheme -
+func (r *KeystoneServiceReconciler) GetScheme() *runtime.Scheme {
+	return r.Scheme
+}
 
 // KeystoneServiceReconciler reconciles a KeystoneService object
 type KeystoneServiceReconciler struct {
@@ -60,33 +74,6 @@ type KeystoneServiceReconciler struct {
 func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("keystoneservice", req.NamespacedName)
 
-	// Select the 1st KeystoneAPI instance
-	var keystoneAPIInstance keystonev1.KeystoneAPI
-	keystoneAPIList := &keystonev1.KeystoneAPIList{}
-	listOpts := []client.ListOption{
-		client.InNamespace(req.Namespace),
-	}
-
-	if err := r.Client.List(ctx, keystoneAPIList, listOpts...); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	if len(keystoneAPIList.Items) == 1 {
-		keystoneAPIInstance = keystoneAPIList.Items[0]
-	} else if len(keystoneAPIList.Items) > 1 {
-		r.Log.Info("Multiple KeystoneAPI instances found.")
-		return ctrl.Result{RequeueAfter: time.Second * 5}, nil
-	} else {
-		r.Log.Info("No KeystoneAPI instances found")
-		return ctrl.Result{RequeueAfter: time.Second * 5}, nil
-	}
-
-	if hash, ok := keystoneAPIInstance.Status.Hash[keystonev1.BootstrapHash]; !ok {
-		r.Log.Info("KeystoneAPI bootstrap not complete.", "BootstrapHash", hash)
-		return ctrl.Result{RequeueAfter: time.Second * 5}, nil
-	}
-	r.Log.Info("KeystoneAPI bootstrap complete.", "BootstrapHash", keystoneAPIInstance.Status.Hash[keystonev1.BootstrapHash])
-
 	// Fetch the KeystoneService instance
 	instance := &keystonev1.KeystoneService{}
 	err := r.Client.Get(ctx, req.NamespacedName, instance)
@@ -101,154 +88,73 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
-	openStackConfigMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "openstack-config",
-			Namespace: instance.Namespace,
-		},
-	}
-	err = r.Client.Get(ctx, types.NamespacedName{Name: openStackConfigMap.Name, Namespace: instance.Namespace}, openStackConfigMap)
+	helper, err := helper.NewHelper(
+		instance,
+		r.Client,
+		r.Kclient,
+		r.Scheme,
+		r.Log,
+	)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	oscm := keystone.OpenStackConfig{}
-	err = yaml.Unmarshal([]byte(openStackConfigMap.Data["clouds.yaml"]), &oscm)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	r.Log.Info("openStackConfigMap binary data", "binary", openStackConfigMap.BinaryData)
-	r.Log.Info("openStackConfigMap data", "data", openStackConfigMap.Data)
-	r.Log.Info("oscm", "oscm", oscm)
-
-	openStackConfigSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "openstack-config-secret",
-			Namespace: instance.Namespace,
-		},
-	}
-	err = r.Client.Get(
-		ctx,
-		types.NamespacedName{
-			Name:      openStackConfigSecret.Name,
-			Namespace: instance.Namespace},
-		openStackConfigSecret)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	oscmSecret := keystone.OpenStackConfigSecret{}
-	sec, err := r.Kclient.CoreV1().Secrets(instance.Namespace).Get(ctx, openStackConfigSecret.Name, metav1.GetOptions{})
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	r.Log.Info("sec", "sec", string(sec.Data["secure.yaml"]))
-
-	err = yaml.Unmarshal([]byte(string(sec.Data["secure.yaml"])), &oscmSecret)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	r.Log.Info("oscmSecret", "secret", oscmSecret)
-
-	opts := gophercloud.AuthOptions{
-		IdentityEndpoint: oscm.Clouds.Default.Auth.AuthURL,
-		Username:         oscm.Clouds.Default.Auth.UserName,
-		Password:         oscmSecret.Clouds.Default.Auth.Password,
-		TenantName:       oscm.Clouds.Default.Auth.ProjectName,
-		DomainName:       oscm.Clouds.Default.Auth.UserDomainName,
-	}
-
-	provider, err := openstack.AuthenticatedClient(opts)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	endpointOpts := gophercloud.EndpointOpts{Type: "identity", Region: instance.Spec.Region}
-	identityClient, err := openstack.NewIdentityV3(provider, endpointOpts)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// Create new service if ServiceID is not already set
-	if instance.Status.ServiceID == "" {
-		createOpts := services.CreateOpts{
-			Type:    instance.Spec.ServiceType,
-			Enabled: &instance.Spec.Enabled,
-			Extra: map[string]interface{}{
-				"name":        instance.Spec.ServiceName,
-				"description": instance.Spec.ServiceDescription,
-			},
+	// Always patch the instance status when exiting this function so we can persist any changes.
+	defer func() {
+		if err := helper.SetAfter(instance); err != nil {
+			common.LogErrorForObject(r, err, "Set after and calc patch/diff", instance)
 		}
 
-		service, err := services.Create(identityClient, createOpts).Extract()
-		if err != nil {
-			r.Log.Error(err, "error")
-			return ctrl.Result{}, err
-		}
+		if changed := helper.GetChanges()["status"]; changed {
+			patch := client.MergeFrom(helper.GetBeforeObject())
 
-		// Set ServiceID in the status
-		r.Log.Info("instance.Status.ServiceID", "ServiceID", instance.Status.ServiceID)
-		r.Log.Info("service.ID", "service.ID", service.ID)
-		if instance.Status.ServiceID != service.ID {
-			instance.Status.ServiceID = service.ID
-			if err := r.Client.Status().Update(ctx, instance); err != nil {
-				r.Log.Error(err, "error")
-				return ctrl.Result{}, err
+			if err := r.Status().Patch(ctx, instance, patch); err != nil && !k8s_errors.IsNotFound(err) {
+				common.LogErrorForObject(r, err, "Update status", instance)
 			}
 		}
-	} else {
-		// ServiceID is already set, update the service
-		updateOpts := services.UpdateOpts{
-			Type:    instance.Spec.ServiceType,
-			Enabled: &instance.Spec.Enabled,
-			Extra: map[string]interface{}{
-				"name":        instance.Spec.ServiceName,
-				"description": instance.Spec.ServiceDescription,
-			},
+	}()
+
+	//
+	// Validate that keystoneAPI is up
+	//
+	keystoneAPI, err := external.GetKeystoneAPI(ctx, helper, instance.Namespace, map[string]string{})
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			r.Log.Info("KeystoneAPI not found!")
+			return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 		}
-		_, err := services.Update(identityClient, instance.Status.ServiceID, updateOpts).Extract()
-		if err != nil {
-			r.Log.Error(err, "error")
-			return ctrl.Result{}, err
-		}
-	}
-
-	serviceID := instance.Status.ServiceID
-	err = reconcileEndpoint(identityClient, serviceID, instance.Spec.ServiceName, instance.Spec.Region, "admin", instance.Spec.AdminURL)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	err = reconcileEndpoint(identityClient, serviceID, instance.Spec.ServiceName, instance.Spec.Region, "internal", instance.Spec.InternalURL)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	err = reconcileEndpoint(identityClient, serviceID, instance.Spec.ServiceName, instance.Spec.Region, "public", instance.Spec.PublicURL)
-	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	var username string
-	if instance.Spec.Username == "" {
-		username = instance.Spec.ServiceName
-	} else {
-		username = instance.Spec.Username
+	if !keystoneAPI.IsReady() {
+		r.Log.Info("KeystoneAPI not yet ready")
+		return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 	}
 
-	var password string
-	if instance.Spec.Password == "" {
-		// FIXME: use our default password for now until we have generation.
-		password = "foobar123"
-	} else {
-		password = instance.Spec.Password
-	}
-
-	err = reconcileUser(r.Log, identityClient, username, password)
+	//
+	// get admin authentication OpenStack
+	//
+	os, cond, ctrlResult, err := external.GetAdminServiceClient(
+		ctx,
+		helper,
+		keystoneAPI,
+	)
+	instance.Status.Conditions.UpdateCurrentCondition(cond)
 	if err != nil {
-		r.Log.Error(err, "error")
 		return ctrl.Result{}, err
 	}
+	if (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, nil
+	}
 
-	return ctrl.Result{}, nil
+	// Handle service delete
+	if !instance.DeletionTimestamp.IsZero() {
+		return r.reconcileDelete(ctx, instance, helper, os)
+	}
+
+	// Handle non-deleted clusters
+	return r.reconcileNormal(ctx, instance, helper, os)
+
 }
 
 // SetupWithManager x
@@ -258,148 +164,303 @@ func (r *KeystoneServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func reconcileEndpoint(client *gophercloud.ServiceClient, serviceID string, serviceName string, region string, endpointInterface string, url string) error {
-	// Return if url is empty, likely wasn't specified in the request
-	if url == "" {
-		return nil
-	}
+func (r *KeystoneServiceReconciler) reconcileDelete(
+	ctx context.Context,
+	instance *keystonev1.KeystoneService,
+	helper *helper.Helper,
+	os *openstack.OpenStack,
+) (ctrl.Result, error) {
+	r.Log.Info("Reconciling Service delete")
 
-	var availability gophercloud.Availability
-	if endpointInterface == "admin" {
-		availability = gophercloud.AvailabilityAdmin
-	} else if endpointInterface == "internal" {
-		availability = gophercloud.AvailabilityInternal
-	} else if endpointInterface == "public" {
-		availability = gophercloud.AvailabilityPublic
-	} else {
-		return fmt.Errorf("endpoint interface %s not known", endpointInterface)
-	}
+	// Delete Endpoints
+	for endpointInterface := range instance.Spec.APIEndpoints {
+		// get the gopher availability mapping for the endpointInterface
+		availability, err := openstack.GetAvailability(endpointInterface)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 
-	// Fetch existing endpoint and check it's value if it exists
-	listOpts := endpoints.ListOpts{
-		ServiceID:    serviceID,
-		Availability: availability,
-		RegionID:     region,
-	}
-	allPages, err := endpoints.List(client, listOpts).AllPages()
-	if err != nil {
-		return err
-	}
-	allEndpoints, err := endpoints.ExtractEndpoints(allPages)
-	if err != nil {
-		return err
-	}
-	if len(allEndpoints) == 1 {
-		endpoint := allEndpoints[0]
-		if url != endpoint.URL {
-			// Update the endpoint
-			updateOpts := endpoints.UpdateOpts{
+		err = os.DeleteEndpoint(
+			r.Log,
+			openstack.Endpoint{
+				Name:         instance.Spec.ServiceName,
+				ServiceID:    instance.Status.ServiceID,
 				Availability: availability,
-				Name:         serviceName,
-				Region:       region,
-				ServiceID:    serviceID,
-				URL:          url,
-			}
-			_, err := endpoints.Update(client, endpoint.ID, updateOpts).Extract()
+			},
+		)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	// Delete User
+	err := os.DeleteUser(
+		r.Log,
+		instance.Spec.ServiceUser)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Delete Service
+	err = os.DeleteService(
+		r.Log,
+		instance.Status.ServiceID)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Service is deleted so remove the finalizer.
+	controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
+	r.Log.Info("Reconciled Service delete successfully")
+	if err := r.Update(ctx, instance); err != nil && !k8s_errors.IsNotFound(err) {
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, nil
+}
+
+func (r *KeystoneServiceReconciler) reconcileNormal(
+	ctx context.Context,
+	instance *keystonev1.KeystoneService,
+	helper *helper.Helper,
+	os *openstack.OpenStack,
+) (ctrl.Result, error) {
+	r.Log.Info("Reconciling Service")
+
+	// If the service object doesn't have our finalizer, add it.
+	controllerutil.AddFinalizer(instance, helper.GetFinalizer())
+	// Register the finalizer immediately to avoid orphaning resources on delete
+	if err := r.Update(ctx, instance); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	//
+	// Create new service if ServiceID is not already set
+	//
+	err := r.reconcileService(instance, os)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	//
+	// create/update/delete endpoint
+	//
+	err = r.reconcileEndpoints(
+		instance,
+		os)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	//
+	// create/update service user
+	//
+	ctrlResult, err := r.reconcileUser(
+		ctx,
+		helper,
+		instance,
+		os)
+	if err != nil {
+		return ctrlResult, err
+	} else if (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, nil
+	}
+
+	r.Log.Info("Reconciled Service successfully")
+	return ctrl.Result{}, nil
+}
+
+func (r *KeystoneServiceReconciler) reconcileService(
+	instance *keystonev1.KeystoneService,
+	os *openstack.OpenStack,
+) error {
+	r.Log.Info(fmt.Sprintf("Reconciling Service %s", instance.Spec.ServiceName))
+
+	// Create new service if ServiceID is not already set
+	if instance.Status.ServiceID == "" {
+
+		// verify if there is still an existing service in keystone for
+		// type and name, if so register the ID
+		service, err := os.GetService(
+			r.Log,
+			instance.Spec.ServiceType,
+			instance.Spec.ServiceName,
+		)
+		if err != nil {
+			return err
+		}
+
+		// if there is already a service registered use it
+		if service != nil && instance.Status.ServiceID != service.ID {
+			instance.Status.ServiceID = service.ID
+		} else {
+			instance.Status.ServiceID, err = os.CreateService(
+				r.Log,
+				openstack.Service{
+					Name:        instance.Spec.ServiceName,
+					Type:        instance.Spec.ServiceType,
+					Description: instance.Spec.ServiceDescription,
+					Enabled:     instance.Spec.Enabled,
+				})
 			if err != nil {
 				return err
 			}
 		}
 	} else {
-		// Create the endpoint
-		createOpts := endpoints.CreateOpts{
-			Availability: availability,
-			Name:         serviceName,
-			Region:       region,
-			ServiceID:    serviceID,
-			URL:          url,
-		}
-		_, err := endpoints.Create(client, createOpts).Extract()
+		// ServiceID is already set, update the service
+		err := os.UpdateService(
+			r.Log,
+			openstack.Service{
+				Name:        instance.Spec.ServiceName,
+				Type:        instance.Spec.ServiceType,
+				Description: instance.Spec.ServiceDescription,
+				Enabled:     instance.Spec.Enabled,
+			},
+			instance.Status.ServiceID)
 		if err != nil {
 			return err
 		}
 	}
 
+	r.Log.Info("Reconciled Service successfully")
 	return nil
-
 }
 
-func reconcileUser(reqLogger logr.Logger, client *gophercloud.ServiceClient, username string, password string) error {
-	reqLogger.Info("Reconciling User.", "Username", username)
+func (r *KeystoneServiceReconciler) reconcileEndpoints(
+	instance *keystonev1.KeystoneService,
+	os *openstack.OpenStack,
+) error {
+	r.Log.Info("Reconciling Endpoints")
 
-	var serviceProjectID string
-	allPages, err := projects.List(client, projects.ListOpts{Name: "service"}).AllPages()
-	if err != nil {
-		return err
+	// create / update endpoints
+	for endpointInterface, url := range instance.Spec.APIEndpoints {
+
+		// get the gopher availability mapping for the endpointInterface
+		availability, err := openstack.GetAvailability(endpointInterface)
+		if err != nil {
+			return err
+		}
+
+		// get registered endpoints for the service and endpointInterface
+		allEndpoints, err := os.GetEndpoints(
+			r.Log,
+			instance.Status.ServiceID,
+			endpointInterface)
+		if err != nil {
+			return err
+		}
+
+		if len(allEndpoints) == 1 {
+			endpoint := allEndpoints[0]
+			if url != endpoint.URL {
+				// Update the endpoint
+				_, err := os.UpdateEndpoint(
+					r.Log,
+					openstack.Endpoint{
+						Name:         endpoint.Name,
+						ServiceID:    endpoint.ServiceID,
+						Availability: availability,
+						URL:          url,
+					},
+					endpoint.ID,
+				)
+				if err != nil {
+					return err
+				}
+			}
+		} else {
+			// Create the endpoint
+			_, err := os.CreateEndpoint(
+				r.Log,
+				openstack.Endpoint{
+					Name:         instance.Spec.ServiceName,
+					ServiceID:    instance.Status.ServiceID,
+					Availability: availability,
+					URL:          url,
+				},
+			)
+			if err != nil {
+				return err
+			}
+		}
 	}
-	allProjects, err := projects.ExtractProjects(allPages)
+
+	r.Log.Info("Reconciled Endpoints successfully")
+	return nil
+}
+
+func (r *KeystoneServiceReconciler) reconcileUser(
+	ctx context.Context,
+	h *helper.Helper,
+	instance *keystonev1.KeystoneService,
+	os *openstack.OpenStack,
+) (reconcile.Result, error) {
+	r.Log.Info(fmt.Sprintf("Reconciling User %s", instance.Spec.ServiceUser))
+	roleName := "admin"
+
+	// get the password of the service user from the secret
+	password, _, ctrlResult, err := common.GetDataFromSecret(
+		ctx,
+		h,
+		instance.Spec.Secret,
+		10,
+		instance.Spec.PasswordSelector)
 	if err != nil {
-		return err
+		return ctrl.Result{}, err
 	}
-	if len(allProjects) == 1 {
-		serviceProjectID = allProjects[0].ID
-	} else if len(allProjects) == 0 {
-		createOpts := projects.CreateOpts{
+	if (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, nil
+	}
+
+	//
+	//  create service project if it does not exist
+	//
+	serviceProjectID, err := os.CreateProject(
+		r.Log,
+		openstack.Project{
 			Name:        "service",
 			Description: "service",
-		}
-		reqLogger.Info("Creating service project")
-		project, err := projects.Create(client, createOpts).Extract()
-		if err != nil {
-			return err
-		}
-		serviceProjectID = project.ID
-	} else {
-		return errors.New("multiple projects named \"service\" found")
+		})
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
-	allPages, err = users.List(client, users.ListOpts{Name: username}).AllPages()
+	//
+	//  create role if it does not exist
+	//
+	_, err = os.CreateRole(
+		r.Log,
+		roleName)
 	if err != nil {
-		return err
-	}
-	allUsers, err := users.ExtractUsers(allPages)
-	if err != nil {
-		return err
-	}
-	var userID string
-	if len(allUsers) == 1 {
-		userID = allUsers[0].ID
-	} else {
-		createOpts := users.CreateOpts{
-			Name:             username,
-			DefaultProjectID: serviceProjectID,
-			Password:         password,
-		}
-		user, err := users.Create(client, createOpts).Extract()
-		if err != nil {
-			return err
-		}
-		reqLogger.Info("User Created", "Username", user.Name, "User ID", user.ID)
-		userID = user.ID
+		return ctrl.Result{}, err
 	}
 
-	var adminRoleID string
-	allPages, err = roles.List(client, roles.ListOpts{
-		Name: "admin"}).AllPages()
+	//
+	// create user if it does not exist
+	//
+	userID, err := os.CreateUser(
+		r.Log,
+		openstack.User{
+			Name:      instance.Spec.ServiceUser,
+			Password:  password,
+			ProjectID: serviceProjectID,
+		})
 	if err != nil {
-		return err
-	}
-	allRoles, err := roles.ExtractRoles(allPages)
-	if err != nil {
-		return err
-	}
-	if len(allRoles) == 1 {
-		adminRoleID = allRoles[0].ID
-	} else {
-		return errors.New("could not lookup admin role ID")
+		return ctrl.Result{}, err
 	}
 
-	err = roles.Assign(client, adminRoleID, roles.AssignOpts{
-		UserID:    userID,
-		ProjectID: serviceProjectID}).ExtractErr()
+	//
+	// add user to admin role
+	//
+	err = os.AssignUserRole(
+		r.Log,
+		roleName,
+		userID,
+		serviceProjectID)
 	if err != nil {
-		return err
+		return ctrl.Result{}, err
 	}
 
-	return nil
+	r.Log.Info("Reconciled User successfully")
+	return ctrl.Result{}, nil
 }

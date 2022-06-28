@@ -3,18 +3,14 @@ kind: KeystoneService
 metadata:
   name: openstack
 spec:
-  username: admin
-  password: foobar123
-  project: admin
-  domainName: Default
-  authURL: http://keystone-openstack.apps.ostest.test.metalkube.org/
-
-  serviceDescription: sample-description
-  serviceName: sample
-  serviceType: sample-type
-
-  adminURL: http://sample.apps.ostest.test.metalkube.org/
-  internalURL: http://sample.openstack.svc:7777
-  publicURL: http://sample.apps.ostest.test.metalkube.org/
-  region: regionOne
+  serviceUser: placement
   enabled: true
+  serviceDescription: "Placement service"
+  serviceName: placement
+  serviceType: placement
+  apiEndpoints:
+    admin: http://placement-admin-openstack.apps-crc.testing
+    internal: http://placement-internal-openstack.apps-crc.testing
+    public: http://placement-public-openstack.apps-crc.testing
+  secret: osp-secret
+  passwordSelector: PlacementPassword
