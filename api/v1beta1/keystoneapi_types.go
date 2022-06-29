@@ -161,6 +161,8 @@ type KeystoneAPIStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[0].status",description="Status"
+//+kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.conditions[0].reason",description="Reason"
 
 // KeystoneAPI is the Schema for the keystoneapis API
 type KeystoneAPI struct {

@@ -240,6 +240,14 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 		helper,
 	)
 	if (ctrlResult != ctrl.Result{}) {
+
+		c := condition.NewCondition(
+			condition.TypeDBSync,
+			corev1.ConditionTrue,
+			database.ReasonDBSync,
+			"KeystoneAPI database sync")
+		instance.Status.Conditions.UpdateCurrentCondition(c)
+
 		return ctrlResult, nil
 	}
 	if err != nil {
@@ -252,7 +260,6 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 		}
 		r.Log.Info(fmt.Sprintf("Job %s hash added - %s", jobDef.Name, instance.Status.Hash[keystonev1.DbSyncHash]))
 	}
-
 	// run keystone db sync - end
 
 	//
@@ -362,7 +369,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	//
 	// check for required OpenStack secret holding passwords for service/admin user and add hash to the vars map
 	//
-	ospSecret, hash, err := common.GetSecret(ctx, r, instance.Spec.Secret, instance.Namespace)
+	ospSecret, hash, err := common.GetSecret(ctx, helper, instance.Spec.Secret, instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			return ctrl.Result{RequeueAfter: time.Second * 10}, fmt.Errorf("OpenStack secret %s not found", instance.Spec.Secret)
@@ -391,7 +398,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	// Create secret holding fernet keys
 	//
 	// TODO key rotation
-	err = r.ensureFernetKeys(ctx, instance, &configMapVars)
+	err = r.ensureFernetKeys(ctx, instance, helper, &configMapVars)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -463,6 +470,13 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+
+	c := condition.NewCondition(
+		condition.TypeCreated,
+		corev1.ConditionTrue,
+		condition.ReasonComplete,
+		"KeystoneAPI created")
+	instance.Status.Conditions.UpdateCurrentCondition(c)
 
 	r.Log.Info("Reconciled Service successfully")
 	return ctrl.Result{}, nil
@@ -628,6 +642,7 @@ func (r *KeystoneAPIReconciler) reconcileConfigMap(ctx context.Context, instance
 func (r *KeystoneAPIReconciler) ensureFernetKeys(
 	ctx context.Context,
 	instance *keystonev1.KeystoneAPI,
+	helper *helper.Helper,
 	envVars *map[string]common.EnvSetter,
 ) error {
 	labels := common.GetLabels(instance, common.GetGroupLabel(keystone.ServiceName), map[string]string{})
@@ -635,7 +650,7 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 	//
 	// check if secret already exist
 	//
-	secret, hash, err := common.GetSecret(ctx, r, keystone.ServiceName, instance.Namespace)
+	secret, hash, err := common.GetSecret(ctx, helper, keystone.ServiceName, instance.Namespace)
 	if err != nil && !k8s_errors.IsNotFound(err) {
 		return err
 	} else if k8s_errors.IsNotFound(err) {
