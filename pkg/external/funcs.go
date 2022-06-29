@@ -27,6 +27,8 @@ import (
 	gophercloud "github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
+	appsv1 "k8s.io/api/apps/v1"
+	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -57,6 +59,13 @@ func GetKeystoneAPI(
 
 	if len(keystoneList.Items) > 1 {
 		return nil, fmt.Errorf("more then one KeystoneAPI object found in namespace %s", namespace)
+	}
+
+	if len(keystoneList.Items) == 0 {
+		return nil, k8s_errors.NewNotFound(
+			appsv1.Resource("KeystoneAPI"),
+			fmt.Sprintf("No KeystoneAPI object found in namespace %s", namespace),
+		)
 	}
 
 	return &keystoneList.Items[0], nil
