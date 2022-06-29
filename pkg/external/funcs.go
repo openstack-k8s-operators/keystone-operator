@@ -19,10 +19,15 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/openstack-k8s-operators/lib-common/pkg/common"
+	"github.com/openstack-k8s-operators/lib-common/pkg/condition"
 	"github.com/openstack-k8s-operators/lib-common/pkg/helper"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gophercloud "github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/openstack"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 //
@@ -55,4 +60,54 @@ func GetKeystoneAPI(
 	}
 
 	return &keystoneList.Items[0], nil
+}
+
+//
+// GetAdminServiceClient - get an admin serviceClient for the keystoneAPI instance
+//
+func GetAdminServiceClient(
+	ctx context.Context,
+	h *helper.Helper,
+	keystoneAPI *keystonev1.KeystoneAPI,
+) (*gophercloud.ServiceClient, condition.Condition, ctrl.Result, error) {
+	// get public endpoint as authurl from keystone instance
+	authURL, err := keystoneAPI.GetEndpoint(common.EndpointPublic)
+	if err != nil {
+		return nil, condition.Condition{}, ctrl.Result{}, err
+	}
+
+	// get the password of the admin user from Spec.Secret
+	// using PasswordSelectors.Admin
+	authPassword, cond, ctrlResult, err := common.GetDataFromSecret(
+		ctx,
+		h,
+		keystoneAPI.Spec.Secret,
+		10,
+		keystoneAPI.Spec.PasswordSelectors.Admin)
+	if err != nil {
+		return nil, cond, ctrl.Result{}, err
+	}
+	if (ctrlResult != ctrl.Result{}) {
+		return nil, cond, ctrlResult, nil
+	}
+
+	opts := gophercloud.AuthOptions{
+		IdentityEndpoint: authURL,
+		Username:         keystoneAPI.Spec.AdminUser,
+		Password:         authPassword,
+		TenantName:       keystoneAPI.Spec.AdminProject,
+		DomainName:       "Default",
+	}
+
+	provider, err := openstack.AuthenticatedClient(opts)
+	if err != nil {
+		return nil, condition.Condition{}, ctrl.Result{}, err
+	}
+	endpointOpts := gophercloud.EndpointOpts{Type: "identity", Region: keystoneAPI.Spec.Region}
+	identityClient, err := openstack.NewIdentityV3(provider, endpointOpts)
+	if err != nil {
+		return nil, condition.Condition{}, ctrl.Result{}, err
+	}
+
+	return identityClient, condition.Condition{}, ctrl.Result{}, nil
 }
