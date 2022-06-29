@@ -461,6 +461,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	} else if (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, nil
 	}
+	instance.Status.ReadyCount = depl.GetDeployment().Status.ReadyReplicas
 	// create Deployment - end
 
 	//
@@ -605,7 +606,7 @@ func (r *KeystoneAPIReconciler) reconcileConfigMap(ctx context.Context, instance
 
 	secretName := "openstack-config-secret"
 	var openStackConfigSecret keystone.OpenStackConfigSecret
-	openStackConfigSecret.Clouds.Default.Auth.Password = string(keystoneSecret.Data["AdminPassword"])
+	openStackConfigSecret.Clouds.Default.Auth.Password = string(keystoneSecret.Data[instance.Spec.PasswordSelectors.Admin])
 
 	secretVal, err := yaml.Marshal(&openStackConfigSecret)
 	secret := &corev1.Secret{

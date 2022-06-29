@@ -22,10 +22,6 @@ const (
 	ServiceAccount = "keystone-operator-keystone"
 	// DatabaseName -
 	DatabaseName = "keystone"
-	// KeystoneDatabasePassword - ref name to get the keystone db password from osp-secret
-	KeystoneDatabasePassword = "KeystoneDatabasePassword"
-	// AdminPassword - ref name to get the admin password from osp-secret
-	AdminPassword = "AdminPassword"
 
 	// KeystoneAdminPort -
 	KeystoneAdminPort int32 = 35357

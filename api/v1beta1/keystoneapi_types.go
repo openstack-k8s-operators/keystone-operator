@@ -93,6 +93,10 @@ type KeystoneAPISpec struct {
 	Secret string `json:"secret,omitempty"`
 
 	// +kubebuilder:validation:Optional
+	// PasswordSelectors - Selectors to identify the DB and AdminUser password from the Secret
+	PasswordSelectors PasswordSelector `json:"passwordSelectors,omitempty"`
+
+	// +kubebuilder:validation:Optional
 	// NodeSelector to target subset of worker nodes running this service
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
@@ -125,6 +129,19 @@ type KeystoneAPISpec struct {
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
+// PasswordSelector to identify the DB and AdminUser password from the Secret
+type PasswordSelector struct {
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default="KeystoneDatabasePassword"
+	// Database - Selector to get the keystone Database user password from the Secret
+	// TODO: not used, need change in mariadb-operator
+	Database string `json:"database,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default="AdminPassword"
+	// Database - Selector to get the keystone Database user password from the Secret
+	Admin string `json:"admin,omitempty"`
+}
+
 // KeystoneDebug defines the observed state of KeystoneAPI
 type KeystoneDebug struct {
 	// +kubebuilder:validation:Optional
@@ -144,7 +161,7 @@ type KeystoneDebug struct {
 // KeystoneAPIStatus defines the observed state of KeystoneAPI
 type KeystoneAPIStatus struct {
 	// ReadyCount of keystone API instances
-	ReadyCount int `json:"readyCount,omitempty"`
+	ReadyCount int32 `json:"readyCount,omitempty"`
 
 	// Map of hashes to track e.g. job status
 	Hash map[string]string `json:"hash,omitempty"`
@@ -192,4 +209,9 @@ func (instance KeystoneAPI) GetEndpoint(endpointType common.Endpoint) (string, e
 		return url, nil
 	}
 	return "", fmt.Errorf("%s endpoint not found", string(endpointType))
+}
+
+// IsReady - returns true if service is ready to server requests
+func (instance KeystoneAPI) IsReady() bool {
+	return instance.Status.ReadyCount >= 1
 }

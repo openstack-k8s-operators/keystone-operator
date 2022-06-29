@@ -110,12 +110,14 @@ func BootstrapJob(
 	job.Spec.Template.Spec.Volumes = getVolumes(instance.Name)
 
 	initContainerDetails := APIDetails{
-		ContainerImage: instance.Spec.ContainerImage,
-		DatabaseHost:   instance.Status.DatabaseHostname,
-		DatabaseUser:   instance.Spec.DatabaseUser,
-		DatabaseName:   DatabaseName,
-		OSPSecret:      instance.Spec.Secret,
-		VolumeMounts:   getInitVolumeMounts(),
+		ContainerImage:       instance.Spec.ContainerImage,
+		DatabaseHost:         instance.Status.DatabaseHostname,
+		DatabaseUser:         instance.Spec.DatabaseUser,
+		DatabaseName:         DatabaseName,
+		OSPSecret:            instance.Spec.Secret,
+		DBPasswordSelector:   instance.Spec.PasswordSelectors.Database,
+		UserPasswordSelector: instance.Spec.PasswordSelectors.Admin,
+		VolumeMounts:         getInitVolumeMounts(),
 	}
 	job.Spec.Template.Spec.InitContainers = initContainer(initContainerDetails)
 
