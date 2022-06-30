@@ -142,7 +142,7 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	// Handle service delete
 	if !instance.DeletionTimestamp.IsZero() {
-		return r.reconcileDelete(ctx, instance)
+		return r.reconcileDelete(ctx, instance, helper)
 	}
 
 	// Handle non-deleted clusters
@@ -163,11 +163,11 @@ func (r *KeystoneAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *KeystoneAPIReconciler) reconcileDelete(ctx context.Context, instance *keystonev1.KeystoneAPI) (ctrl.Result, error) {
+func (r *KeystoneAPIReconciler) reconcileDelete(ctx context.Context, instance *keystonev1.KeystoneAPI, helper *helper.Helper) (ctrl.Result, error) {
 	r.Log.Info("Reconciling Service delete")
 
 	// Service is deleted so remove the finalizer.
-	controllerutil.RemoveFinalizer(instance, keystonev1.KeystoneFinalizer)
+	controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
 	r.Log.Info("Reconciled Service delete successfully")
 	if err := r.Update(ctx, instance); err != nil && !k8s_errors.IsNotFound(err) {
 		return ctrl.Result{}, err
@@ -356,7 +356,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	r.Log.Info("Reconciling Service")
 
 	// If the service object doesn't have our finalizer, add it.
-	controllerutil.AddFinalizer(instance, keystonev1.KeystoneFinalizer)
+	controllerutil.AddFinalizer(instance, helper.GetFinalizer())
 	// Register the finalizer immediately to avoid orphaning resources on delete
 	//if err := patchHelper.Patch(ctx, openStackCluster); err != nil {
 	if err := r.Update(ctx, instance); err != nil {

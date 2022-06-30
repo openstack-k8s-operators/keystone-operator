@@ -26,10 +26,6 @@ import (
 )
 
 const (
-	// KeystoneFinalizer allows KeystoneAPIReconciler to clean up resources associated with KeystoneAPI before
-	// removing it from the apiserver.
-	KeystoneFinalizer = "keystoneapi.osp-director.openstack.org"
-
 	// DbSyncHash hash
 	DbSyncHash = "dbsync"
 
