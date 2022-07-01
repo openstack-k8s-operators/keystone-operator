@@ -26,9 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	gophercloud "github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
+	openstack "github.com/openstack-k8s-operators/lib-common/pkg/openstack"
 	appsv1 "k8s.io/api/apps/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -82,7 +81,7 @@ func GetAdminServiceClient(
 	ctx context.Context,
 	h *helper.Helper,
 	keystoneAPI *keystonev1.KeystoneAPI,
-) (*gophercloud.ServiceClient, condition.Condition, ctrl.Result, error) {
+) (*openstack.OpenStack, condition.Condition, ctrl.Result, error) {
 	// get public endpoint as authurl from keystone instance
 	authURL, err := keystoneAPI.GetEndpoint(common.EndpointPublic)
 	if err != nil {
@@ -104,25 +103,21 @@ func GetAdminServiceClient(
 		return nil, cond, ctrlResult, nil
 	}
 
-	opts := gophercloud.AuthOptions{
-		IdentityEndpoint: authURL,
-		Username:         keystoneAPI.Spec.AdminUser,
-		Password:         authPassword,
-		TenantName:       keystoneAPI.Spec.AdminProject,
-		DomainName:       "Default",
-	}
-
-	provider, err := openstack.AuthenticatedClient(opts)
-	if err != nil {
-		return nil, condition.Condition{}, ctrl.Result{}, err
-	}
-	endpointOpts := gophercloud.EndpointOpts{Type: "identity", Region: keystoneAPI.Spec.Region}
-	identityClient, err := openstack.NewIdentityV3(provider, endpointOpts)
+	os, err := openstack.NewOpenStack(
+		h.GetLogger(),
+		openstack.AuthOpts{
+			AuthURL:    authURL,
+			Username:   keystoneAPI.Spec.AdminUser,
+			Password:   authPassword,
+			TenantName: keystoneAPI.Spec.AdminProject,
+			DomainName: "Default",
+			Region:     keystoneAPI.Spec.Region,
+		})
 	if err != nil {
 		return nil, condition.Condition{}, ctrl.Result{}, err
 	}
 
-	return identityClient, condition.Condition{}, ctrl.Result{}, nil
+	return os, condition.Condition{}, ctrl.Result{}, nil
 }
 
 // NewKeystoneService returns an initialized NewKeystoneService.
