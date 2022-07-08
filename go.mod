@@ -8,7 +8,6 @@ require (
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.17.0
 	github.com/openshift/api v3.9.0+incompatible
-	github.com/openstack-k8s-operators/keystone-operator/api v0.0.0-00010101000000-000000000000
 	github.com/openstack-k8s-operators/lib-common v0.0.0-20220630111354-9f8383d4a2ea
 	github.com/openstack-k8s-operators/mariadb-operator v0.0.0-20220516121356-119f8d825a71
 	gopkg.in/yaml.v2 v2.4.0
@@ -77,8 +76,6 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
-
-replace github.com/openstack-k8s-operators/keystone-operator/api => ./api
 
 // 1. push your code to github.com/fork/somelib @ dev branch
 // 2. modify your go.mod file, add a line replace github.com/original/somelib => github.com/fork/somelib dev
