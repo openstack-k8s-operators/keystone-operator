@@ -40,11 +40,13 @@ func Deployment(
 
 	livenessProbe := &corev1.Probe{
 		// TODO might need tuning
+		TimeoutSeconds:      5,
 		PeriodSeconds:       3,
 		InitialDelaySeconds: 3,
 	}
 	readinessProbe := &corev1.Probe{
 		// TODO might need tuning
+		TimeoutSeconds:      5,
 		PeriodSeconds:       5,
 		InitialDelaySeconds: 5,
 	}
@@ -70,9 +72,11 @@ func Deployment(
 		// https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
 		//
 		livenessProbe.HTTPGet = &corev1.HTTPGetAction{
+			Path: "/v3",
 			Port: intstr.IntOrString{Type: intstr.Int, IntVal: int32(KeystonePublicPort)},
 		}
 		readinessProbe.HTTPGet = &corev1.HTTPGetAction{
+			Path: "/v3",
 			Port: intstr.IntOrString{Type: intstr.Int, IntVal: int32(KeystonePublicPort)},
 		}
 	}
