@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/openstack-k8s-operators/lib-common v0.0.0-20220712152428-b5e222dbcf44
-	k8s.io/api v0.24.0
+	k8s.io/api v0.24.2
 	k8s.io/apimachinery v0.24.2
 	sigs.k8s.io/controller-runtime v0.12.1
 )
