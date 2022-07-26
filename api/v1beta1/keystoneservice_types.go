@@ -17,27 +17,42 @@ limitations under the License.
 package v1beta1
 
 import (
+	condition "github.com/openstack-k8s-operators/lib-common/pkg/condition"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // KeystoneServiceSpec defines the desired state of KeystoneService
 type KeystoneServiceSpec struct {
-	ServiceID          string `json:"serviceID,omitempty"`
-	ServiceType        string `json:"serviceType,omitempty"`
-	ServiceName        string `json:"serviceName,omitempty"`
+	// +kubebuilder:validation:Required
+	// ServiceType - Type is the type of the service.
+	ServiceType string `json:"serviceType,omitempty"`
+	// +kubebuilder:validation:Required
+	// ServiceName - Name of the service.
+	ServiceName string `json:"serviceName,omitempty"`
+	// +kubebuilder:validation:Optional
+	// ServiceDescription - Description for the service.
 	ServiceDescription string `json:"serviceDescription,omitempty"`
-	Enabled            bool   `json:"enabled,omitempty"`
-	Region             string `json:"region,omitempty"`
-	AdminURL           string `json:"adminURL,omitempty"`
-	PublicURL          string `json:"publicURL,omitempty"`
-	InternalURL        string `json:"internalURL,omitempty"`
-	Username           string `json:"username,omitempty"`
-	Password           string `json:"password,omitempty"`
+	// +kubebuilder:validation:Required
+	// Enabled - whether or not the service is enabled.
+	Enabled bool `json:"enabled,omitempty"`
+	// APIEndpoints - service api endpoint URLs
+	APIEndpoints map[string]string `json:"apiEndpoints,omitempty"`
+	// +kubebuilder:validation:Required
+	// ServiceUser - optional username used for this service
+	ServiceUser string `json:"serviceUser,omitempty"`
+	// +kubebuilder:validation:Required
+	// Secret containing OpenStack password information for the ServiceUser
+	Secret string `json:"secret,omitempty"`
+	// +kubebuilder:validation:Required
+	// PasswordSelector - Selector to get the ServiceUser password from the Secret, e.g. PlacementPassword
+	PasswordSelector string `json:"passwordSelector,omitempty"`
 }
 
 // KeystoneServiceStatus defines the observed state of KeystoneService
 type KeystoneServiceStatus struct {
 	ServiceID string `json:"serviceID,omitempty"`
+	// Conditions
+	Conditions condition.List `json:"conditions,omitempty" optional:"true"`
 }
 
 //+kubebuilder:object:root=true

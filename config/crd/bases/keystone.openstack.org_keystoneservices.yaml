@@ -35,32 +35,66 @@ spec:
           spec:
             description: KeystoneServiceSpec defines the desired state of KeystoneService
             properties:
-              adminURL:
-                type: string
+              apiEndpoints:
+                additionalProperties:
+                  type: string
+                description: APIEndpoints - service api endpoint URLs
+                type: object
               enabled:
+                description: Enabled - whether or not the service is enabled.
                 type: boolean
-              internalURL:
+              passwordSelector:
+                description: PasswordSelector - Selector to get the ServiceUser password
+                  from the Secret, e.g. PlacementPassword
                 type: string
-              password:
-                type: string
-              publicURL:
-                type: string
-              region:
+              secret:
+                description: Secret containing OpenStack password information for
+                  the ServiceUser
                 type: string
               serviceDescription:
-                type: string
-              serviceID:
+                description: ServiceDescription - Description for the service.
                 type: string
               serviceName:
+                description: ServiceName - Name of the service.
                 type: string
               serviceType:
+                description: ServiceType - Type is the type of the service.
                 type: string
-              username:
+              serviceUser:
+                description: ServiceUser - optional username used for this service
                 type: string
             type: object
           status:
             description: KeystoneServiceStatus defines the observed state of KeystoneService
             properties:
+              conditions:
+                description: Conditions
+                items:
+                  description: Condition - A particular overall condition of a certain
+                    resource
+                  properties:
+                    lastHearbeatTime:
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      description: Reason - Why a particular condition is true, false
+                        or unknown
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      description: Type - A summarizing name for a given condition
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
               serviceID:
                 type: string
             type: object
