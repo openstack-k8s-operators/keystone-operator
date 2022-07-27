@@ -4,13 +4,12 @@ go 1.18
 
 require (
 	github.com/go-logr/logr v1.2.3
-	github.com/gophercloud/gophercloud v0.25.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.18.1
 	github.com/openshift/api v3.9.0+incompatible
 	github.com/openstack-k8s-operators/keystone-operator/api v0.0.0-20220708075303-17bd6ee3e936
-	github.com/openstack-k8s-operators/lib-common v0.0.0-20220712152428-b5e222dbcf44
-	github.com/openstack-k8s-operators/lib-common/pkg/openstack v0.0.0-20220726093225-9af4cdc1ee59
+	github.com/openstack-k8s-operators/lib-common v0.0.0-20220727151739-0ac9fed768b3
+	github.com/openstack-k8s-operators/lib-common/pkg/openstack v0.0.0-20220727151739-0ac9fed768b3
 	github.com/openstack-k8s-operators/mariadb-operator v0.0.0-20220516121356-119f8d825a71
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.24.2
@@ -47,6 +46,7 @@ require (
 	github.com/google/go-cmp v0.5.5 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/google/uuid v1.1.2 // indirect
+	github.com/gophercloud/gophercloud v0.25.0 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
