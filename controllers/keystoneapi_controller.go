@@ -128,14 +128,14 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// Always patch the instance status when exiting this function so we can persist any changes.
 	defer func() {
 		if err := helper.SetAfter(instance); err != nil {
-			common.LogErrorForObject(r, err, "Set after and calc patch/diff", instance)
+			common.LogErrorForObject(helper, err, "Set after and calc patch/diff", instance)
 		}
 
 		if changed := helper.GetChanges()["status"]; changed {
 			patch := client.MergeFrom(helper.GetBeforeObject())
 
 			if err := r.Status().Patch(ctx, instance, patch); err != nil && !k8s_errors.IsNotFound(err) {
-				common.LogErrorForObject(r, err, "Update status", instance)
+				common.LogErrorForObject(helper, err, "Update status", instance)
 			}
 		}
 	}()
@@ -389,7 +389,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	// - %-config configmap holding minimal keystone config required to get the service up, user can add additional files to be added to the service
 	// - parameters which has passwords gets added from the OpenStack secret via the init container
 	//
-	err = r.generateServiceConfigMaps(ctx, instance, &configMapVars)
+	err = r.generateServiceConfigMaps(ctx, instance, helper, &configMapVars)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -490,6 +490,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	ctx context.Context,
 	instance *keystonev1.KeystoneAPI,
+	h *helper.Helper,
 	envVars *map[string]common.EnvSetter,
 ) error {
 	//
@@ -533,7 +534,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			Labels:        cmLabels,
 		},
 	}
-	err := common.EnsureConfigMaps(ctx, r, instance, cms, envVars)
+	err := common.EnsureConfigMaps(ctx, h, instance, cms, envVars)
 	if err != nil {
 		return nil
 	}
@@ -669,7 +670,7 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 				Labels:     labels,
 			},
 		}
-		err := common.EnsureSecrets(ctx, r, instance, tmpl, envVars)
+		err := common.EnsureSecrets(ctx, helper, instance, tmpl, envVars)
 		if err != nil {
 			return nil
 		}

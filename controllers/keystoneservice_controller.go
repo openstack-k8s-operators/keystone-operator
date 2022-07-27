@@ -102,14 +102,14 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// Always patch the instance status when exiting this function so we can persist any changes.
 	defer func() {
 		if err := helper.SetAfter(instance); err != nil {
-			common.LogErrorForObject(r, err, "Set after and calc patch/diff", instance)
+			common.LogErrorForObject(helper, err, "Set after and calc patch/diff", instance)
 		}
 
 		if changed := helper.GetChanges()["status"]; changed {
 			patch := client.MergeFrom(helper.GetBeforeObject())
 
 			if err := r.Status().Patch(ctx, instance, patch); err != nil && !k8s_errors.IsNotFound(err) {
-				common.LogErrorForObject(r, err, "Update status", instance)
+				common.LogErrorForObject(helper, err, "Update status", instance)
 			}
 		}
 	}()
@@ -172,41 +172,48 @@ func (r *KeystoneServiceReconciler) reconcileDelete(
 ) (ctrl.Result, error) {
 	r.Log.Info("Reconciling Service delete")
 
-	// Delete Endpoints
-	for endpointInterface := range instance.Spec.APIEndpoints {
-		// get the gopher availability mapping for the endpointInterface
-		availability, err := openstack.GetAvailability(endpointInterface)
-		if err != nil {
-			return ctrl.Result{}, err
+	// only cleanup the service if there is the ServiceID reference in the
+	// object status
+	if instance.Status.ServiceID != "" {
+		// Delete Endpoints
+		for endpointInterface := range instance.Spec.APIEndpoints {
+			// get the gopher availability mapping for the endpointInterface
+			availability, err := openstack.GetAvailability(endpointInterface)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+
+			err = os.DeleteEndpoint(
+				r.Log,
+				openstack.Endpoint{
+					Name:         instance.Spec.ServiceName,
+					ServiceID:    instance.Status.ServiceID,
+					Availability: availability,
+				},
+			)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
 		}
 
-		err = os.DeleteEndpoint(
+		// Delete User
+		err := os.DeleteUser(
 			r.Log,
-			openstack.Endpoint{
-				Name:         instance.Spec.ServiceName,
-				ServiceID:    instance.Status.ServiceID,
-				Availability: availability,
-			},
-		)
+			instance.Spec.ServiceUser)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-	}
 
-	// Delete User
-	err := os.DeleteUser(
-		r.Log,
-		instance.Spec.ServiceUser)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+		// Delete Service
+		err = os.DeleteService(
+			r.Log,
+			instance.Status.ServiceID)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 
-	// Delete Service
-	err = os.DeleteService(
-		r.Log,
-		instance.Status.ServiceID)
-	if err != nil {
-		return ctrl.Result{}, err
+	} else {
+		r.Log.Info(fmt.Sprintf("Not deleting service %s as there is no stores service ID", instance.Spec.ServiceName))
 	}
 
 	// Service is deleted so remove the finalizer.
