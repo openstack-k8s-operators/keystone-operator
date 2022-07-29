@@ -18,7 +18,8 @@ package keystone
 import (
 	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 
-	common "github.com/openstack-k8s-operators/lib-common/pkg/common"
+	common "github.com/openstack-k8s-operators/lib-common/modules/common"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/env"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,24 +45,24 @@ func BootstrapJob(
 		args = append(args, BootstrapCommand)
 	}
 
-	envVars := map[string]common.EnvSetter{}
-	envVars["KOLLA_CONFIG_FILE"] = common.EnvValue(KollaConfig)
-	envVars["KOLLA_CONFIG_STRATEGY"] = common.EnvValue("COPY_ALWAYS")
-	envVars["KOLLA_BOOTSTRAP"] = common.EnvValue("true")
-	envVars["OS_BOOTSTRAP_USERNAME"] = common.EnvValue(instance.Spec.AdminUser)
-	envVars["OS_BOOTSTRAP_PROJECT_NAME"] = common.EnvValue(instance.Spec.AdminProject)
-	envVars["OS_BOOTSTRAP_ROLE_NAME"] = common.EnvValue(instance.Spec.AdminRole)
-	envVars["OS_BOOTSTRAP_SERVICE_NAME"] = common.EnvValue(ServiceName)
-	envVars["OS_BOOTSTRAP_REGION_ID"] = common.EnvValue(instance.Spec.Region)
+	envVars := map[string]env.Setter{}
+	envVars["KOLLA_CONFIG_FILE"] = env.SetValue(KollaConfig)
+	envVars["KOLLA_CONFIG_STRATEGY"] = env.SetValue("COPY_ALWAYS")
+	envVars["KOLLA_BOOTSTRAP"] = env.SetValue("true")
+	envVars["OS_BOOTSTRAP_USERNAME"] = env.SetValue(instance.Spec.AdminUser)
+	envVars["OS_BOOTSTRAP_PROJECT_NAME"] = env.SetValue(instance.Spec.AdminProject)
+	envVars["OS_BOOTSTRAP_ROLE_NAME"] = env.SetValue(instance.Spec.AdminRole)
+	envVars["OS_BOOTSTRAP_SERVICE_NAME"] = env.SetValue(ServiceName)
+	envVars["OS_BOOTSTRAP_REGION_ID"] = env.SetValue(instance.Spec.Region)
 
 	if _, ok := endpoints["admin"]; ok {
-		envVars["OS_BOOTSTRAP_ADMIN_URL"] = common.EnvValue(endpoints["admin"])
+		envVars["OS_BOOTSTRAP_ADMIN_URL"] = env.SetValue(endpoints["admin"])
 	}
 	if _, ok := endpoints["internal"]; ok {
-		envVars["OS_BOOTSTRAP_INTERNAL_URL"] = common.EnvValue(endpoints["internal"])
+		envVars["OS_BOOTSTRAP_INTERNAL_URL"] = env.SetValue(endpoints["internal"])
 	}
 	if _, ok := endpoints["public"]; ok {
-		envVars["OS_BOOTSTRAP_PUBLIC_URL"] = common.EnvValue(endpoints["public"])
+		envVars["OS_BOOTSTRAP_PUBLIC_URL"] = env.SetValue(endpoints["public"])
 	}
 
 	job := &batchv1.Job{
@@ -106,7 +107,7 @@ func BootstrapJob(
 			},
 		},
 	}
-	job.Spec.Template.Spec.Containers[0].Env = common.MergeEnvs(job.Spec.Template.Spec.Containers[0].Env, envVars)
+	job.Spec.Template.Spec.Containers[0].Env = env.MergeEnvs(job.Spec.Template.Spec.Containers[0].Env, envVars)
 	job.Spec.Template.Spec.Volumes = getVolumes(instance.Name)
 
 	initContainerDetails := APIDetails{

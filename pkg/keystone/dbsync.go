@@ -18,7 +18,8 @@ package keystone
 import (
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 
-	common "github.com/openstack-k8s-operators/lib-common/pkg/common"
+	common "github.com/openstack-k8s-operators/lib-common/modules/common"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/env"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,10 +44,10 @@ func DbSyncJob(
 		args = append(args, DBSyncCommand)
 	}
 
-	envVars := map[string]common.EnvSetter{}
-	envVars["KOLLA_CONFIG_FILE"] = common.EnvValue(KollaConfig)
-	envVars["KOLLA_CONFIG_STRATEGY"] = common.EnvValue("COPY_ALWAYS")
-	envVars["KOLLA_BOOTSTRAP"] = common.EnvValue("true")
+	envVars := map[string]env.Setter{}
+	envVars["KOLLA_CONFIG_FILE"] = env.SetValue(KollaConfig)
+	envVars["KOLLA_CONFIG_STRATEGY"] = env.SetValue("COPY_ALWAYS")
+	envVars["KOLLA_BOOTSTRAP"] = env.SetValue("true")
 
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -70,7 +71,7 @@ func DbSyncJob(
 							SecurityContext: &corev1.SecurityContext{
 								RunAsUser: &runAsUser,
 							},
-							Env:          common.MergeEnvs([]corev1.EnvVar{}, envVars),
+							Env:          env.MergeEnvs([]corev1.EnvVar{}, envVars),
 							VolumeMounts: getVolumeMounts(),
 						},
 					},

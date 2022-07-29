@@ -16,7 +16,7 @@ limitations under the License.
 package keystone
 
 import (
-	common "github.com/openstack-k8s-operators/lib-common/pkg/common"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/env"
 
 	corev1 "k8s.io/api/core/v1"
 )
@@ -47,10 +47,10 @@ func initContainer(init APIDetails) []corev1.Container {
 		InitContainerCommand,
 	}
 
-	envVars := map[string]common.EnvSetter{}
-	envVars["DatabaseHost"] = common.EnvValue(init.DatabaseHost)
-	envVars["DatabaseUser"] = common.EnvValue(init.DatabaseUser)
-	envVars["DatabaseName"] = common.EnvValue(init.DatabaseName)
+	envVars := map[string]env.Setter{}
+	envVars["DatabaseHost"] = env.SetValue(init.DatabaseHost)
+	envVars["DatabaseUser"] = env.SetValue(init.DatabaseUser)
+	envVars["DatabaseName"] = env.SetValue(init.DatabaseName)
 
 	envs := []corev1.EnvVar{
 		{
@@ -76,7 +76,7 @@ func initContainer(init APIDetails) []corev1.Container {
 			},
 		},
 	}
-	envs = common.MergeEnvs(envs, envVars)
+	envs = env.MergeEnvs(envs, envVars)
 
 	return []corev1.Container{
 		{

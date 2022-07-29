@@ -20,14 +20,16 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/openstack-k8s-operators/lib-common/pkg/common"
-	"github.com/openstack-k8s-operators/lib-common/pkg/condition"
-	"github.com/openstack-k8s-operators/lib-common/pkg/helper"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/condition"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/helper"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/secret"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
-	openstack "github.com/openstack-k8s-operators/lib-common/pkg/openstack"
+	openstack "github.com/openstack-k8s-operators/lib-common/modules/openstack"
 	appsv1 "k8s.io/api/apps/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -83,14 +85,14 @@ func GetAdminServiceClient(
 	keystoneAPI *keystonev1.KeystoneAPI,
 ) (*openstack.OpenStack, condition.Condition, ctrl.Result, error) {
 	// get public endpoint as authurl from keystone instance
-	authURL, err := keystoneAPI.GetEndpoint(common.EndpointPublic)
+	authURL, err := keystoneAPI.GetEndpoint(endpoint.EndpointPublic)
 	if err != nil {
 		return nil, condition.Condition{}, ctrl.Result{}, err
 	}
 
 	// get the password of the admin user from Spec.Secret
 	// using PasswordSelectors.Admin
-	authPassword, cond, ctrlResult, err := common.GetDataFromSecret(
+	authPassword, cond, ctrlResult, err := secret.GetDataFromSecret(
 		ctx,
 		h,
 		keystoneAPI.Spec.Secret,
@@ -159,7 +161,7 @@ func (ks *KeystoneService) CreateOrPatch(
 
 	op, err := controllerutil.CreateOrPatch(ctx, h.GetClient(), service, func() error {
 		service.Spec = ks.service.Spec
-		service.Labels = common.MergeStringMaps(service.Labels, ks.service.Labels)
+		service.Labels = util.MergeStringMaps(service.Labels, ks.service.Labels)
 
 		err := controllerutil.SetControllerReference(h.GetBeforeObject(), service, h.GetScheme())
 		if err != nil {
