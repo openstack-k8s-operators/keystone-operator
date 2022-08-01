@@ -22,7 +22,7 @@ limitations under the License.
 package v1beta1
 
 import (
-	"github.com/openstack-k8s-operators/lib-common/pkg/condition"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 

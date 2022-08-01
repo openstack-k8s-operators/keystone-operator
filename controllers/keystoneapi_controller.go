@@ -24,10 +24,18 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	keystone "github.com/openstack-k8s-operators/keystone-operator/pkg/keystone"
-	common "github.com/openstack-k8s-operators/lib-common/pkg/common"
-	condition "github.com/openstack-k8s-operators/lib-common/pkg/condition"
-	database "github.com/openstack-k8s-operators/lib-common/pkg/database"
-	helper "github.com/openstack-k8s-operators/lib-common/pkg/helper"
+	"github.com/openstack-k8s-operators/lib-common/modules/common"
+	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
+	configmap "github.com/openstack-k8s-operators/lib-common/modules/common/configmap"
+	deployment "github.com/openstack-k8s-operators/lib-common/modules/common/deployment"
+	endpoint "github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
+	env "github.com/openstack-k8s-operators/lib-common/modules/common/env"
+	helper "github.com/openstack-k8s-operators/lib-common/modules/common/helper"
+	job "github.com/openstack-k8s-operators/lib-common/modules/common/job"
+	labels "github.com/openstack-k8s-operators/lib-common/modules/common/labels"
+	oko_secret "github.com/openstack-k8s-operators/lib-common/modules/common/secret"
+	util "github.com/openstack-k8s-operators/lib-common/modules/common/util"
+	database "github.com/openstack-k8s-operators/lib-common/modules/database"
 	mariadbv1 "github.com/openstack-k8s-operators/mariadb-operator/api/v1beta1"
 
 	"gopkg.in/yaml.v2"
@@ -128,14 +136,14 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// Always patch the instance status when exiting this function so we can persist any changes.
 	defer func() {
 		if err := helper.SetAfter(instance); err != nil {
-			common.LogErrorForObject(helper, err, "Set after and calc patch/diff", instance)
+			util.LogErrorForObject(helper, err, "Set after and calc patch/diff", instance)
 		}
 
 		if changed := helper.GetChanges()["status"]; changed {
 			patch := client.MergeFrom(helper.GetBeforeObject())
 
 			if err := r.Status().Patch(ctx, instance, patch); err != nil && !k8s_errors.IsNotFound(err) {
-				common.LogErrorForObject(helper, err, "Update status", instance)
+				util.LogErrorForObject(helper, err, "Update status", instance)
 			}
 		}
 	}()
@@ -228,7 +236,7 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	//
 	dbSyncHash := instance.Status.Hash[keystonev1.DbSyncHash]
 	jobDef := keystone.DbSyncJob(instance, serviceLabels)
-	dbSyncjob := common.NewJob(
+	dbSyncjob := job.NewJob(
 		jobDef,
 		keystonev1.DbSyncHash,
 		instance.Spec.PreserveJobs,
@@ -265,13 +273,19 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	//
 	// expose the service (create service, route and return the created endpoint URLs)
 	//
-	var keystonePorts = map[common.Endpoint]int32{
-		common.EndpointAdmin:    keystone.KeystoneAdminPort,
-		common.EndpointPublic:   keystone.KeystonePublicPort,
-		common.EndpointInternal: keystone.KeystoneInternalPort,
+	var keystonePorts = map[endpoint.Endpoint]endpoint.EndpointData{
+		endpoint.EndpointAdmin: endpoint.EndpointData{
+			Port: keystone.KeystoneAdminPort,
+		},
+		endpoint.EndpointPublic: endpoint.EndpointData{
+			Port: keystone.KeystonePublicPort,
+		},
+		endpoint.EndpointInternal: endpoint.EndpointData{
+			Port: keystone.KeystoneInternalPort,
+		},
 	}
 
-	apiEndpoints, ctrlResult, err := common.ExposeEndpoints(
+	apiEndpoints, ctrlResult, err := endpoint.ExposeEndpoints(
 		ctx,
 		helper,
 		keystone.ServiceName,
@@ -299,7 +313,7 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	// BootStrap Job
 	//
 	jobDef = keystone.BootstrapJob(instance, serviceLabels, instance.Status.APIEndpoints)
-	bootstrapjob := common.NewJob(
+	bootstrapjob := job.NewJob(
 		jobDef,
 		keystonev1.BootstrapHash,
 		instance.Spec.PreserveJobs,
@@ -364,19 +378,19 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	}
 
 	// ConfigMap
-	configMapVars := make(map[string]common.EnvSetter)
+	configMapVars := make(map[string]env.Setter)
 
 	//
 	// check for required OpenStack secret holding passwords for service/admin user and add hash to the vars map
 	//
-	ospSecret, hash, err := common.GetSecret(ctx, helper, instance.Spec.Secret, instance.Namespace)
+	ospSecret, hash, err := oko_secret.GetSecret(ctx, helper, instance.Spec.Secret, instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			return ctrl.Result{RequeueAfter: time.Second * 10}, fmt.Errorf("OpenStack secret %s not found", instance.Spec.Secret)
 		}
 		return ctrl.Result{}, err
 	}
-	configMapVars[ospSecret.Name] = common.EnvValue(hash)
+	configMapVars[ospSecret.Name] = env.SetValue(hash)
 	// run check OpenStack secret - end
 
 	//
@@ -450,7 +464,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	//
 
 	// Define a new Deployment object
-	depl := common.NewDeployment(
+	depl := deployment.NewDeployment(
 		keystone.Deployment(instance, inputHash, serviceLabels),
 		5,
 	)
@@ -491,7 +505,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	ctx context.Context,
 	instance *keystonev1.KeystoneAPI,
 	h *helper.Helper,
-	envVars *map[string]common.EnvSetter,
+	envVars *map[string]env.Setter,
 ) error {
 	//
 	// create Configmap/Secret required for keystone input
@@ -500,7 +514,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	// - parameters which has passwords gets added from the ospSecret via the init container
 	//
 
-	cmLabels := common.GetLabels(instance, common.GetGroupLabel(keystone.ServiceName), map[string]string{})
+	cmLabels := labels.GetLabels(instance, labels.GetGroupLabel(keystone.ServiceName), map[string]string{})
 
 	// customData hold any customization for the service.
 	// custom.conf is going to /etc/<service>/<service>.conf.d
@@ -513,12 +527,12 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 
 	templateParameters := make(map[string]interface{})
 
-	cms := []common.Template{
+	cms := []util.Template{
 		// ScriptsConfigMap
 		{
 			Name:               fmt.Sprintf("%s-scripts", instance.Name),
 			Namespace:          instance.Namespace,
-			Type:               common.TemplateTypeScripts,
+			Type:               util.TemplateTypeScripts,
 			InstanceType:       instance.Kind,
 			AdditionalTemplate: map[string]string{"common.sh": "/common/common.sh"},
 			Labels:             cmLabels,
@@ -527,14 +541,14 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		{
 			Name:          fmt.Sprintf("%s-config-data", instance.Name),
 			Namespace:     instance.Namespace,
-			Type:          common.TemplateTypeConfig,
+			Type:          util.TemplateTypeConfig,
 			InstanceType:  instance.Kind,
 			CustomData:    customData,
 			ConfigOptions: templateParameters,
 			Labels:        cmLabels,
 		},
 	}
-	err := common.EnsureConfigMaps(ctx, h, instance, cms, envVars)
+	err := configmap.EnsureConfigMaps(ctx, h, instance, cms, envVars)
 	if err != nil {
 		return nil
 	}
@@ -550,7 +564,7 @@ func (r *KeystoneAPIReconciler) reconcileConfigMap(ctx context.Context, instance
 
 	configMapName := "openstack-config"
 	var openStackConfig keystone.OpenStackConfig
-	authURL, err := instance.GetEndpoint(common.EndpointPublic)
+	authURL, err := instance.GetEndpoint(endpoint.EndpointPublic)
 	if err != nil {
 		return err
 	}
@@ -645,14 +659,14 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 	ctx context.Context,
 	instance *keystonev1.KeystoneAPI,
 	helper *helper.Helper,
-	envVars *map[string]common.EnvSetter,
+	envVars *map[string]env.Setter,
 ) error {
-	labels := common.GetLabels(instance, common.GetGroupLabel(keystone.ServiceName), map[string]string{})
+	labels := labels.GetLabels(instance, labels.GetGroupLabel(keystone.ServiceName), map[string]string{})
 
 	//
 	// check if secret already exist
 	//
-	secret, hash, err := common.GetSecret(ctx, helper, keystone.ServiceName, instance.Namespace)
+	secret, hash, err := oko_secret.GetSecret(ctx, helper, keystone.ServiceName, instance.Namespace)
 	if err != nil && !k8s_errors.IsNotFound(err) {
 		return err
 	} else if k8s_errors.IsNotFound(err) {
@@ -661,16 +675,16 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 			"1": keystone.GenerateFernetKey(),
 		}
 
-		tmpl := []common.Template{
+		tmpl := []util.Template{
 			{
 				Name:       keystone.ServiceName,
 				Namespace:  instance.Namespace,
-				Type:       common.TemplateTypeNone,
+				Type:       util.TemplateTypeNone,
 				CustomData: fernetKeys,
 				Labels:     labels,
 			},
 		}
-		err := common.EnsureSecrets(ctx, helper, instance, tmpl, envVars)
+		err := oko_secret.EnsureSecrets(ctx, helper, instance, tmpl, envVars)
 		if err != nil {
 			return nil
 		}
@@ -681,7 +695,7 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 	// TODO: fernet key rotation
 
 	// add hash to envVars
-	(*envVars)[secret.Name] = common.EnvValue(hash)
+	(*envVars)[secret.Name] = env.SetValue(hash)
 
 	return nil
 }
@@ -693,14 +707,14 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 func (r *KeystoneAPIReconciler) createHashOfInputHashes(
 	ctx context.Context,
 	instance *keystonev1.KeystoneAPI,
-	envVars map[string]common.EnvSetter,
+	envVars map[string]env.Setter,
 ) (string, error) {
-	mergedMapVars := common.MergeEnvs([]corev1.EnvVar{}, envVars)
-	hash, err := common.ObjectHash(mergedMapVars)
+	mergedMapVars := env.MergeEnvs([]corev1.EnvVar{}, envVars)
+	hash, err := util.ObjectHash(mergedMapVars)
 	if err != nil {
 		return hash, err
 	}
-	if hashMap, changed := common.SetHash(instance.Status.Hash, common.InputHashName, hash); changed {
+	if hashMap, changed := util.SetHash(instance.Status.Hash, common.InputHashName, hash); changed {
 		instance.Status.Hash = hashMap
 		if err := r.Client.Status().Update(ctx, instance); err != nil {
 			return hash, err

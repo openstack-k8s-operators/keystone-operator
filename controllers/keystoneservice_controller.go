@@ -19,15 +19,17 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	external "github.com/openstack-k8s-operators/keystone-operator/pkg/external"
-	common "github.com/openstack-k8s-operators/lib-common/pkg/common"
-	helper "github.com/openstack-k8s-operators/lib-common/pkg/helper"
+	helper "github.com/openstack-k8s-operators/lib-common/modules/common/helper"
+	secret "github.com/openstack-k8s-operators/lib-common/modules/common/secret"
+	util "github.com/openstack-k8s-operators/lib-common/modules/common/util"
 
-	openstack "github.com/openstack-k8s-operators/lib-common/pkg/openstack"
+	openstack "github.com/openstack-k8s-operators/lib-common/modules/openstack"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -102,14 +104,14 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// Always patch the instance status when exiting this function so we can persist any changes.
 	defer func() {
 		if err := helper.SetAfter(instance); err != nil {
-			common.LogErrorForObject(helper, err, "Set after and calc patch/diff", instance)
+			util.LogErrorForObject(helper, err, "Set after and calc patch/diff", instance)
 		}
 
 		if changed := helper.GetChanges()["status"]; changed {
 			patch := client.MergeFrom(helper.GetBeforeObject())
 
 			if err := r.Status().Patch(ctx, instance, patch); err != nil && !k8s_errors.IsNotFound(err) {
-				common.LogErrorForObject(helper, err, "Update status", instance)
+				util.LogErrorForObject(helper, err, "Update status", instance)
 			}
 		}
 	}()
@@ -209,6 +211,7 @@ func (r *KeystoneServiceReconciler) reconcileDelete(
 			r.Log,
 			instance.Status.ServiceID)
 		if err != nil {
+			r.Log.Info(err.Error())
 			return ctrl.Result{}, err
 		}
 
@@ -293,7 +296,8 @@ func (r *KeystoneServiceReconciler) reconcileService(
 			instance.Spec.ServiceType,
 			instance.Spec.ServiceName,
 		)
-		if err != nil {
+		// If the service is not found, don't count that as an error here
+		if err != nil && !strings.Contains(err.Error(), "service not found in keystone") {
 			return err
 		}
 
@@ -406,7 +410,7 @@ func (r *KeystoneServiceReconciler) reconcileUser(
 	roleName := "admin"
 
 	// get the password of the service user from the secret
-	password, _, ctrlResult, err := common.GetDataFromSecret(
+	password, _, ctrlResult, err := secret.GetDataFromSecret(
 		ctx,
 		h,
 		instance.Spec.Secret,
