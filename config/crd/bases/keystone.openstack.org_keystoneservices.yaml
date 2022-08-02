@@ -15,7 +15,16 @@ spec:
     singular: keystoneservice
   scope: Namespaced
   versions:
-  - name: v1beta1
+  - additionalPrinterColumns:
+    - description: Status
+      jsonPath: .status.conditions[0].status
+      name: Status
+      type: string
+    - description: Message
+      jsonPath: .status.conditions[0].message
+      name: Message
+      type: string
+    name: v1beta1
     schema:
       openAPIV3Schema:
         description: KeystoneService is the Schema for the keystoneservices API
@@ -70,27 +79,42 @@ spec:
               conditions:
                 description: Conditions
                 items:
-                  description: Condition - A particular overall condition of a certain
-                    resource
+                  description: Condition defines an observation of a API resource
+                    operational state.
                   properties:
-                    lastHearbeatTime:
-                      format: date-time
-                      type: string
                     lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another. This should be when the underlying condition changed.
+                        If that is not known, then using the time when the API field
+                        changed is acceptable.
                       format: date-time
                       type: string
                     message:
+                      description: A human readable message indicating details about
+                        the transition.
                       type: string
                     reason:
-                      description: Reason - Why a particular condition is true, false
-                        or unknown
+                      description: The reason for the condition's last transition
+                        in CamelCase.
+                      type: string
+                    severity:
+                      description: Severity provides a classification of Reason code,
+                        so the current situation is immediately understandable and
+                        could act accordingly. It is meant for situations where Status=False
+                        and it should be indicated if it is just informational, warning
+                        (next reconciliation might fix it) or an error (e.g. DB create
+                        issue and no actions to automatically resolve the issue can/should
+                        be done). For conditions where Status=Unknown or Status=True
+                        the Severity should be SeverityNone.
                       type: string
                     status:
+                      description: Status of the condition, one of True, False, Unknown.
                       type: string
                     type:
-                      description: Type - A summarizing name for a given condition
+                      description: Type of condition in CamelCase.
                       type: string
                   required:
+                  - lastTransitionTime
                   - status
                   - type
                   type: object
