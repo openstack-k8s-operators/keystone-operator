@@ -204,27 +204,23 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 		},
 	)
 	// create or patch the DB
-	cond, ctrlResult, err := db.CreateOrPatchDB(
+	ctrlResult, err := db.CreateOrPatchDB(
 		ctx,
 		helper,
 	)
-	instance.Status.Conditions.UpdateCurrentCondition(cond)
-
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	if (ctrlResult != ctrl.Result{}) {
-		r.Log.Info(cond.Message)
 		return ctrlResult, nil
 	}
+
 	// wait for the DB to be setup
-	cond, ctrlResult, err = db.WaitForDBCreated(ctx, helper)
-	instance.Status.Conditions.UpdateCurrentCondition(cond)
+	ctrlResult, err = db.WaitForDBCreated(ctx, helper)
 	if err != nil {
 		return ctrlResult, err
 	}
 	if (ctrlResult != ctrl.Result{}) {
-		r.Log.Info(cond.Message)
 		return ctrlResult, nil
 	}
 	// update Status.DatabaseHostname, used to bootstrap/config the service
@@ -248,14 +244,6 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 		helper,
 	)
 	if (ctrlResult != ctrl.Result{}) {
-
-		c := condition.NewCondition(
-			condition.TypeDBSync,
-			corev1.ConditionTrue,
-			database.ReasonDBSync,
-			"KeystoneAPI database sync")
-		instance.Status.Conditions.UpdateCurrentCondition(c)
-
 		return ctrlResult, nil
 	}
 	if err != nil {
@@ -372,7 +360,6 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	// If the service object doesn't have our finalizer, add it.
 	controllerutil.AddFinalizer(instance, helper.GetFinalizer())
 	// Register the finalizer immediately to avoid orphaning resources on delete
-	//if err := patchHelper.Patch(ctx, openStackCluster); err != nil {
 	if err := r.Update(ctx, instance); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -485,13 +472,6 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-
-	c := condition.NewCondition(
-		condition.TypeCreated,
-		corev1.ConditionTrue,
-		condition.ReasonComplete,
-		"KeystoneAPI created")
-	instance.Status.Conditions.UpdateCurrentCondition(c)
 
 	r.Log.Info("Reconciled Service successfully")
 	return ctrl.Result{}, nil

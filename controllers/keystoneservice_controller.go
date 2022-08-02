@@ -136,12 +136,11 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	//
 	// get admin authentication OpenStack
 	//
-	os, cond, ctrlResult, err := external.GetAdminServiceClient(
+	os, ctrlResult, err := external.GetAdminServiceClient(
 		ctx,
 		helper,
 		keystoneAPI,
 	)
-	instance.Status.Conditions.UpdateCurrentCondition(cond)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -410,7 +409,7 @@ func (r *KeystoneServiceReconciler) reconcileUser(
 	roleName := "admin"
 
 	// get the password of the service user from the secret
-	password, _, ctrlResult, err := secret.GetDataFromSecret(
+	password, ctrlResult, err := secret.GetDataFromSecret(
 		ctx,
 		h,
 		instance.Spec.Secret,
