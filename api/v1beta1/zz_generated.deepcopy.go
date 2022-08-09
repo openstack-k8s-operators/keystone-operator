@@ -136,7 +136,7 @@ func (in *KeystoneAPIStatus) DeepCopyInto(out *KeystoneAPIStatus) {
 	}
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
-		*out = make(condition.List, len(*in))
+		*out = make(condition.Conditions, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
@@ -254,7 +254,7 @@ func (in *KeystoneServiceStatus) DeepCopyInto(out *KeystoneServiceStatus) {
 	*out = *in
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
-		*out = make(condition.List, len(*in))
+		*out = make(condition.Conditions, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}

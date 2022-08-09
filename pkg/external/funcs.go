@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/helper"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/secret"
@@ -83,26 +82,26 @@ func GetAdminServiceClient(
 	ctx context.Context,
 	h *helper.Helper,
 	keystoneAPI *keystonev1.KeystoneAPI,
-) (*openstack.OpenStack, condition.Condition, ctrl.Result, error) {
+) (*openstack.OpenStack, ctrl.Result, error) {
 	// get public endpoint as authurl from keystone instance
 	authURL, err := keystoneAPI.GetEndpoint(endpoint.EndpointPublic)
 	if err != nil {
-		return nil, condition.Condition{}, ctrl.Result{}, err
+		return nil, ctrl.Result{}, err
 	}
 
 	// get the password of the admin user from Spec.Secret
 	// using PasswordSelectors.Admin
-	authPassword, cond, ctrlResult, err := secret.GetDataFromSecret(
+	authPassword, ctrlResult, err := secret.GetDataFromSecret(
 		ctx,
 		h,
 		keystoneAPI.Spec.Secret,
 		10,
 		keystoneAPI.Spec.PasswordSelectors.Admin)
 	if err != nil {
-		return nil, cond, ctrl.Result{}, err
+		return nil, ctrl.Result{}, err
 	}
 	if (ctrlResult != ctrl.Result{}) {
-		return nil, cond, ctrlResult, nil
+		return nil, ctrlResult, nil
 	}
 
 	os, err := openstack.NewOpenStack(
@@ -116,10 +115,10 @@ func GetAdminServiceClient(
 			Region:     keystoneAPI.Spec.Region,
 		})
 	if err != nil {
-		return nil, condition.Condition{}, ctrl.Result{}, err
+		return nil, ctrl.Result{}, err
 	}
 
-	return os, condition.Condition{}, ctrl.Result{}, nil
+	return os, ctrl.Result{}, nil
 }
 
 // NewKeystoneService returns an initialized NewKeystoneService.

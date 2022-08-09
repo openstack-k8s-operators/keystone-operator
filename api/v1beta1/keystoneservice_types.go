@@ -52,11 +52,13 @@ type KeystoneServiceSpec struct {
 type KeystoneServiceStatus struct {
 	ServiceID string `json:"serviceID,omitempty"`
 	// Conditions
-	Conditions condition.List `json:"conditions,omitempty" optional:"true"`
+	Conditions condition.Conditions `json:"conditions,omitempty" optional:"true"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[0].status",description="Status"
+//+kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[0].message",description="Message"
 
 // KeystoneService is the Schema for the keystoneservices API
 type KeystoneService struct {

@@ -113,7 +113,12 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// initialize status
 	//
 	if instance.Status.Conditions == nil {
-		instance.Status.Conditions = condition.List{}
+		instance.Status.Conditions = condition.Conditions{}
+		instance.Status.Conditions.Init(nil)
+		// Register overall status immediately to have an early feedback e.g. in the cli
+		if err := r.Status().Update(ctx, instance); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 	if instance.Status.Hash == nil {
 		instance.Status.Hash = map[string]string{}
@@ -135,6 +140,11 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	// Always patch the instance status when exiting this function so we can persist any changes.
 	defer func() {
+		// update the overall status condition if service is ready
+		if instance.IsReady() {
+			instance.Status.Conditions.MarkTrue(condition.ReadyCondition, condition.ReadyMessage)
+		}
+
 		if err := helper.SetAfter(instance); err != nil {
 			util.LogErrorForObject(helper, err, "Set after and calc patch/diff", instance)
 		}
@@ -204,31 +214,51 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 		},
 	)
 	// create or patch the DB
-	cond, ctrlResult, err := db.CreateOrPatchDB(
+	ctrlResult, err := db.CreateOrPatchDB(
 		ctx,
 		helper,
 	)
-	instance.Status.Conditions.UpdateCurrentCondition(cond)
-
 	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.DBReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.DBReadyErrorMessage,
+			err.Error()))
 		return ctrl.Result{}, err
 	}
 	if (ctrlResult != ctrl.Result{}) {
-		r.Log.Info(cond.Message)
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.DBReadyCondition,
+			condition.RequestedReason,
+			condition.SeverityInfo,
+			condition.DBReadyRunningMessage))
 		return ctrlResult, nil
 	}
+
 	// wait for the DB to be setup
-	cond, ctrlResult, err = db.WaitForDBCreated(ctx, helper)
-	instance.Status.Conditions.UpdateCurrentCondition(cond)
+	ctrlResult, err = db.WaitForDBCreated(ctx, helper)
 	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.DBReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.DBReadyErrorMessage,
+			err.Error()))
 		return ctrlResult, err
 	}
 	if (ctrlResult != ctrl.Result{}) {
-		r.Log.Info(cond.Message)
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.DBReadyCondition,
+			condition.RequestedReason,
+			condition.SeverityInfo,
+			condition.DBReadyRunningMessage))
 		return ctrlResult, nil
 	}
 	// update Status.DatabaseHostname, used to bootstrap/config the service
 	instance.Status.DatabaseHostname = db.GetDatabaseHostname()
+	instance.Status.Conditions.MarkTrue(condition.DBReadyCondition, condition.DBReadyMessage)
+
 	// create service DB - end
 
 	//
@@ -248,17 +278,20 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 		helper,
 	)
 	if (ctrlResult != ctrl.Result{}) {
-
-		c := condition.NewCondition(
-			condition.TypeDBSync,
-			corev1.ConditionTrue,
-			database.ReasonDBSync,
-			"KeystoneAPI database sync")
-		instance.Status.Conditions.UpdateCurrentCondition(c)
-
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.DBSyncReadyCondition,
+			condition.RequestedReason,
+			condition.SeverityInfo,
+			condition.DBSyncReadyRunningMessage))
 		return ctrlResult, nil
 	}
 	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.DBSyncReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.DBSyncReadyErrorMessage,
+			err.Error()))
 		return ctrl.Result{}, err
 	}
 	if dbSyncjob.HasChanged() {
@@ -268,6 +301,8 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 		}
 		r.Log.Info(fmt.Sprintf("Job %s hash added - %s", jobDef.Name, instance.Status.Hash[keystonev1.DbSyncHash]))
 	}
+	instance.Status.Conditions.MarkTrue(condition.DBSyncReadyCondition, condition.DBSyncReadyMessage)
+
 	// run keystone db sync - end
 
 	//
@@ -293,10 +328,22 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 		keystonePorts,
 	)
 	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.ExposeServiceReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.ExposeServiceReadyErrorMessage,
+			err.Error()))
 		return ctrlResult, err
 	} else if (ctrlResult != ctrl.Result{}) {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.ExposeServiceReadyCondition,
+			condition.RequestedReason,
+			condition.SeverityInfo,
+			condition.ExposeServiceReadyRunningMessage))
 		return ctrlResult, nil
 	}
+	instance.Status.Conditions.MarkTrue(condition.ExposeServiceReadyCondition, condition.ExposeServiceReadyMessage)
 
 	//
 	// Update instance status with service endpoint url from route host information
@@ -325,9 +372,20 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 		helper,
 	)
 	if (ctrlResult != ctrl.Result{}) {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.BootstrapReadyCondition,
+			condition.RequestedReason,
+			condition.SeverityInfo,
+			condition.BootstrapReadyRunningMessage))
 		return ctrlResult, nil
 	}
 	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.BootstrapReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.BootstrapReadyErrorMessage,
+			err.Error()))
 		return ctrl.Result{}, err
 	}
 	if bootstrapjob.HasChanged() {
@@ -337,9 +395,8 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 		}
 		r.Log.Info(fmt.Sprintf("Job %s hash added - %s", jobDef.Name, instance.Status.Hash[keystonev1.BootstrapHash]))
 	}
-	if (ctrlResult != ctrl.Result{}) {
-		return ctrlResult, nil
-	}
+	instance.Status.Conditions.MarkTrue(condition.BootstrapReadyCondition, condition.BootstrapReadyMessage)
+
 	// run keystone bootstrap - end
 
 	r.Log.Info("Reconciled Service init successfully")
@@ -372,7 +429,6 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	// If the service object doesn't have our finalizer, add it.
 	controllerutil.AddFinalizer(instance, helper.GetFinalizer())
 	// Register the finalizer immediately to avoid orphaning resources on delete
-	//if err := patchHelper.Patch(ctx, openStackCluster); err != nil {
 	if err := r.Update(ctx, instance); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -386,11 +442,25 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	ospSecret, hash, err := oko_secret.GetSecret(ctx, helper, instance.Spec.Secret, instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
+			instance.Status.Conditions.Set(condition.FalseCondition(
+				condition.InputReadyCondition,
+				condition.RequestedReason,
+				condition.SeverityInfo,
+				condition.InputReadyWaitingMessage))
 			return ctrl.Result{RequeueAfter: time.Second * 10}, fmt.Errorf("OpenStack secret %s not found", instance.Spec.Secret)
 		}
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.InputReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.InputReadyErrorMessage,
+			err.Error()))
 		return ctrl.Result{}, err
 	}
 	configMapVars[ospSecret.Name] = env.SetValue(hash)
+
+	instance.Status.Conditions.MarkTrue(condition.InputReadyCondition, condition.InputReadyMessage)
+
 	// run check OpenStack secret - end
 
 	//
@@ -405,6 +475,12 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	//
 	err = r.generateServiceConfigMaps(ctx, instance, helper, &configMapVars)
 	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.ServiceConfigReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.ServiceConfigReadyErrorMessage,
+			err.Error()))
 		return ctrl.Result{}, err
 	}
 
@@ -414,6 +490,12 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	// TODO key rotation
 	err = r.ensureFernetKeys(ctx, instance, helper, &configMapVars)
 	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.ServiceConfigReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.ServiceConfigReadyErrorMessage,
+			err.Error()))
 		return ctrl.Result{}, err
 	}
 
@@ -425,6 +507,9 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+
+	instance.Status.Conditions.MarkTrue(condition.ServiceConfigReadyCondition, condition.ServiceConfigReadyMessage)
+
 	// Create ConfigMaps and Secrets - end
 
 	//
@@ -471,11 +556,23 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 
 	ctrlResult, err = depl.CreateOrPatch(ctx, helper)
 	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.DeploymentReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.DeploymentReadyErrorMessage,
+			err.Error()))
 		return ctrlResult, err
 	} else if (ctrlResult != ctrl.Result{}) {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.DeploymentReadyCondition,
+			condition.RequestedReason,
+			condition.SeverityInfo,
+			condition.DeploymentReadyRunningMessage))
 		return ctrlResult, nil
 	}
 	instance.Status.ReadyCount = depl.GetDeployment().Status.ReadyReplicas
+	instance.Status.Conditions.MarkTrue(condition.DeploymentReadyCondition, condition.DeploymentReadyMessage)
 	// create Deployment - end
 
 	//
@@ -485,13 +582,6 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-
-	c := condition.NewCondition(
-		condition.TypeCreated,
-		corev1.ConditionTrue,
-		condition.ReasonComplete,
-		"KeystoneAPI created")
-	instance.Status.Conditions.UpdateCurrentCondition(c)
 
 	r.Log.Info("Reconciled Service successfully")
 	return ctrl.Result{}, nil

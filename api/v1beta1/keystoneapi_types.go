@@ -166,7 +166,7 @@ type KeystoneAPIStatus struct {
 	APIEndpoints map[string]string `json:"apiEndpoint,omitempty"`
 
 	// Conditions
-	Conditions condition.List `json:"conditions,omitempty" optional:"true"`
+	Conditions condition.Conditions `json:"conditions,omitempty" optional:"true"`
 
 	// Keystone Database Hostname
 	DatabaseHostname string `json:"databaseHostname,omitempty"`
@@ -175,7 +175,7 @@ type KeystoneAPIStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[0].status",description="Status"
-//+kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.conditions[0].reason",description="Reason"
+//+kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[0].message",description="Message"
 
 // KeystoneAPI is the Schema for the keystoneapis API
 type KeystoneAPI struct {
