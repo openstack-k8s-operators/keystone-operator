@@ -114,7 +114,18 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	//
 	if instance.Status.Conditions == nil {
 		instance.Status.Conditions = condition.Conditions{}
-		instance.Status.Conditions.Init(nil)
+
+		cl := condition.CreateList(
+			condition.UnknownCondition(condition.DBReadyCondition, condition.InitReason, condition.DBReadyInitMessage),
+			condition.UnknownCondition(condition.DBSyncReadyCondition, condition.InitReason, condition.DBSyncReadyInitMessage),
+			condition.UnknownCondition(condition.ExposeServiceReadyCondition, condition.InitReason, condition.ExposeServiceReadyInitMessage),
+			condition.UnknownCondition(condition.BootstrapReadyCondition, condition.InitReason, condition.BootstrapReadyInitMessage),
+			condition.UnknownCondition(condition.InputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
+			condition.UnknownCondition(condition.ServiceConfigReadyCondition, condition.InitReason, condition.ServiceConfigReadyInitMessage),
+			condition.UnknownCondition(condition.DeploymentReadyCondition, condition.InitReason, condition.DeploymentReadyInitMessage))
+
+		instance.Status.Conditions.Init(&cl)
+
 		// Register overall status immediately to have an early feedback e.g. in the cli
 		if err := r.Status().Update(ctx, instance); err != nil {
 			return ctrl.Result{}, err
@@ -308,14 +319,14 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	//
 	// expose the service (create service, route and return the created endpoint URLs)
 	//
-	var keystonePorts = map[endpoint.Endpoint]endpoint.EndpointData{
-		endpoint.EndpointAdmin: endpoint.EndpointData{
+	var keystonePorts = map[endpoint.Endpoint]endpoint.Data{
+		endpoint.EndpointAdmin: endpoint.Data{
 			Port: keystone.KeystoneAdminPort,
 		},
-		endpoint.EndpointPublic: endpoint.EndpointData{
+		endpoint.EndpointPublic: endpoint.Data{
 			Port: keystone.KeystonePublicPort,
 		},
-		endpoint.EndpointInternal: endpoint.EndpointData{
+		endpoint.EndpointInternal: endpoint.Data{
 			Port: keystone.KeystoneInternalPort,
 		},
 	}
@@ -572,7 +583,9 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 		return ctrlResult, nil
 	}
 	instance.Status.ReadyCount = depl.GetDeployment().Status.ReadyReplicas
-	instance.Status.Conditions.MarkTrue(condition.DeploymentReadyCondition, condition.DeploymentReadyMessage)
+	if instance.Status.ReadyCount > 0 {
+		instance.Status.Conditions.MarkTrue(condition.DeploymentReadyCondition, condition.DeploymentReadyMessage)
+	}
 	// create Deployment - end
 
 	//
