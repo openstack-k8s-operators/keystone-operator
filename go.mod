@@ -8,9 +8,9 @@ require (
 	github.com/onsi/gomega v1.20.0
 	github.com/openshift/api v3.9.0+incompatible
 	github.com/openstack-k8s-operators/keystone-operator/api v0.0.0-20220727152756-f13e087e4199
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20220801090425-5f6ce3845f7d
-	github.com/openstack-k8s-operators/lib-common/modules/database v0.0.0-20220801090425-5f6ce3845f7d
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.0.0-20220801090425-5f6ce3845f7d
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20220809134547-1a7f2be42190
+	github.com/openstack-k8s-operators/lib-common/modules/database v0.0.0-20220809134547-1a7f2be42190
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.0.0-20220809134547-1a7f2be42190
 	github.com/openstack-k8s-operators/mariadb-operator v0.0.0-20220714144434-169460573426
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.24.3
@@ -105,7 +105,3 @@ replace sigs.k8s.io/structured-merge-diff/v4 v4.2.2 => sigs.k8s.io/structured-me
 // 3. execute go mod tidy command. After done these, go will auto replace the dev in go.mod to a suitiable pseudo-version.
 // replace github.com/openstack-k8s-operators/lib-common => github.com/<account>/lib-common v0.0.0-20220610121238-abedf5879ca4
 // replace github.com/openstack-k8s-operators/lib-common => /path/to/local/repo
-
-replace github.com/openstack-k8s-operators/lib-common/modules/common => github.com/stuggi/lib-common/modules/common v0.0.0-20220809102108-cc8996c1b4bf
-
-replace github.com/openstack-k8s-operators/lib-common/modules/database => github.com/stuggi/lib-common/modules/database v0.0.0-20220809102108-cc8996c1b4bf
