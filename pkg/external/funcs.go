@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/helper"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/secret"
@@ -194,6 +195,11 @@ func (ks *KeystoneService) CreateOrPatch(
 // GetServiceID - returns the openstack service ID
 func (ks *KeystoneService) GetServiceID() string {
 	return ks.id
+}
+
+// GetConditions - returns the conditions of the keystone service object
+func (ks *KeystoneService) GetConditions() *condition.Conditions {
+	return &ks.service.Status.Conditions
 }
 
 // Delete - deletes a KeystoneService if it exists.
