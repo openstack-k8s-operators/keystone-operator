@@ -81,3 +81,13 @@ type KeystoneServiceList struct {
 func init() {
 	SchemeBuilder.Register(&KeystoneService{}, &KeystoneServiceList{})
 }
+
+// IsReady - returns true if service, endpoints and user got created ok in keystone
+// AND the service ID registerd in the object status
+func (instance KeystoneService) IsReady() bool {
+
+	return instance.Status.Conditions.IsTrue(KeystoneServiceOSServiceReadyCondition) &&
+		instance.Status.Conditions.IsTrue(KeystoneServiceOSEndpointsReadyCondition) &&
+		instance.Status.Conditions.IsTrue(KeystoneServiceOSUserReadyCondition) &&
+		instance.Status.ServiceID != ""
+}

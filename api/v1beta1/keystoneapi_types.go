@@ -209,5 +209,6 @@ func (instance KeystoneAPI) GetEndpoint(endpointType endpoint.Endpoint) (string,
 
 // IsReady - returns true if service is ready to server requests
 func (instance KeystoneAPI) IsReady() bool {
-	return instance.Status.ReadyCount >= 1
+	return instance.Status.Conditions.IsTrue(condition.ExposeServiceReadyCondition) &&
+		instance.Status.Conditions.IsTrue(condition.DeploymentReadyCondition)
 }
