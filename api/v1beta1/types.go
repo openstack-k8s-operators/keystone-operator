@@ -13,15 +13,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package external
+package v1beta1
 
-import (
-	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
-)
-
-// KeystoneService -
-type KeystoneService struct {
-	service *keystonev1.KeystoneService
+// KeystoneServiceHelper -
+type KeystoneServiceHelper struct {
+	service *KeystoneService
 	timeout int
 	labels  map[string]string
 	id      string

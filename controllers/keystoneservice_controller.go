@@ -24,7 +24,6 @@ import (
 
 	"github.com/go-logr/logr"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
-	external "github.com/openstack-k8s-operators/keystone-operator/pkg/external"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	helper "github.com/openstack-k8s-operators/lib-common/modules/common/helper"
 	secret "github.com/openstack-k8s-operators/lib-common/modules/common/secret"
@@ -144,7 +143,7 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	//
 	// Validate that keystoneAPI is up
 	//
-	keystoneAPI, err := external.GetKeystoneAPI(ctx, helper, instance.Namespace, map[string]string{})
+	keystoneAPI, err := keystonev1.GetKeystoneAPI(ctx, helper, instance.Namespace, map[string]string{})
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			instance.Status.Conditions.Set(condition.FalseCondition(
@@ -179,7 +178,7 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	//
 	// get admin authentication OpenStack
 	//
-	os, ctrlResult, err := external.GetAdminServiceClient(
+	os, ctrlResult, err := keystonev1.GetAdminServiceClient(
 		ctx,
 		helper,
 		keystoneAPI,
