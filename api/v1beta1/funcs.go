@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package external
+package v1beta1
 
 import (
 	"context"
@@ -28,7 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	openstack "github.com/openstack-k8s-operators/lib-common/modules/openstack"
 	appsv1 "k8s.io/api/apps/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -45,8 +44,8 @@ func GetKeystoneAPI(
 	h *helper.Helper,
 	namespace string,
 	labelSelector map[string]string,
-) (*keystonev1.KeystoneAPI, error) {
-	keystoneList := &keystonev1.KeystoneAPIList{}
+) (*KeystoneAPI, error) {
+	keystoneList := &KeystoneAPIList{}
 
 	listOpts := []client.ListOption{
 		client.InNamespace(namespace),
@@ -82,7 +81,7 @@ func GetKeystoneAPI(
 func GetAdminServiceClient(
 	ctx context.Context,
 	h *helper.Helper,
-	keystoneAPI *keystonev1.KeystoneAPI,
+	keystoneAPI *KeystoneAPI,
 ) (*openstack.OpenStack, ctrl.Result, error) {
 	// get public endpoint as authurl from keystone instance
 	authURL, err := keystoneAPI.GetEndpoint(endpoint.EndpointPublic)
@@ -124,12 +123,12 @@ func GetAdminServiceClient(
 
 // NewKeystoneService returns an initialized NewKeystoneService.
 func NewKeystoneService(
-	spec keystonev1.KeystoneServiceSpec,
+	spec KeystoneServiceSpec,
 	namespace string,
 	labels map[string]string,
 	timeout int,
-) *KeystoneService {
-	service := &keystonev1.KeystoneService{
+) *KeystoneServiceHelper {
+	service := &KeystoneService{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      spec.ServiceName,
 			Namespace: namespace,
@@ -137,7 +136,7 @@ func NewKeystoneService(
 		Spec: spec,
 	}
 
-	return &KeystoneService{
+	return &KeystoneServiceHelper{
 		service: service,
 		timeout: timeout,
 		labels:  labels,
@@ -145,11 +144,11 @@ func NewKeystoneService(
 }
 
 // CreateOrPatch - creates or patches a KeystoneService, reconciles after Xs if object won't exist.
-func (ks *KeystoneService) CreateOrPatch(
+func (ks *KeystoneServiceHelper) CreateOrPatch(
 	ctx context.Context,
 	h *helper.Helper,
 ) (ctrl.Result, error) {
-	service := &keystonev1.KeystoneService{
+	service := &KeystoneService{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ks.service.Name,
 			Namespace: ks.service.Namespace,
@@ -193,17 +192,17 @@ func (ks *KeystoneService) CreateOrPatch(
 }
 
 // GetServiceID - returns the openstack service ID
-func (ks *KeystoneService) GetServiceID() string {
+func (ks *KeystoneServiceHelper) GetServiceID() string {
 	return ks.id
 }
 
 // GetConditions - returns the conditions of the keystone service object
-func (ks *KeystoneService) GetConditions() *condition.Conditions {
+func (ks *KeystoneServiceHelper) GetConditions() *condition.Conditions {
 	return &ks.service.Status.Conditions
 }
 
 // Delete - deletes a KeystoneService if it exists.
-func (ks *KeystoneService) Delete(
+func (ks *KeystoneServiceHelper) Delete(
 	ctx context.Context,
 	h *helper.Helper,
 ) error {
@@ -238,9 +237,9 @@ func GetKeystoneServiceWithName(
 	h *helper.Helper,
 	name string,
 	namespace string,
-) (*keystonev1.KeystoneService, error) {
+) (*KeystoneService, error) {
 
-	ks := &keystonev1.KeystoneService{}
+	ks := &KeystoneService{}
 	err := h.GetClient().Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, ks)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
