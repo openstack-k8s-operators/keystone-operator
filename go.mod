@@ -13,9 +13,9 @@ require (
 	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.0.0-20220915080953-f73a201a1da6
 	github.com/openstack-k8s-operators/mariadb-operator/api v0.0.0-20220822131846-da454a446c65
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.25.0
-	k8s.io/apimachinery v0.25.0
-	k8s.io/client-go v0.25.0
+	k8s.io/api v0.25.1
+	k8s.io/apimachinery v0.25.1
+	k8s.io/client-go v0.25.1
 	sigs.k8s.io/controller-runtime v0.13.0
 )
 
