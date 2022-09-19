@@ -35,8 +35,6 @@ type KeystoneServiceSpec struct {
 	// +kubebuilder:validation:Required
 	// Enabled - whether or not the service is enabled.
 	Enabled bool `json:"enabled,omitempty"`
-	// APIEndpoints - service api endpoint URLs
-	APIEndpoints map[string]string `json:"apiEndpoints,omitempty"`
 	// +kubebuilder:validation:Required
 	// ServiceUser - optional username used for this service
 	ServiceUser string `json:"serviceUser,omitempty"`
@@ -87,7 +85,6 @@ func init() {
 func (instance KeystoneService) IsReady() bool {
 
 	return instance.Status.Conditions.IsTrue(KeystoneServiceOSServiceReadyCondition) &&
-		instance.Status.Conditions.IsTrue(KeystoneServiceOSEndpointsReadyCondition) &&
 		instance.Status.Conditions.IsTrue(KeystoneServiceOSUserReadyCondition) &&
 		instance.Status.ServiceID != ""
 }

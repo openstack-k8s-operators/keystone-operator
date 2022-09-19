@@ -2,4 +2,5 @@
 resources:
 - keystone_v1beta1_keystoneapi.yaml
 - keystone_v1beta1_keystoneservice.yaml
+- keystone_v1beta1_keystoneendpoint.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

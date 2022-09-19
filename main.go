@@ -35,8 +35,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
-	"github.com/openstack-k8s-operators/keystone-operator/controllers"
 	mariadbv1 "github.com/openstack-k8s-operators/mariadb-operator/api/v1beta1"
+
+	"github.com/openstack-k8s-operators/keystone-operator/controllers"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -114,6 +115,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = (&controllers.KeystoneEndpointReconciler{
+		Client:  mgr.GetClient(),
+		Scheme:  mgr.GetScheme(),
+		Kclient: kclient,
+		Log:     ctrl.Log.WithName("controllers").WithName("KeystoneEndpoint"),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "KeystoneEndpoint")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

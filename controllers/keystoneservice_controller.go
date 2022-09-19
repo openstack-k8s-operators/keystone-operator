@@ -99,7 +99,6 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			condition.UnknownCondition(keystonev1.KeystoneAPIReadyCondition, condition.InitReason, keystonev1.KeystoneAPIReadyInitMessage),
 			condition.UnknownCondition(keystonev1.AdminServiceClientReadyCondition, condition.InitReason, keystonev1.AdminServiceClientReadyInitMessage),
 			condition.UnknownCondition(keystonev1.KeystoneServiceOSServiceReadyCondition, condition.InitReason, keystonev1.KeystoneServiceOSServiceReadyInitMessage),
-			condition.UnknownCondition(keystonev1.KeystoneServiceOSEndpointsReadyCondition, condition.InitReason, keystonev1.KeystoneServiceOSEndpointsReadyInitMessage),
 			condition.UnknownCondition(keystonev1.KeystoneServiceOSUserReadyCondition, condition.InitReason, keystonev1.KeystoneServiceOSUserReadyInitMessage))
 		instance.Status.Conditions.Init(&cl)
 
@@ -202,6 +201,11 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 	instance.Status.Conditions.MarkTrue(keystonev1.AdminServiceClientReadyCondition, keystonev1.AdminServiceClientReadyMessage)
 
+	// update status to save current conditions to object before sub-reconcilation rules start
+	if err := r.Status().Update(ctx, instance); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	// Handle service delete
 	if !instance.DeletionTimestamp.IsZero() {
 		return r.reconcileDelete(ctx, instance, helper, os)
@@ -230,27 +234,6 @@ func (r *KeystoneServiceReconciler) reconcileDelete(
 	// only cleanup the service if there is the ServiceID reference in the
 	// object status
 	if instance.Status.ServiceID != "" {
-		// Delete Endpoints
-		for endpointInterface := range instance.Spec.APIEndpoints {
-			// get the gopher availability mapping for the endpointInterface
-			availability, err := openstack.GetAvailability(endpointInterface)
-			if err != nil {
-				return ctrl.Result{}, err
-			}
-
-			err = os.DeleteEndpoint(
-				r.Log,
-				openstack.Endpoint{
-					Name:         instance.Spec.ServiceName,
-					ServiceID:    instance.Status.ServiceID,
-					Availability: availability,
-				},
-			)
-			if err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-
 		// Delete User
 		err := os.DeleteUser(
 			r.Log,
@@ -318,26 +301,6 @@ func (r *KeystoneServiceReconciler) reconcileNormal(
 	)
 
 	//
-	// create/update/delete endpoint
-	//
-	err = r.reconcileEndpoints(
-		instance,
-		os)
-	if err != nil {
-		instance.Status.Conditions.Set(condition.FalseCondition(
-			keystonev1.KeystoneServiceOSEndpointsReadyCondition,
-			condition.ErrorReason,
-			condition.SeverityWarning,
-			keystonev1.KeystoneServiceOSEndpointsReadyErrorMessage,
-			err.Error()))
-		return ctrl.Result{}, err
-	}
-	instance.Status.Conditions.MarkTrue(
-		keystonev1.KeystoneServiceOSEndpointsReadyCondition,
-		keystonev1.KeystoneServiceOSEndpointsReadyMessage,
-		instance.Spec.APIEndpoints,
-	)
-	//
 	// create/update service user
 	//
 	ctrlResult, err := r.reconcileUser(
@@ -377,39 +340,34 @@ func (r *KeystoneServiceReconciler) reconcileService(
 ) error {
 	r.Log.Info(fmt.Sprintf("Reconciling Service %s", instance.Spec.ServiceName))
 
-	// Create new service if ServiceID is not already set
-	if instance.Status.ServiceID == "" {
+	// verify if there is already a service in keystone for the type and name
+	service, err := os.GetService(
+		r.Log,
+		instance.Spec.ServiceType,
+		instance.Spec.ServiceName,
+	)
+	// If the service is not found, don't count that as an error here,
+	// it gets created bellow
+	if err != nil && !strings.Contains(err.Error(), openstack.ServiceNotFound) {
+		return err
+	}
 
-		// verify if there is still an existing service in keystone for
-		// type and name, if so register the ID
-		service, err := os.GetService(
+	if service == nil {
+		// create the service
+		instance.Status.ServiceID, err = os.CreateService(
 			r.Log,
-			instance.Spec.ServiceType,
-			instance.Spec.ServiceName,
-		)
-		// If the service is not found, don't count that as an error here
-		if err != nil && !strings.Contains(err.Error(), "service not found in keystone") {
+			openstack.Service{
+				Name:        instance.Spec.ServiceName,
+				Type:        instance.Spec.ServiceType,
+				Description: instance.Spec.ServiceDescription,
+				Enabled:     instance.Spec.Enabled,
+			})
+		if err != nil {
 			return err
 		}
-
-		// if there is already a service registered use it
-		if service != nil && instance.Status.ServiceID != service.ID {
-			instance.Status.ServiceID = service.ID
-		} else {
-			instance.Status.ServiceID, err = os.CreateService(
-				r.Log,
-				openstack.Service{
-					Name:        instance.Spec.ServiceName,
-					Type:        instance.Spec.ServiceType,
-					Description: instance.Spec.ServiceDescription,
-					Enabled:     instance.Spec.Enabled,
-				})
-			if err != nil {
-				return err
-			}
-		}
-	} else {
-		// ServiceID is already set, update the service
+	} else if service.Enabled != instance.Spec.Enabled ||
+		service.Extra["description"] != instance.Spec.ServiceDescription {
+		// update the service ONLY if Enabled or Description changed.
 		err := os.UpdateService(
 			r.Log,
 			openstack.Service{
@@ -418,76 +376,13 @@ func (r *KeystoneServiceReconciler) reconcileService(
 				Description: instance.Spec.ServiceDescription,
 				Enabled:     instance.Spec.Enabled,
 			},
-			instance.Status.ServiceID)
+			service.ID)
 		if err != nil {
 			return err
 		}
 	}
 
 	r.Log.Info("Reconciled Service successfully")
-	return nil
-}
-
-func (r *KeystoneServiceReconciler) reconcileEndpoints(
-	instance *keystonev1.KeystoneService,
-	os *openstack.OpenStack,
-) error {
-	r.Log.Info("Reconciling Endpoints")
-
-	// create / update endpoints
-	for endpointInterface, url := range instance.Spec.APIEndpoints {
-
-		// get the gopher availability mapping for the endpointInterface
-		availability, err := openstack.GetAvailability(endpointInterface)
-		if err != nil {
-			return err
-		}
-
-		// get registered endpoints for the service and endpointInterface
-		allEndpoints, err := os.GetEndpoints(
-			r.Log,
-			instance.Status.ServiceID,
-			endpointInterface)
-		if err != nil {
-			return err
-		}
-
-		if len(allEndpoints) == 1 {
-			endpoint := allEndpoints[0]
-			if url != endpoint.URL {
-				// Update the endpoint
-				_, err := os.UpdateEndpoint(
-					r.Log,
-					openstack.Endpoint{
-						Name:         endpoint.Name,
-						ServiceID:    endpoint.ServiceID,
-						Availability: availability,
-						URL:          url,
-					},
-					endpoint.ID,
-				)
-				if err != nil {
-					return err
-				}
-			}
-		} else {
-			// Create the endpoint
-			_, err := os.CreateEndpoint(
-				r.Log,
-				openstack.Endpoint{
-					Name:         instance.Spec.ServiceName,
-					ServiceID:    instance.Status.ServiceID,
-					Availability: availability,
-					URL:          url,
-				},
-			)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	r.Log.Info("Reconciled Endpoints successfully")
 	return nil
 }
 

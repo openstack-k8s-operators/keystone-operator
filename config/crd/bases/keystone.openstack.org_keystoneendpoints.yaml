@@ -5,14 +5,14 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.9.2
   creationTimestamp: null
-  name: keystoneservices.keystone.openstack.org
+  name: keystoneendpoints.keystone.openstack.org
 spec:
   group: keystone.openstack.org
   names:
-    kind: KeystoneService
-    listKind: KeystoneServiceList
-    plural: keystoneservices
-    singular: keystoneservice
+    kind: KeystoneEndpoint
+    listKind: KeystoneEndpointList
+    plural: keystoneendpoints
+    singular: keystoneendpoint
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -27,7 +27,7 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: KeystoneService is the Schema for the keystoneservices API
+        description: KeystoneEndpoint is the Schema for the keystoneendpoints API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -42,34 +42,21 @@ spec:
           metadata:
             type: object
           spec:
-            description: KeystoneServiceSpec defines the desired state of KeystoneService
+            description: KeystoneEndpointSpec defines the desired state of KeystoneEndpoint
             properties:
-              enabled:
-                description: Enabled - whether or not the service is enabled.
-                type: boolean
-              passwordSelector:
-                description: PasswordSelector - Selector to get the ServiceUser password
-                  from the Secret, e.g. PlacementPassword
-                type: string
-              secret:
-                description: Secret containing OpenStack password information for
-                  the ServiceUser
-                type: string
-              serviceDescription:
-                description: ServiceDescription - Description for the service.
-                type: string
+              endpoints:
+                additionalProperties:
+                  type: string
+                description: Endpoints - map with service api endpoint URLs with the
+                  endpoint type as index
+                type: object
               serviceName:
-                description: ServiceName - Name of the service.
-                type: string
-              serviceType:
-                description: ServiceType - Type is the type of the service.
-                type: string
-              serviceUser:
-                description: ServiceUser - optional username used for this service
+                description: ServiceName - Name of the service to create the endpoint
+                  for
                 type: string
             type: object
           status:
-            description: KeystoneServiceStatus defines the observed state of KeystoneService
+            description: KeystoneEndpointStatus defines the observed state of KeystoneEndpoint
             properties:
               conditions:
                 description: Conditions
@@ -114,6 +101,10 @@ spec:
                   - type
                   type: object
                 type: array
+              endpointIDs:
+                additionalProperties:
+                  type: string
+                type: object
               serviceID:
                 type: string
             type: object

@@ -21,107 +21,26 @@ import (
 	"time"
 
 	"github.com/openstack-k8s-operators/lib-common/modules/common/condition"
-	"github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/helper"
-	"github.com/openstack-k8s-operators/lib-common/modules/common/secret"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	openstack "github.com/openstack-k8s-operators/lib-common/modules/openstack"
-	appsv1 "k8s.io/api/apps/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-//
-// GetKeystoneAPI - get keystoneAPI object in namespace
-//
-func GetKeystoneAPI(
-	ctx context.Context,
-	h *helper.Helper,
-	namespace string,
-	labelSelector map[string]string,
-) (*KeystoneAPI, error) {
-	keystoneList := &KeystoneAPIList{}
-
-	listOpts := []client.ListOption{
-		client.InNamespace(namespace),
-	}
-
-	if len(labelSelector) > 0 {
-		labels := client.MatchingLabels(labelSelector)
-		listOpts = append(listOpts, labels)
-	}
-
-	err := h.GetClient().List(ctx, keystoneList, listOpts...)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(keystoneList.Items) > 1 {
-		return nil, fmt.Errorf("more then one KeystoneAPI object found in namespace %s", namespace)
-	}
-
-	if len(keystoneList.Items) == 0 {
-		return nil, k8s_errors.NewNotFound(
-			appsv1.Resource("KeystoneAPI"),
-			fmt.Sprintf("No KeystoneAPI object found in namespace %s", namespace),
-		)
-	}
-
-	return &keystoneList.Items[0], nil
+// KeystoneServiceHelper -
+type KeystoneServiceHelper struct {
+	service *KeystoneService
+	timeout int
+	labels  map[string]string
+	id      string
 }
 
-//
-// GetAdminServiceClient - get an admin serviceClient for the keystoneAPI instance
-//
-func GetAdminServiceClient(
-	ctx context.Context,
-	h *helper.Helper,
-	keystoneAPI *KeystoneAPI,
-) (*openstack.OpenStack, ctrl.Result, error) {
-	// get public endpoint as authurl from keystone instance
-	authURL, err := keystoneAPI.GetEndpoint(endpoint.EndpointPublic)
-	if err != nil {
-		return nil, ctrl.Result{}, err
-	}
-
-	// get the password of the admin user from Spec.Secret
-	// using PasswordSelectors.Admin
-	authPassword, ctrlResult, err := secret.GetDataFromSecret(
-		ctx,
-		h,
-		keystoneAPI.Spec.Secret,
-		10,
-		keystoneAPI.Spec.PasswordSelectors.Admin)
-	if err != nil {
-		return nil, ctrl.Result{}, err
-	}
-	if (ctrlResult != ctrl.Result{}) {
-		return nil, ctrlResult, nil
-	}
-
-	os, err := openstack.NewOpenStack(
-		h.GetLogger(),
-		openstack.AuthOpts{
-			AuthURL:    authURL,
-			Username:   keystoneAPI.Spec.AdminUser,
-			Password:   authPassword,
-			TenantName: keystoneAPI.Spec.AdminProject,
-			DomainName: "Default",
-			Region:     keystoneAPI.Spec.Region,
-		})
-	if err != nil {
-		return nil, ctrl.Result{}, err
-	}
-
-	return os, ctrl.Result{}, nil
-}
-
-// NewKeystoneService returns an initialized NewKeystoneService.
+// NewKeystoneService returns an initialized KeystoneService.
 func NewKeystoneService(
 	spec KeystoneServiceSpec,
 	namespace string,
@@ -249,4 +168,31 @@ func GetKeystoneServiceWithName(
 	}
 
 	return ks, nil
+}
+
+// DeleteKeystoneServiceWithName func
+func DeleteKeystoneServiceWithName(
+	ctx context.Context,
+	h *helper.Helper,
+	name string,
+	namespace string,
+) error {
+
+	ks, err := GetKeystoneServiceWithName(ctx, h, name, namespace)
+	if err != nil && !k8s_errors.IsNotFound(err) {
+		return err
+	}
+
+	// Could get here if there was an k8s_errors.IsNotFound, so need to check again
+	// (we do it this way because we want to make sure the "RemoveFinalizer" call is
+	// executed even if the KeystoneService no longer exists)
+	if !k8s_errors.IsNotFound(err) {
+		ksSvcObj := NewKeystoneService(ks.Spec, namespace, map[string]string{}, 10)
+		err = ksSvcObj.Delete(ctx, h)
+
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
