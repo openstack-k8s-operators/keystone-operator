@@ -161,10 +161,7 @@ func GetKeystoneServiceWithName(
 	ks := &KeystoneService{}
 	err := h.GetClient().Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, ks)
 	if err != nil {
-		if k8s_errors.IsNotFound(err) {
-			return ks, err
-		}
-		return ks, err
+		return nil, err
 	}
 
 	return ks, nil
@@ -183,16 +180,14 @@ func DeleteKeystoneServiceWithName(
 		return err
 	}
 
-	// Could get here if there was an k8s_errors.IsNotFound, so need to check again
-	// (we do it this way because we want to make sure the "RemoveFinalizer" call is
-	// executed even if the KeystoneService no longer exists)
-	if !k8s_errors.IsNotFound(err) {
+	if ks != nil {
 		ksSvcObj := NewKeystoneService(ks.Spec, namespace, map[string]string{}, 10)
-		err = ksSvcObj.Delete(ctx, h)
 
+		err = ksSvcObj.Delete(ctx, h)
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }

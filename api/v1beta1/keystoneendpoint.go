@@ -162,10 +162,7 @@ func GetKeystoneEndpointWithName(
 	ke := &KeystoneEndpoint{}
 	err := h.GetClient().Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, ke)
 	if err != nil {
-		if k8s_errors.IsNotFound(err) {
-			return ke, err
-		}
-		return ke, err
+		return nil, err
 	}
 
 	return ke, nil
@@ -185,16 +182,14 @@ func DeleteKeystoneEndpointWithName(
 		return err
 	}
 
-	// Could get here if there was an k8s_errors.IsNotFound, so need to check again
-	// (we do it this way because we want to make sure the "RemoveFinalizer" call is
-	// executed even if the KeystoneEndpoint no longer exists)
-	if !k8s_errors.IsNotFound(err) {
+	if ke != nil {
 		ksEndptObj := NewKeystoneEndpoint(ke.Name, namespace, ke.Spec, map[string]string{}, 10)
-		err = ksEndptObj.Delete(ctx, h)
 
+		err = ksEndptObj.Delete(ctx, h)
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
