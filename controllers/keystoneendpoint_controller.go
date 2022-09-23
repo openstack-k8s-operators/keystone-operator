@@ -271,6 +271,11 @@ func (r *KeystoneEndpointReconciler) reconcileNormal(
 	//
 	ksSvc, err := keystonev1.GetKeystoneServiceWithName(ctx, helper, instance.Spec.ServiceName, instance.Namespace)
 	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			util.LogForObject(helper, fmt.Sprintf("KeystoneService %s not found", instance.Spec.ServiceName), instance)
+			return ctrl.Result{RequeueAfter: time.Second * 5}, nil
+		}
+
 		return ctrl.Result{}, err
 	}
 	// mirror the Status, Reason, Severity and Message of the latest keystoneservice condition
