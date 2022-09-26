@@ -67,9 +67,6 @@ func init() {
 }
 
 // IsReady - returns true if endpoint got created ok in keystone
-// AND the endpoint ID registerd in the object status
 func (instance KeystoneEndpoint) IsReady() bool {
-
-	return instance.Status.Conditions.IsTrue(KeystoneServiceOSEndpointsReadyCondition) &&
-		len(instance.Status.EndpointIDs) == len(instance.Spec.Endpoints)
+	return instance.Status.Conditions.IsTrue(KeystoneServiceOSEndpointsReadyCondition)
 }
