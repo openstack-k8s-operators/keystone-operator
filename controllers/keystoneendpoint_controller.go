@@ -322,11 +322,11 @@ func (r *KeystoneEndpointReconciler) reconcileEndpoints(
 ) error {
 	util.LogForObject(helper, "Reconciling Endpoints", instance)
 
-	// check for removed endpoints from the Spec.Endpoints definition
-	if instance.Status.EndpointIDs != nil && len(instance.Spec.Endpoints) < len(instance.Status.EndpointIDs) {
+	// delete endpoint if it does no longer exist in Spec.Endpoints
+	// but has a reference in Status.EndpointIDs
+	if instance.Status.EndpointIDs != nil {
 		for endpointType := range instance.Status.EndpointIDs {
 			if _, ok := instance.Spec.Endpoints[endpointType]; !ok {
-				// delete endpoint
 				// get the gopher availability mapping for the endpointInterface
 				availability, err := openstack.GetAvailability(endpointType)
 				if err != nil {
@@ -344,6 +344,9 @@ func (r *KeystoneEndpointReconciler) reconcileEndpoints(
 				if err != nil {
 					return err
 				}
+
+				// remove endpoint reference from status
+				delete(instance.Status.EndpointIDs, endpointType)
 			}
 		}
 	}
@@ -411,7 +414,7 @@ func (r *KeystoneEndpointReconciler) reconcileEndpoints(
 		if instance.Status.EndpointIDs == nil {
 			instance.Status.EndpointIDs = map[string]string{}
 		}
-		if endpointID != "" {
+		if _, ok := instance.Spec.Endpoints[endpointType]; ok && endpointID != "" {
 			instance.Status.EndpointIDs[endpointType] = endpointID
 		}
 	}
