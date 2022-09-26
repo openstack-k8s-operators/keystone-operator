@@ -213,31 +213,26 @@ func (r *KeystoneEndpointReconciler) reconcileDelete(
 ) (ctrl.Result, error) {
 	util.LogForObject(helper, "Reconciling Endpoint delete", instance)
 
-	// only cleanup the endpoints if there are EndpointIDs references in the
-	// object status
-	if len(instance.Status.EndpointIDs) > 0 {
-		// Delete Endpoints
-		for endpointType := range instance.Spec.Endpoints {
-			// get the gopher availability mapping for the endpointInterface
-			availability, err := openstack.GetAvailability(endpointType)
-			if err != nil {
-				return ctrl.Result{}, err
-			}
-
-			err = os.DeleteEndpoint(
-				r.Log,
-				openstack.Endpoint{
-					Name:         instance.Spec.ServiceName,
-					ServiceID:    instance.Status.ServiceID,
-					Availability: availability,
-				},
-			)
-			if err != nil {
-				return ctrl.Result{}, err
-			}
+	// Delete Endpoints -  it is ok to call delete on non existing Endpoints
+	// therefore always call delete for the spec.
+	for endpointType := range instance.Spec.Endpoints {
+		// get the gopher availability mapping for the endpointInterface
+		availability, err := openstack.GetAvailability(endpointType)
+		if err != nil {
+			return ctrl.Result{}, err
 		}
-	} else {
-		util.LogForObject(helper, fmt.Sprintf("Not deleting %s endpoints as there are no stored IDs", instance.Spec.ServiceName), instance)
+
+		err = os.DeleteEndpoint(
+			r.Log,
+			openstack.Endpoint{
+				Name:         instance.Spec.ServiceName,
+				ServiceID:    instance.Status.ServiceID,
+				Availability: availability,
+			},
+		)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	// Endpoints are deleted so remove the finalizer.
