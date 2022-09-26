@@ -102,7 +102,7 @@ func (r *KeystoneEndpointReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// Always patch the instance status when exiting this function so we can persist any changes.
 	defer func() {
-		// update the overall status condition if service is ready
+		// update the overall status condition if endpoints are ready
 		if instance.IsReady() {
 			instance.Status.Conditions.MarkTrue(condition.ReadyCondition, condition.ReadyMessage)
 		}
@@ -213,7 +213,7 @@ func (r *KeystoneEndpointReconciler) reconcileDelete(
 ) (ctrl.Result, error) {
 	util.LogForObject(helper, "Reconciling Endpoint delete", instance)
 
-	// only cleanup the service if there are EndpointIDs references in the
+	// only cleanup the endpoints if there are EndpointIDs references in the
 	// object status
 	if len(instance.Status.EndpointIDs) > 0 {
 		// Delete Endpoints
@@ -240,7 +240,7 @@ func (r *KeystoneEndpointReconciler) reconcileDelete(
 		util.LogForObject(helper, fmt.Sprintf("Not deleting %s endpoints as there are no stored IDs", instance.Spec.ServiceName), instance)
 	}
 
-	// Service is deleted so remove the finalizer.
+	// Endpoints are deleted so remove the finalizer.
 	controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
 	util.LogForObject(helper, "Reconciled Endpoint delete successfully", instance)
 
@@ -259,7 +259,7 @@ func (r *KeystoneEndpointReconciler) reconcileNormal(
 ) (ctrl.Result, error) {
 	util.LogForObject(helper, "Reconciling Endpoint normal", instance)
 
-	// If the service object doesn't have our finalizer, add it.
+	// If the endpoint object doesn't have our finalizer, add it.
 	controllerutil.AddFinalizer(instance, helper.GetFinalizer())
 	// Register the finalizer immediately to avoid orphaning resources on delete
 	if err := r.Update(ctx, instance); err != nil {
