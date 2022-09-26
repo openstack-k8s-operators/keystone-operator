@@ -16,6 +16,11 @@ spec:
       kind: KeystoneAPI
       name: keystoneapis.keystone.openstack.org
       version: v1beta1
+    - description: KeystoneEndpoint is the Schema for the keystoneendpoints API
+      displayName: Keystone Endpoint
+      kind: KeystoneEndpoint
+      name: keystoneendpoints.keystone.openstack.org
+      version: v1beta1
     - description: KeystoneService is the Schema for the keystoneservices API
       displayName: Keystone Service
       kind: KeystoneService

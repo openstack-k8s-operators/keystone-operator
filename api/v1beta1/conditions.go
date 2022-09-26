@@ -101,7 +101,7 @@ const (
 	KeystoneServiceOSEndpointsReadyInitMessage = "Keystone Endpoints registration not started"
 
 	// KeystoneServiceOSEndpointsReadyMessage
-	KeystoneServiceOSEndpointsReadyMessage = "Keystone Endpoints %+v ready"
+	KeystoneServiceOSEndpointsReadyMessage = "Keystone Endpoints ready: %+v"
 
 	// KeystoneServiceOSEndpointsReadyErrorMessage
 	KeystoneServiceOSEndpointsReadyErrorMessage = "Keystone Endpoints error occured %s"

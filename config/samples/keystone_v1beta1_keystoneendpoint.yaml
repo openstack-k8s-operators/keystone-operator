@@ -1,0 +1,10 @@
+apiVersion: keystone.openstack.org/v1beta1
+kind: KeystoneEndpoint
+metadata:
+  name: placement
+spec:
+  serviceName: placement
+  endpoints:
+    admin: http://placement-admin-openstack.apps-crc.testing
+    internal: http://placement-internal-openstack.apps-crc.testing
+    public: http://placement-public-openstack.apps-crc.testing

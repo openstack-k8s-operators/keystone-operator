@@ -1,16 +1,12 @@
 apiVersion: keystone.openstack.org/v1beta1
 kind: KeystoneService
 metadata:
-  name: openstack
+  name: placement
 spec:
   serviceUser: placement
   enabled: true
   serviceDescription: "Placement service"
   serviceName: placement
   serviceType: placement
-  apiEndpoints:
-    admin: http://placement-admin-openstack.apps-crc.testing
-    internal: http://placement-internal-openstack.apps-crc.testing
-    public: http://placement-public-openstack.apps-crc.testing
   secret: osp-secret
   passwordSelector: PlacementPassword

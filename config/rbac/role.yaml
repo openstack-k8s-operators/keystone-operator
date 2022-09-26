@@ -94,6 +94,32 @@ rules:
 - apiGroups:
   - keystone.openstack.org
   resources:
+  - keystoneendpoints
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - keystone.openstack.org
+  resources:
+  - keystoneendpoints/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - keystone.openstack.org
+  resources:
+  - keystoneendpoints/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - keystone.openstack.org
+  resources:
   - keystoneservices
   verbs:
   - create
