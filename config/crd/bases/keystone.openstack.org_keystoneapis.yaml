@@ -104,12 +104,6 @@ spec:
                   to add additional files. Those get added to the service config dir
                   in /etc/<service> . TODO: -> implement'
                 type: object
-              nodeSelector:
-                additionalProperties:
-                  type: string
-                description: NodeSelector to target subset of worker nodes running
-                  this service
-                type: object
               passwordSelectors:
                 description: PasswordSelectors - Selectors to identify the DB and
                   AdminUser password from the Secret

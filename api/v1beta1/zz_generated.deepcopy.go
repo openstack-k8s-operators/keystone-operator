@@ -89,13 +89,6 @@ func (in *KeystoneAPIList) DeepCopyObject() runtime.Object {
 func (in *KeystoneAPISpec) DeepCopyInto(out *KeystoneAPISpec) {
 	*out = *in
 	out.PasswordSelectors = in.PasswordSelectors
-	if in.NodeSelector != nil {
-		in, out := &in.NodeSelector, &out.NodeSelector
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
-	}
 	out.Debug = in.Debug
 	if in.DefaultConfigOverwrite != nil {
 		in, out := &in.DefaultConfigOverwrite, &out.DefaultConfigOverwrite

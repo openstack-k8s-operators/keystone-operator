@@ -137,9 +137,6 @@ func Deployment(
 		},
 		corev1.LabelHostname,
 	)
-	if instance.Spec.NodeSelector != nil && len(instance.Spec.NodeSelector) > 0 {
-		deployment.Spec.Template.Spec.NodeSelector = instance.Spec.NodeSelector
-	}
 
 	initContainerDetails := APIDetails{
 		ContainerImage:       instance.Spec.ContainerImage,
