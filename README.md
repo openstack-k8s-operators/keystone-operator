@@ -19,7 +19,7 @@ metadata:
   name: keystone
 spec:
   adminPassword: foobar123
-  containerImage: quay.io/tripleotraincentos8/centos-binary-keystone:current-tripleo
+  containerImage: quay.io/tripleowallabycentos9/openstack-keystone:current-tripleo
   replicas: 1
   secret: keystone-secret
 ```
