@@ -40,11 +40,6 @@ const (
 )
 
 //
-// Keystone Reasons used by API objects.
-//
-const ()
-
-//
 // Common Messages used by API objects.
 //
 const (

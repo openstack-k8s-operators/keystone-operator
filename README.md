@@ -18,7 +18,6 @@ kind: KeystoneAPI
 metadata:
   name: keystone
 spec:
-  adminPassword: foobar123
   containerImage: quay.io/tripleowallabycentos9/openstack-keystone:current-tripleo
   replicas: 1
   secret: keystone-secret
