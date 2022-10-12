@@ -116,8 +116,8 @@ spec:
                 properties:
                   admin:
                     default: AdminPassword
-                    description: Database - Selector to get the keystone Database
-                      user password from the Secret
+                    description: Admin - Selector to get the keystone Admin password
+                      from the Secret
                     type: string
                   database:
                     default: KeystoneDatabasePassword

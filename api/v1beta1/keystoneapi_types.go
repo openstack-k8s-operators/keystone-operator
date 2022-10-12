@@ -134,7 +134,7 @@ type PasswordSelector struct {
 	Database string `json:"database,omitempty"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default="AdminPassword"
-	// Database - Selector to get the keystone Database user password from the Secret
+	// Admin - Selector to get the keystone Admin password from the Secret
 	Admin string `json:"admin,omitempty"`
 }
 
