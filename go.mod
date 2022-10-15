@@ -92,3 +92,5 @@ replace github.com/openstack-k8s-operators/keystone-operator/api => ./api
 // Without this, the following error occurs:
 // ../go/pkg/mod/k8s.io/apimachinery@v0.24.3/pkg/util/managedfields/gvkparser.go:62:39: cannot use smdschema.Schema{…} (value of type "sigs.k8s.io/structured-merge-diff/v4/schema".Schema) as type *"sigs.k8s.io/structured-merge-diff/v4/schema".Schema in struct literal
 replace sigs.k8s.io/structured-merge-diff/v4 v4.2.2 => sigs.k8s.io/structured-merge-diff/v4 v4.2.1
+
+replace github.com/openstack-k8s-operators/lib-common/modules/common => github.com/gibizer/lib-common/modules/common v0.0.0-20221014143800-c6662e4a62ff

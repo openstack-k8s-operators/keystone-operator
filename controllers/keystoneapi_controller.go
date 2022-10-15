@@ -280,8 +280,7 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	dbSyncjob := job.NewJob(
 		jobDef,
 		keystonev1.DbSyncHash,
-		instance.Spec.PreserveJobs,
-		5,
+		time.Duration(5)*time.Second,
 		dbSyncHash,
 	)
 	ctrlResult, err = dbSyncjob.DoJob(
@@ -311,6 +310,12 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 			return ctrl.Result{}, err
 		}
 		r.Log.Info(fmt.Sprintf("Job %s hash added - %s", jobDef.Name, instance.Status.Hash[keystonev1.DbSyncHash]))
+	}
+	if !instance.Spec.PreserveJobs {
+		err = job.DeleteAllSucceededJobs(ctx, helper, []string{instance.Status.Hash[keystonev1.DbSyncHash]})
+		if err != nil {
+			return ctrlResult, err
+		}
 	}
 	instance.Status.Conditions.MarkTrue(condition.DBSyncReadyCondition, condition.DBSyncReadyMessage)
 
@@ -374,8 +379,7 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	bootstrapjob := job.NewJob(
 		jobDef,
 		keystonev1.BootstrapHash,
-		instance.Spec.PreserveJobs,
-		5,
+		time.Duration(5)*time.Second,
 		instance.Status.Hash[keystonev1.BootstrapHash],
 	)
 	ctrlResult, err = bootstrapjob.DoJob(
@@ -405,6 +409,12 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 			return ctrl.Result{}, err
 		}
 		r.Log.Info(fmt.Sprintf("Job %s hash added - %s", jobDef.Name, instance.Status.Hash[keystonev1.BootstrapHash]))
+	}
+	if !instance.Spec.PreserveJobs {
+		err = job.DeleteAllSucceededJobs(ctx, helper, []string{instance.Status.Hash[keystonev1.BootstrapHash]})
+		if err != nil {
+			return ctrlResult, err
+		}
 	}
 	instance.Status.Conditions.MarkTrue(condition.BootstrapReadyCondition, condition.BootstrapReadyMessage)
 
