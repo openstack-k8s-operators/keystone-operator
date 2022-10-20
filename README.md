@@ -1,7 +1,7 @@
 # keystone-operator
 
 A Kubernetes Operator built using the [Operator Framework](https://github.com/operator-framework) for Go. The Operator provides a way to easily install and manage an OpenStack Keystone installation
-on Kubernetes. This Operator was developed using [RDO](https://www.rdoproject.org/) containers for openStack.
+on Kubernetes. This Operator was developed using [TripleO](https://opendev.org/openstack/tripleo-common/src/branch/master/container-images/tripleo_containers.yaml) containers for OpenStack.
 
 # Deployment
 
