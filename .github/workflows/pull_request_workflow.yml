@@ -1,0 +1,44 @@
+name: Pull Request Workflow
+
+# Run workflow when a new pull request is opened against master branch.
+on:
+  pull_request_target:
+    branches:
+    - 'master'
+
+jobs:
+  check_user_permission:
+    runs-on: ubuntu-latest
+    name: A job to check user's permission level
+    outputs:
+      has-permission: ${{ steps.check.outputs.has-permission }}
+    steps:
+      # Check for write permission
+      - name: Check user permission
+        id: check
+        uses: scherermichael-oss/action-has-permission@master
+        with:
+          required-permission: write
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  
+      - name: Add comment to PR if user has insufficient permissions
+        if: "! steps.check.outputs.has-permission"
+        env:
+          URL: ${{ github.event.pull_request.comments_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl \
+            -X POST \
+            $URL \
+            -H "Content-Type: application/json" \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            --data '{ "body": "Sorry! Your permissions are insufficient. Request collaborators to add `ok-to-test` label to test this PR" }'
+
+  e2e:
+    if: ${{needs.check_user_permission.outputs.has-permission}}
+    needs: [check_user_permission]
+    uses: openstack-k8s-operators/openstack-k8s-operators-ci/.github/workflows/reusable-workflow-e2e.yaml@master
+    with:
+      operator_name: keystone-operator
+    secrets: inherit
