@@ -89,6 +89,7 @@ type KeystoneAPISpec struct {
 	Secret string `json:"secret,omitempty"`
 
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default={database: KeystoneDatabasePassword, admin: AdminPassword}
 	// PasswordSelectors - Selectors to identify the DB and AdminUser password from the Secret
 	PasswordSelectors PasswordSelector `json:"passwordSelectors,omitempty"`
 
