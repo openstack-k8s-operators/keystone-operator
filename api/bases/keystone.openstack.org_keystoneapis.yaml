@@ -176,6 +176,10 @@ spec:
                 description: Secret containing OpenStack password information for
                   keystone KeystoneDatabasePassword, AdminPassword
                 type: string
+            required:
+            - containerImage
+            - databaseInstance
+            - secret
             type: object
           status:
             description: KeystoneAPIStatus defines the observed state of KeystoneAPI

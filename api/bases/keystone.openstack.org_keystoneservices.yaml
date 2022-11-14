@@ -67,6 +67,13 @@ spec:
               serviceUser:
                 description: ServiceUser - optional username used for this service
                 type: string
+            required:
+            - enabled
+            - passwordSelector
+            - secret
+            - serviceName
+            - serviceType
+            - serviceUser
             type: object
           status:
             description: KeystoneServiceStatus defines the observed state of KeystoneService

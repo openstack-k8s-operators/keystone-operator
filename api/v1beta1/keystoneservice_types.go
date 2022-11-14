@@ -25,25 +25,25 @@ import (
 type KeystoneServiceSpec struct {
 	// +kubebuilder:validation:Required
 	// ServiceType - Type is the type of the service.
-	ServiceType string `json:"serviceType,omitempty"`
+	ServiceType string `json:"serviceType"`
 	// +kubebuilder:validation:Required
 	// ServiceName - Name of the service.
-	ServiceName string `json:"serviceName,omitempty"`
+	ServiceName string `json:"serviceName"`
 	// +kubebuilder:validation:Optional
 	// ServiceDescription - Description for the service.
 	ServiceDescription string `json:"serviceDescription,omitempty"`
 	// +kubebuilder:validation:Required
 	// Enabled - whether or not the service is enabled.
-	Enabled bool `json:"enabled,omitempty"`
+	Enabled bool `json:"enabled"`
 	// +kubebuilder:validation:Required
 	// ServiceUser - optional username used for this service
-	ServiceUser string `json:"serviceUser,omitempty"`
+	ServiceUser string `json:"serviceUser"`
 	// +kubebuilder:validation:Required
 	// Secret containing OpenStack password information for the ServiceUser
-	Secret string `json:"secret,omitempty"`
+	Secret string `json:"secret"`
 	// +kubebuilder:validation:Required
 	// PasswordSelector - Selector to get the ServiceUser password from the Secret, e.g. PlacementPassword
-	PasswordSelector string `json:"passwordSelector,omitempty"`
+	PasswordSelector string `json:"passwordSelector"`
 }
 
 // KeystoneServiceStatus defines the observed state of KeystoneService
