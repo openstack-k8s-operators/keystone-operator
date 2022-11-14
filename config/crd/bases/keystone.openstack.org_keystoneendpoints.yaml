@@ -54,6 +54,9 @@ spec:
                 description: ServiceName - Name of the service to create the endpoint
                   for
                 type: string
+            required:
+            - endpoints
+            - serviceName
             type: object
           status:
             description: KeystoneEndpointStatus defines the observed state of KeystoneEndpoint

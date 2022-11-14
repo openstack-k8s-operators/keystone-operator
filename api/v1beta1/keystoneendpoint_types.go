@@ -25,10 +25,10 @@ import (
 type KeystoneEndpointSpec struct {
 	// +kubebuilder:validation:Required
 	// ServiceName - Name of the service to create the endpoint for
-	ServiceName string `json:"serviceName,omitempty"`
+	ServiceName string `json:"serviceName"`
 	// +kubebuilder:validation:Required
 	// Endpoints - map with service api endpoint URLs with the endpoint type as index
-	Endpoints map[string]string `json:"endpoints,omitempty"`
+	Endpoints map[string]string `json:"endpoints"`
 }
 
 // KeystoneEndpointStatus defines the observed state of KeystoneEndpoint
