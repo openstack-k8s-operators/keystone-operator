@@ -73,7 +73,8 @@ type KeystoneAPISpec struct {
 	// AdminUser - admin user name
 	AdminUser string `json:"adminUser"`
 
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default="quay.io/tripleozedcentos9/openstack-keystone:current-tripleo"
 	// Keystone Container Image URL
 	ContainerImage string `json:"containerImage"`
 
