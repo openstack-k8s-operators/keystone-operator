@@ -70,7 +70,8 @@ type KeystoneServiceReconciler struct {
 // +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneservices,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneservices/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneservices/finalizers,verbs=update
-// +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis,verbs=get;list;watch
+// +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis,verbs=get;list;update;patch
+// +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis/finalizers,verbs=update
 
 // Reconcile keystone service requests
 func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -163,6 +164,19 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
+	//
+	// Add a finalizer to the KeystoneAPI for this service instance, as we do not want
+	// the KeystoneAPI to disappear before this service in the case where this service
+	// is deleted
+	//
+	if controllerutil.AddFinalizer(keystoneAPI, fmt.Sprintf("%s-%s", helper.GetFinalizer(), instance.Name)) {
+		err := r.Update(ctx, keystoneAPI)
+
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	if !keystoneAPI.IsReady() {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			keystonev1.KeystoneAPIReadyCondition,
@@ -208,7 +222,7 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	// Handle service delete
 	if !instance.DeletionTimestamp.IsZero() {
-		return r.reconcileDelete(ctx, instance, helper, os)
+		return r.reconcileDelete(ctx, instance, helper, os, keystoneAPI)
 	}
 
 	// Handle non-deleted clusters
@@ -228,6 +242,7 @@ func (r *KeystoneServiceReconciler) reconcileDelete(
 	instance *keystonev1.KeystoneService,
 	helper *helper.Helper,
 	os *openstack.OpenStack,
+	keystoneAPI *keystonev1.KeystoneAPI,
 ) (ctrl.Result, error) {
 	r.Log.Info("Reconciling Service delete")
 
@@ -253,6 +268,15 @@ func (r *KeystoneServiceReconciler) reconcileDelete(
 
 	} else {
 		r.Log.Info(fmt.Sprintf("Not deleting service %s as there is no stores service ID", instance.Spec.ServiceName))
+	}
+
+	// Remove the finalizer for this service from the KeystoneAPI
+	if controllerutil.RemoveFinalizer(keystoneAPI, fmt.Sprintf("%s-%s", helper.GetFinalizer(), instance.Name)) {
+		err := r.Update(ctx, keystoneAPI)
+
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	// Service is deleted so remove the finalizer.
