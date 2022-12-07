@@ -201,8 +201,10 @@ func (r *KeystoneAPIReconciler) reconcileDelete(ctx context.Context, instance *k
 		return ctrl.Result{}, err
 	}
 
-	if err := db.DeleteFinalizer(ctx, helper); err != nil {
-		return ctrl.Result{}, err
+	if !k8s_errors.IsNotFound(err) {
+		if err := db.DeleteFinalizer(ctx, helper); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	// Service is deleted so remove the finalizer.
