@@ -52,7 +52,7 @@ type KeystoneEndpointReconciler struct {
 //+kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneservices,verbs=get;list
 
 // Reconcile keystone endpoint requests
-func (r *KeystoneEndpointReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *KeystoneEndpointReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, _err error) {
 	_ = log.FromContext(ctx)
 
 	// Fetch the KeystoneEndpoint instance
@@ -66,6 +66,67 @@ func (r *KeystoneEndpointReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
+		return ctrl.Result{}, err
+	}
+
+	helper, err := helper.NewHelper(
+		instance,
+		r.Client,
+		r.Kclient,
+		r.Scheme,
+		r.Log,
+	)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Always patch the instance status when exiting this function so we can persist any changes.
+	// TODO: call lib-common version of this logic was it is available
+	defer func() {
+		// update the overall status condition if service is ready
+		if instance.IsReady() {
+			instance.Status.Conditions.MarkTrue(condition.ReadyCondition, condition.ReadyMessage)
+		}
+
+		if err := helper.SetAfter(instance); err != nil {
+			util.LogErrorForObject(helper, err, "Set after and calc patch/diff", instance)
+			_err = err
+			return
+		}
+
+		changes := helper.GetChanges()
+		patch := client.MergeFrom(helper.GetBeforeObject())
+
+		if changes["metadata"] {
+			err := r.Client.Patch(ctx, instance, patch)
+			if k8s_errors.IsConflict(err) {
+				util.LogForObject(helper, "Metadata update conflict", instance)
+				_err = err
+				return
+			} else if err != nil && !k8s_errors.IsNotFound(err) {
+				util.LogErrorForObject(helper, err, "Metadate update failed", instance)
+				_err = err
+				return
+			}
+		}
+
+		if changes["status"] {
+			err := r.Client.Status().Patch(ctx, instance, patch)
+			if k8s_errors.IsConflict(err) {
+				util.LogForObject(helper, "Status update conflict", instance)
+				_err = err
+				return
+
+			} else if err != nil && !k8s_errors.IsNotFound(err) {
+				util.LogErrorForObject(helper, err, "Status update failed", instance)
+				_err = err
+				return
+			}
+		}
+	}()
+
+	// If we're not deleting this and the service object doesn't have our finalizer, add it.
+	if instance.DeletionTimestamp.IsZero() && controllerutil.AddFinalizer(instance, helper.GetFinalizer()) {
 		return ctrl.Result{}, err
 	}
 
@@ -84,41 +145,8 @@ func (r *KeystoneEndpointReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		instance.Status.Conditions.Init(&cl)
 
 		// Register overall status immediately to have an early feedback e.g. in the cli
-		if err := r.Status().Update(ctx, instance); err != nil {
-			return ctrl.Result{}, err
-		}
+		return ctrl.Result{}, nil
 	}
-
-	helper, err := helper.NewHelper(
-		instance,
-		r.Client,
-		r.Kclient,
-		r.Scheme,
-		r.Log,
-	)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// Always patch the instance status when exiting this function so we can persist any changes.
-	defer func() {
-		// update the overall status condition if endpoints are ready
-		if instance.IsReady() {
-			instance.Status.Conditions.MarkTrue(condition.ReadyCondition, condition.ReadyMessage)
-		}
-
-		if err := helper.SetAfter(instance); err != nil {
-			util.LogErrorForObject(helper, err, "Set after and calc patch/diff", instance)
-		}
-
-		if changed := helper.GetChanges()["status"]; changed {
-			patch := client.MergeFrom(helper.GetBeforeObject())
-
-			if err := r.Status().Patch(ctx, instance, patch); err != nil && !k8s_errors.IsNotFound(err) {
-				util.LogErrorForObject(helper, err, "Update status", instance)
-			}
-		}
-	}()
 
 	//
 	// Validate that keystoneAPI is up
@@ -184,11 +212,6 @@ func (r *KeystoneEndpointReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 	instance.Status.Conditions.MarkTrue(keystonev1.AdminServiceClientReadyCondition, keystonev1.AdminServiceClientReadyMessage)
 
-	// update status to save current conditions to object before sub-reconcilation rules start
-	if err := r.Status().Update(ctx, instance); err != nil {
-		return ctrl.Result{}, err
-	}
-
 	// Handle endpoint delete
 	if !instance.DeletionTimestamp.IsZero() {
 		return r.reconcileDelete(ctx, instance, helper, os)
@@ -239,10 +262,6 @@ func (r *KeystoneEndpointReconciler) reconcileDelete(
 	controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
 	util.LogForObject(helper, "Reconciled Endpoint delete successfully", instance)
 
-	if err := r.Update(ctx, instance); err != nil && !k8s_errors.IsNotFound(err) {
-		return ctrl.Result{}, err
-	}
-
 	return ctrl.Result{}, nil
 }
 
@@ -253,15 +272,6 @@ func (r *KeystoneEndpointReconciler) reconcileNormal(
 	os *openstack.OpenStack,
 ) (ctrl.Result, error) {
 	util.LogForObject(helper, "Reconciling Endpoint normal", instance)
-
-	if !controllerutil.ContainsFinalizer(instance, helper.GetFinalizer()) {
-		// If the service object doesn't have our finalizer, add it.
-		controllerutil.AddFinalizer(instance, helper.GetFinalizer())
-		// Register the finalizer immediately to avoid orphaning resources on delete
-		err := r.Update(ctx, instance)
-
-		return ctrl.Result{}, err
-	}
 
 	//
 	// Wait for KeystoneService is Ready and get the ServiceID from the object
