@@ -48,7 +48,8 @@ type KeystoneEndpointReconciler struct {
 //+kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneendpoints,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneendpoints/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneendpoints/finalizers,verbs=update
-//+kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis,verbs=get;list
+//+kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis,verbs=get;list;update;patch
+//+kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis/finalizers,verbs=update
 //+kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneservices,verbs=get;list
 
 // Reconcile keystone endpoint requests
@@ -173,6 +174,19 @@ func (r *KeystoneEndpointReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, err
 	}
 
+	//
+	// Add a finalizer to the KeystoneAPI for this endpoint instance, as we do not want
+	// the KeystoneAPI to disappear before this endpoint in the case where this endpoint
+	// is deleted
+	//
+	if controllerutil.AddFinalizer(keystoneAPI, fmt.Sprintf("%s-%s", helper.GetFinalizer(), instance.Name)) {
+		err := r.Update(ctx, keystoneAPI)
+
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	if !keystoneAPI.IsReady() {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			keystonev1.KeystoneAPIReadyCondition,
@@ -214,7 +228,7 @@ func (r *KeystoneEndpointReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// Handle endpoint delete
 	if !instance.DeletionTimestamp.IsZero() {
-		return r.reconcileDelete(ctx, instance, helper, os)
+		return r.reconcileDelete(ctx, instance, helper, os, keystoneAPI)
 	}
 
 	// Handle non-deleted clusters
@@ -233,6 +247,7 @@ func (r *KeystoneEndpointReconciler) reconcileDelete(
 	instance *keystonev1.KeystoneEndpoint,
 	helper *helper.Helper,
 	os *openstack.OpenStack,
+	keystoneAPI *keystonev1.KeystoneAPI,
 ) (ctrl.Result, error) {
 	util.LogForObject(helper, "Reconciling Endpoint delete", instance)
 
@@ -253,6 +268,15 @@ func (r *KeystoneEndpointReconciler) reconcileDelete(
 				Availability: availability,
 			},
 		)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	// Remove the finalizer for this endpoint from the KeystoneAPI
+	if controllerutil.RemoveFinalizer(keystoneAPI, fmt.Sprintf("%s-%s", helper.GetFinalizer(), instance.Name)) {
+		err := r.Update(ctx, keystoneAPI)
+
 		if err != nil {
 			return ctrl.Result{}, err
 		}
