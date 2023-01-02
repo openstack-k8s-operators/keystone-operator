@@ -1,0 +1,63 @@
+#
+# Check for:
+#
+# - 1 KeystoneAPI CR
+# - 3 Pods for KeystoneAPI CR
+#
+
+apiVersion: keystone.openstack.org/v1beta1
+kind: KeystoneAPI
+metadata:
+  finalizers:
+  - KeystoneAPI
+  name: keystone
+  namespace: openstack
+spec:
+  adminProject: admin
+  adminRole: admin
+  adminUser: admin
+  containerImage: quay.io/tripleozedcentos9/openstack-keystone:current-tripleo
+  customServiceConfig: |
+    [DEFAULT]
+    debug = true
+  databaseInstance: openstack
+  databaseUser: keystone
+  debug:
+    bootstrap: false
+    dbSync: false
+    service: false
+  passwordSelectors:
+    admin: AdminPassword
+    database: KeystoneDatabasePassword
+  preserveJobs: false
+  region: regionOne
+  replicas: 3
+  resources:
+    requests:
+      cpu: "1"
+      memory: 500Mi
+  secret: osp-secret
+status:
+  apiEndpoint:
+    admin: http://keystone-admin-openstack.apps-crc.testing
+    internal: http://keystone-internal-openstack.apps-crc.testing
+    public: http://keystone-public-openstack.apps-crc.testing
+  databaseHostname: openstack
+  readyCount: 3
+---
+# We can't provide 3 separate Pod YAMLs to match against because we don't know
+# what random strings were used in the Pod names for the KeystoneAPI, so instead
+# we run a bash script to check for the 3 Pods
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+namespaced: true
+commands:
+  - script: |
+      set -x
+      sleep 3
+      podcount=$(oc get pods -n openstack -l service=keystone -o name | wc -l)
+      if [ "$podcount" == "3" ]; then
+        exit 0
+      else
+        exit 1
+      fi

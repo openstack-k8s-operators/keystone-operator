@@ -1,0 +1,55 @@
+#
+# Check for:
+#
+# No KeystoneAPI CR
+# No Pods for KeystoneAPI CR
+#
+apiVersion: keystone.openstack.org/v1beta1
+kind: KeystoneAPI
+metadata:
+  finalizers:
+  - KeystoneAPI
+  name: keystone
+  namespace: openstack
+spec:
+  adminProject: admin
+  adminRole: admin
+  adminUser: admin
+  containerImage: quay.io/tripleozedcentos9/openstack-keystone:current-tripleo
+  customServiceConfig: |
+    [DEFAULT]
+    debug = true
+  databaseInstance: openstack
+  databaseUser: keystone
+  debug:
+    bootstrap: false
+    dbSync: false
+    service: false
+  passwordSelectors:
+    admin: AdminPassword
+    database: KeystoneDatabasePassword
+  preserveJobs: false
+  region: regionOne
+  replicas: 3
+  resources:
+    requests:
+      cpu: "1"
+      memory: 500Mi
+  secret: osp-secret
+status:
+  apiEndpoint:
+    admin: http://keystone-admin-openstack.apps-crc.testing
+    internal: http://keystone-internal-openstack.apps-crc.testing
+    public: http://keystone-public-openstack.apps-crc.testing
+  databaseHostname: openstack
+  readyCount: 3
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    openshift.io/scc: anyuid
+  labels:
+    service: keystone
+  #name: keystone-69f88774bd-gjspj   Can't include name due to random append
+  namespace: openstack
