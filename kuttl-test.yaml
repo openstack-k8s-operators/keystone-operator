@@ -16,6 +16,8 @@
 
 apiVersion: kuttl.dev/v1beta1
 kind: TestSuite
+testDirs:
+  - ./tests/kuttl/tests
 reportFormat: JSON
 reportName: kuttl-test
 namespace: openstack
