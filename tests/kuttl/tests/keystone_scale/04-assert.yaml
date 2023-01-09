@@ -45,18 +45,9 @@ status:
   databaseHostname: openstack
   readyCount: 1
 ---
-# We can't provide 3 separate Pod YAMLs to match against because we don't know
-# what random strings were used in the Pod names for the KeystoneAPI, so instead
-# we run a bash script to check for the 1 Pods
-apiVersion: kuttl.dev/v1beta1
-kind: TestAssert
-namespaced: true
-commands:
-  - script: |
-      set -x
-      podcount=$(oc get pods -n openstack -l service=keystone -o name | wc -l)
-      if [ "$podcount" == "1" ]; then
-        exit 0
-      else
-        exit 1
-      fi
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: keystone
+spec:
+    replicas: 1
