@@ -54,7 +54,6 @@ namespaced: true
 commands:
   - script: |
       set -x
-      sleep 3
       podcount=$(oc get pods -n openstack -l service=keystone -o name | wc -l)
       if [ "$podcount" == "1" ]; then
         exit 0

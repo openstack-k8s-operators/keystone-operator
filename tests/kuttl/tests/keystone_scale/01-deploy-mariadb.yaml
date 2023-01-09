@@ -3,4 +3,5 @@ kind: TestStep
 commands:
   - script: |
       PWD=$INSTALL_YAMLS
+      echo $INSTALL_YAMLS
       make -C $INSTALL_YAMLS mariadb_deploy
