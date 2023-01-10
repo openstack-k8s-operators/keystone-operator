@@ -2,7 +2,7 @@
 # Check for:
 #
 # - 1 KeystoneAPI CR
-# - 1 Pod for KeystoneAPI CR
+# - 3 Pods for KeystoneAPI CR
 #
 
 apiVersion: keystone.openstack.org/v1beta1
@@ -31,7 +31,7 @@ spec:
     database: KeystoneDatabasePassword
   preserveJobs: false
   region: regionOne
-  replicas: 1
+  replicas: 3
   resources:
     requests:
       cpu: "1.0"
@@ -43,92 +43,13 @@ status:
     internal: http://keystone-internal-openstack.apps-crc.testing
     public: http://keystone-public-openstack.apps-crc.testing
   databaseHostname: openstack
-  readyCount: 1
+  readyCount: 3
 ---
-apiVersion: v1
-kind: Pod
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  annotations:
-    openshift.io/scc: anyuid
-  labels:
-    service: keystone
-  #name: keystone-69f88774bd-gjspj   Can't include name due to random append
-  namespace: openstack
+  name: keystone
 spec:
-  affinity:
-    podAntiAffinity:
-      preferredDuringSchedulingIgnoredDuringExecution:
-      - podAffinityTerm:
-          labelSelector:
-            matchExpressions:
-            - key: service
-              operator: In
-              values:
-              - keystone
-          topologyKey: kubernetes.io/hostname
-        weight: 1
-  containers:
-  - args:
-    - -c
-    - /usr/local/bin/kolla_set_configs && /usr/local/bin/kolla_start
-    command:
-    - /bin/bash
-    image: quay.io/tripleozedcentos9/openstack-keystone:current-tripleo
-    imagePullPolicy: IfNotPresent
-    livenessProbe:
-      failureThreshold: 3
-      httpGet:
-        path: /v3
-        port: 5000
-        scheme: HTTP
-      initialDelaySeconds: 3
-      periodSeconds: 3
-      successThreshold: 1
-      timeoutSeconds: 5
-    name: keystone-api
-    readinessProbe:
-      failureThreshold: 3
-      httpGet:
-        path: /v3
-        port: 5000
-        scheme: HTTP
-      initialDelaySeconds: 5
-      periodSeconds: 5
-      successThreshold: 1
-      timeoutSeconds: 5
-    resources:
-      requests:
-        cpu: "1"
-        memory: 500Mi
-  initContainers:
-  - args:
-    - -c
-    - /usr/local/bin/container-scripts/init.sh
-    command:
-    - /bin/bash
-    env:
-    - name: DatabasePassword
-      valueFrom:
-        secretKeyRef:
-          key: KeystoneDatabasePassword
-          name: osp-secret
-    - name: AdminPassword
-      valueFrom:
-        secretKeyRef:
-          key: AdminPassword
-          name: osp-secret
-    - name: DatabaseHost
-      value: openstack
-    - name: DatabaseName
-      value: keystone
-    - name: DatabaseUser
-      value: keystone
-    image: quay.io/tripleozedcentos9/openstack-keystone:current-tripleo
-    imagePullPolicy: IfNotPresent
-    name: init
-    resources: {}
-  restartPolicy: Always
-  serviceAccount: keystone-operator-keystone
-  serviceAccountName: keystone-operator-keystone
+  replicas: 3
 status:
-  phase: Running
+  availableReplicas: 3

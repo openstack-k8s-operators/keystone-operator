@@ -17,7 +17,7 @@
 apiVersion: kuttl.dev/v1beta1
 kind: TestSuite
 reportFormat: JSON
-reportName: kuttl-test
+reportName: kuttl-test-keystone
 namespace: openstack
 timeout: 180
 parallel: 1
