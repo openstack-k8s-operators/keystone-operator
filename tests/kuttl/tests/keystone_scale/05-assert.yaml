@@ -50,3 +50,16 @@ metadata:
   name: keystone
 spec:
   replicas: 0
+---
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+namespaced: True
+commands:
+  - script: |
+      set -x
+      available=$(oc get deployment -n openstack keystone -o yaml | grep "availableReplicas: 0")
+      if [ -z "$available"  ]; then
+        exit 0
+      else
+        exit 1
+      fi
