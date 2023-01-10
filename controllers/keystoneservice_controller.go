@@ -27,7 +27,6 @@ import (
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	helper "github.com/openstack-k8s-operators/lib-common/modules/common/helper"
 	secret "github.com/openstack-k8s-operators/lib-common/modules/common/secret"
-	util "github.com/openstack-k8s-operators/lib-common/modules/common/util"
 
 	openstack "github.com/openstack-k8s-operators/lib-common/modules/openstack"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -103,47 +102,16 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	// Always patch the instance status when exiting this function so we can persist any changes.
-	// TODO: call lib-common version of this logic was it is available
 	defer func() {
 		// update the overall status condition if service is ready
 		if instance.IsReady() {
 			instance.Status.Conditions.MarkTrue(condition.ReadyCondition, condition.ReadyMessage)
 		}
 
-		if err := helper.SetAfter(instance); err != nil {
-			util.LogErrorForObject(helper, err, "Set after and calc patch/diff", instance)
+		err := helper.PatchInstance(ctx, instance)
+		if err != nil {
 			_err = err
 			return
-		}
-
-		changes := helper.GetChanges()
-		patch := client.MergeFrom(helper.GetBeforeObject())
-
-		if changes["metadata"] {
-			err := r.Client.Patch(ctx, instance, patch)
-			if k8s_errors.IsConflict(err) {
-				util.LogForObject(helper, "Metadata update conflict", instance)
-				_err = err
-				return
-			} else if err != nil && !k8s_errors.IsNotFound(err) {
-				util.LogErrorForObject(helper, err, "Metadate update failed", instance)
-				_err = err
-				return
-			}
-		}
-
-		if changes["status"] {
-			err := r.Client.Status().Patch(ctx, instance, patch)
-			if k8s_errors.IsConflict(err) {
-				util.LogForObject(helper, "Status update conflict", instance)
-				_err = err
-				return
-
-			} else if err != nil && !k8s_errors.IsNotFound(err) {
-				util.LogErrorForObject(helper, err, "Status update failed", instance)
-				_err = err
-				return
-			}
 		}
 	}()
 
