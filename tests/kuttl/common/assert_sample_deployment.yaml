@@ -2,8 +2,13 @@
 # Check for:
 #
 # - 1 KeystoneAPI CR
-# - 1 Pod for KeystoneAPI CR
-#
+# - Deployment with 1 Pod for KeystoneAPI CR
+# - Keystone-admin Service
+# - Keystone-internal Service
+# - Keystone-public Service
+# - Keystone-admin Route
+# - Keystone-internal Route
+# - Keystone-public Route
 
 apiVersion: keystone.openstack.org/v1beta1
 kind: KeystoneAPI
@@ -45,6 +50,98 @@ status:
   databaseHostname: openstack
   readyCount: 1
 ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keystone
+  namespace: openstack
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        service: keystone
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: service
+                  operator: In
+                  values:
+                  - keystone
+              topologyKey: kubernetes.io/hostname
+            weight: 1
+      containers:
+      - args:
+        - -c
+        - /usr/local/bin/kolla_set_configs && /usr/local/bin/kolla_start
+        command:
+        - /bin/bash
+        image: quay.io/tripleozedcentos9/openstack-keystone:current-tripleo
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /v3
+            port: 5000
+            scheme: HTTP
+          initialDelaySeconds: 3
+          periodSeconds: 3
+          successThreshold: 1
+          timeoutSeconds: 5
+        name: keystone-api
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /v3
+            port: 5000
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          requests:
+            cpu: "1"
+            memory: 500Mi
+      initContainers:
+      - args:
+        - -c
+        - /usr/local/bin/container-scripts/init.sh
+        command:
+        - /bin/bash
+        env:
+        - name: DatabasePassword
+          valueFrom:
+            secretKeyRef:
+              key: KeystoneDatabasePassword
+              name: osp-secret
+        - name: AdminPassword
+          valueFrom:
+            secretKeyRef:
+              key: AdminPassword
+              name: osp-secret
+        - name: DatabaseHost
+          value: openstack
+        - name: DatabaseName
+          value: keystone
+        - name: DatabaseUser
+          value: keystone
+        image: quay.io/tripleozedcentos9/openstack-keystone:current-tripleo
+        imagePullPolicy: IfNotPresent
+        name: init
+        resources: {}
+      restartPolicy: Always
+      serviceAccount: keystone-operator-keystone
+      serviceAccountName: keystone-operator-keystone
+status:
+  availableReplicas: 1
+  replicas: 1
+---
+# the openshift annotations can't be checked through the deployment above
 apiVersion: v1
 kind: Pod
 metadata:
@@ -52,83 +149,96 @@ metadata:
     openshift.io/scc: anyuid
   labels:
     service: keystone
-  #name: keystone-69f88774bd-gjspj   Can't include name due to random append
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    admin: "true"
+    service: keystone
+  name: keystone-admin
   namespace: openstack
 spec:
-  affinity:
-    podAntiAffinity:
-      preferredDuringSchedulingIgnoredDuringExecution:
-      - podAffinityTerm:
-          labelSelector:
-            matchExpressions:
-            - key: service
-              operator: In
-              values:
-              - keystone
-          topologyKey: kubernetes.io/hostname
-        weight: 1
-  containers:
-  - args:
-    - -c
-    - /usr/local/bin/kolla_set_configs && /usr/local/bin/kolla_start
-    command:
-    - /bin/bash
-    image: quay.io/tripleozedcentos9/openstack-keystone:current-tripleo
-    imagePullPolicy: IfNotPresent
-    livenessProbe:
-      failureThreshold: 3
-      httpGet:
-        path: /v3
-        port: 5000
-        scheme: HTTP
-      initialDelaySeconds: 3
-      periodSeconds: 3
-      successThreshold: 1
-      timeoutSeconds: 5
-    name: keystone-api
-    readinessProbe:
-      failureThreshold: 3
-      httpGet:
-        path: /v3
-        port: 5000
-        scheme: HTTP
-      initialDelaySeconds: 5
-      periodSeconds: 5
-      successThreshold: 1
-      timeoutSeconds: 5
-    resources:
-      requests:
-        cpu: "1"
-        memory: 500Mi
-  initContainers:
-  - args:
-    - -c
-    - /usr/local/bin/container-scripts/init.sh
-    command:
-    - /bin/bash
-    env:
-    - name: DatabasePassword
-      valueFrom:
-        secretKeyRef:
-          key: KeystoneDatabasePassword
-          name: osp-secret
-    - name: AdminPassword
-      valueFrom:
-        secretKeyRef:
-          key: AdminPassword
-          name: osp-secret
-    - name: DatabaseHost
-      value: openstack
-    - name: DatabaseName
-      value: keystone
-    - name: DatabaseUser
-      value: keystone
-    image: quay.io/tripleozedcentos9/openstack-keystone:current-tripleo
-    imagePullPolicy: IfNotPresent
-    name: init
-    resources: {}
-  restartPolicy: Always
-  serviceAccount: keystone-operator-keystone
-  serviceAccountName: keystone-operator-keystone
-status:
-  phase: Running
+  ports:
+    - name: keystone-admin
+  selector:
+    service: keystone
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    internal: "true"
+    service: keystone
+  name: keystone-internal
+  namespace: openstack
+spec:
+  ports:
+    - name: keystone-internal
+  selector:
+    service: keystone
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    public: "true"
+    service: keystone
+  name: keystone-public
+  namespace: openstack
+spec:
+  ports:
+    - name: keystone-public
+  selector:
+    service: keystone
+  type: ClusterIP
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: keystone-admin
+  labels:
+    admin: "true"
+    service: keystone
+  namespace: openstack
+spec:
+  host: keystone-admin-openstack.apps-crc.testing
+  port:
+    targetPort: keystone-admin
+  to:
+    kind: Service
+    name: keystone-admin
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: keystone-internal
+  labels:
+    internal: "true"
+    service: keystone
+  namespace: openstack
+spec:
+  host: keystone-internal-openstack.apps-crc.testing
+  port:
+    targetPort: keystone-internal
+  to:
+    kind: Service
+    name: keystone-internal
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: keystone-public
+  labels:
+    public: "true"
+    service: keystone
+  namespace: openstack
+spec:
+  host: keystone-public-openstack.apps-crc.testing
+  port:
+    targetPort: keystone-public
+  to:
+    kind: Service
+    name: keystone-public
