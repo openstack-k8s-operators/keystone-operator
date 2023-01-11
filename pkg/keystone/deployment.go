@@ -16,10 +16,14 @@ limitations under the License.
 package keystone
 
 import (
+	"fmt"
+
 	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/lib-common/modules/common"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/affinity"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/annotations"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/env"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -37,7 +41,7 @@ func Deployment(
 	instance *keystonev1beta1.KeystoneAPI,
 	configHash string,
 	labels map[string]string,
-) *appsv1.Deployment {
+) (*appsv1.Deployment, error) {
 	runAsUser := int64(0)
 
 	livenessProbe := &corev1.Probe{
@@ -141,6 +145,14 @@ func Deployment(
 		deployment.Spec.Template.Spec.NodeSelector = instance.Spec.NodeSelector
 	}
 
+	// networks to attach to
+	nwAnnotation, err := annotations.GetNADAnnotation(instance.Namespace, instance.Spec.NetworkAttachmentDefinitions)
+	if err != nil {
+		return nil, fmt.Errorf("failed create network annotation from %s: %w",
+			instance.Spec.NetworkAttachmentDefinitions, err)
+	}
+	deployment.Spec.Template.Annotations = util.MergeStringMaps(deployment.Spec.Template.Annotations, nwAnnotation)
+
 	initContainerDetails := APIDetails{
 		ContainerImage:       instance.Spec.ContainerImage,
 		DatabaseHost:         instance.Status.DatabaseHostname,
@@ -153,5 +165,5 @@ func Deployment(
 	}
 	deployment.Spec.Template.Spec.InitContainers = initContainer(initContainerDetails)
 
-	return deployment
+	return deployment, nil
 }

@@ -16,10 +16,14 @@ limitations under the License.
 package keystone
 
 import (
+	"fmt"
+
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 
 	common "github.com/openstack-k8s-operators/lib-common/modules/common"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/annotations"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/env"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,7 +38,7 @@ const (
 func DbSyncJob(
 	instance *keystonev1.KeystoneAPI,
 	labels map[string]string,
-) *batchv1.Job {
+) (*batchv1.Job, error) {
 	runAsUser := int64(0)
 
 	args := []string{"-c"}
@@ -82,6 +86,14 @@ func DbSyncJob(
 
 	job.Spec.Template.Spec.Volumes = getVolumes(ServiceName)
 
+	// networks to attach to
+	nwAnnotation, err := annotations.GetNADAnnotation(instance.Namespace, instance.Spec.NetworkAttachmentDefinitions)
+	if err != nil {
+		return nil, fmt.Errorf("failed create network annotation from %s: %w",
+			instance.Spec.NetworkAttachmentDefinitions, err)
+	}
+	job.Spec.Template.Annotations = util.MergeStringMaps(job.Spec.Template.Annotations, nwAnnotation)
+
 	initContainerDetails := APIDetails{
 		ContainerImage:       instance.Spec.ContainerImage,
 		DatabaseHost:         instance.Status.DatabaseHostname,
@@ -94,5 +106,5 @@ func DbSyncJob(
 	}
 	job.Spec.Template.Spec.InitContainers = initContainer(initContainerDetails)
 
-	return job
+	return job, nil
 }

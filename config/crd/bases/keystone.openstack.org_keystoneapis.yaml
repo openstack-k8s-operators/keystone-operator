@@ -16,6 +16,10 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
+    - description: Networks
+      jsonPath: .status.networks
+      name: Networks
+      type: string
     - description: Status
       jsonPath: .status.conditions[0].status
       name: Status
@@ -105,6 +109,12 @@ spec:
                   to add additional files. Those get added to the service config dir
                   in /etc/<service> . TODO: -> implement'
                 type: object
+              networkAttachmentDefinitions:
+                description: NetworkAttachmentDefinitions list of network attachment
+                  definitions the service pod gets attached to
+                items:
+                  type: string
+                type: array
               nodeSelector:
                 additionalProperties:
                   type: string
@@ -240,6 +250,12 @@ spec:
                   type: string
                 description: Map of hashes to track e.g. job status
                 type: object
+              networks:
+                description: Networks in addtion to the cluster network, the service
+                  is attached to
+                items:
+                  type: string
+                type: array
               readyCount:
                 description: ReadyCount of keystone API instances
                 format: int32
