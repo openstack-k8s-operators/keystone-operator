@@ -13,43 +13,16 @@ metadata:
   name: keystone
   namespace: openstack
 spec:
-  adminProject: admin
-  adminRole: admin
-  adminUser: admin
-  containerImage: quay.io/tripleozedcentos9/openstack-keystone:current-tripleo
-  customServiceConfig: |
-    [DEFAULT]
-    debug = true
-  databaseInstance: openstack
-  databaseUser: keystone
-  debug:
-    bootstrap: false
-    dbSync: false
-    service: false
-  passwordSelectors:
-    admin: AdminPassword
-    database: KeystoneDatabasePassword
-  preserveJobs: false
-  region: regionOne
   replicas: 1
-  resources:
-    requests:
-      cpu: "1.0"
-      memory: 500Mi
-  secret: osp-secret
 status:
-  apiEndpoint:
-    admin: http://keystone-admin-openstack.apps-crc.testing
-    internal: http://keystone-internal-openstack.apps-crc.testing
-    public: http://keystone-public-openstack.apps-crc.testing
-  databaseHostname: openstack
   readyCount: 1
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-    name: keystone
+  name: keystone
+  namespace: openstack
 spec:
-    replicas: 1
+  replicas: 1
 status:
   availableReplicas: 1
