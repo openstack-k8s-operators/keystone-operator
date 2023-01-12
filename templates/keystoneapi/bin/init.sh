@@ -42,5 +42,4 @@ do
 done
 
 # set secrets
-crudini --set ${SVC_CFG_MERGED} DEFAULT admin_token ${PASSWORD}
 crudini --set ${SVC_CFG_MERGED} database connection mysql+pymysql://${DBUSER}:${DBPASSWORD}@${DBHOST}/${DB}
