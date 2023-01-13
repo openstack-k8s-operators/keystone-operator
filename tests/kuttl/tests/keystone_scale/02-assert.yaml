@@ -1,0 +1,27 @@
+#
+# Check for:
+#
+# - 1 KeystoneAPI CR
+# - 3 Pods for KeystoneAPI CR
+#
+
+apiVersion: keystone.openstack.org/v1beta1
+kind: KeystoneAPI
+metadata:
+  finalizers:
+  - KeystoneAPI
+  name: keystone
+  namespace: openstack
+spec:
+  replicas: 3
+status:
+  readyCount: 3
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keystone
+spec:
+  replicas: 3
+status:
+  availableReplicas: 3

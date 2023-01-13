@@ -1,0 +1,124 @@
+#
+# Check for:
+#
+# No KeystoneAPI CR
+# No Deployment for KeystoneAPI CR
+# No Pods in keystone Deployment
+# No Keystone Services
+# No Keystone Routes
+#
+apiVersion: keystone.openstack.org/v1beta1
+kind: KeystoneAPI
+metadata:
+  finalizers:
+  - KeystoneAPI
+  name: keystone
+  namespace: openstack
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keystone
+  namespace: openstack
+---
+# the openshift annotations can't be checked through the deployment above
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    openshift.io/scc: anyuid
+  labels:
+    service: keystone
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    admin: "true"
+    service: keystone
+  name: keystone-admin
+  namespace: openstack
+spec:
+  ports:
+    - name: keystone-admin
+  selector:
+    service: keystone
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    internal: "true"
+    service: keystone
+  name: keystone-internal
+  namespace: openstack
+spec:
+  ports:
+    - name: keystone-internal
+  selector:
+    service: keystone
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    public: "true"
+    service: keystone
+  name: keystone-public
+  namespace: openstack
+spec:
+  ports:
+    - name: keystone-public
+  selector:
+    service: keystone
+  type: ClusterIP
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: keystone-admin
+  labels:
+    admin: "true"
+    service: keystone
+  namespace: openstack
+spec:
+  host: keystone-admin-openstack.apps-crc.testing
+  port:
+    targetPort: keystone-admin
+  to:
+    kind: Service
+    name: keystone-admin
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: keystone-internal
+  labels:
+    internal: "true"
+    service: keystone
+  namespace: openstack
+spec:
+  host: keystone-internal-openstack.apps-crc.testing
+  port:
+    targetPort: keystone-internal
+  to:
+    kind: Service
+    name: keystone-internal
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: keystone-public
+  labels:
+    public: "true"
+    service: keystone
+  namespace: openstack
+spec:
+  host: keystone-public-openstack.apps-crc.testing
+  port:
+    targetPort: keystone-public
+  to:
+    kind: Service
+    name: keystone-public
