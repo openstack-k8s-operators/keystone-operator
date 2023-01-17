@@ -43,10 +43,6 @@ spec:
       memory: 500Mi
   secret: osp-secret
 status:
-  apiEndpoint:
-    admin: http://keystone-admin-openstack.apps-crc.testing
-    internal: http://keystone-internal-openstack.apps-crc.testing
-    public: http://keystone-public-openstack.apps-crc.testing
   databaseHostname: openstack
   readyCount: 1
 ---
@@ -204,7 +200,6 @@ metadata:
     service: keystone
   namespace: openstack
 spec:
-  host: keystone-admin-openstack.apps-crc.testing
   port:
     targetPort: keystone-admin
   to:
@@ -220,7 +215,6 @@ metadata:
     service: keystone
   namespace: openstack
 spec:
-  host: keystone-internal-openstack.apps-crc.testing
   port:
     targetPort: keystone-internal
   to:
@@ -236,7 +230,6 @@ metadata:
     service: keystone
   namespace: openstack
 spec:
-  host: keystone-public-openstack.apps-crc.testing
   port:
     targetPort: keystone-public
   to:
