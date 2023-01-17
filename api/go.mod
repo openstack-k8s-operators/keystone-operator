@@ -3,7 +3,7 @@ module github.com/openstack-k8s-operators/keystone-operator/api
 go 1.18
 
 require (
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20230109130456-4f5889f3f719
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20230117065141-23eeb95d6729
 	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.0.0-20220915080953-f73a201a1da6
 	k8s.io/api v0.25.4
 	k8s.io/apimachinery v0.25.4

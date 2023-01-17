@@ -282,7 +282,11 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	// run keystone db sync
 	//
 	dbSyncHash := instance.Status.Hash[keystonev1.DbSyncHash]
-	jobDef := keystone.DbSyncJob(instance, serviceLabels)
+	jobDef, err := keystone.DbSyncJob(instance, serviceLabels)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	dbSyncjob := job.NewJob(
 		jobDef,
 		keystonev1.DbSyncHash,
@@ -373,7 +377,11 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	//
 	// BootStrap Job
 	//
-	jobDef = keystone.BootstrapJob(instance, serviceLabels, instance.Status.APIEndpoints)
+	jobDef, err = keystone.BootstrapJob(instance, serviceLabels, instance.Status.APIEndpoints)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	bootstrapjob := job.NewJob(
 		jobDef,
 		keystonev1.BootstrapHash,
@@ -557,8 +565,13 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	//
 
 	// Define a new Deployment object
+	deplDef, err := keystone.Deployment(instance, inputHash, serviceLabels)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	depl := deployment.NewDeployment(
-		keystone.Deployment(instance, inputHash, serviceLabels),
+		deplDef,
 		5,
 	)
 
@@ -583,6 +596,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	if instance.Status.ReadyCount > 0 {
 		instance.Status.Conditions.MarkTrue(condition.DeploymentReadyCondition, condition.DeploymentReadyMessage)
 	}
+	instance.Status.Networks = instance.Spec.NetworkAttachmentDefinitions
 	// create Deployment - end
 
 	//
