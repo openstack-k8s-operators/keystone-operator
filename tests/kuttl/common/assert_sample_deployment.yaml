@@ -43,10 +43,6 @@ spec:
       memory: 500Mi
   secret: osp-secret
 status:
-  apiEndpoint:
-    admin: http://keystone-admin-openstack.apps-crc.testing
-    internal: http://keystone-internal-openstack.apps-crc.testing
-    public: http://keystone-public-openstack.apps-crc.testing
   databaseHostname: openstack
   readyCount: 1
 ---
@@ -204,7 +200,6 @@ metadata:
     service: keystone
   namespace: openstack
 spec:
-  host: keystone-admin-openstack.apps-crc.testing
   port:
     targetPort: keystone-admin
   to:
@@ -220,7 +215,6 @@ metadata:
     service: keystone
   namespace: openstack
 spec:
-  host: keystone-internal-openstack.apps-crc.testing
   port:
     targetPort: keystone-internal
   to:
@@ -236,9 +230,26 @@ metadata:
     service: keystone
   namespace: openstack
 spec:
-  host: keystone-public-openstack.apps-crc.testing
   port:
     targetPort: keystone-public
   to:
     kind: Service
     name: keystone-public
+---
+# the actual addresses of the apiEndpoints are platform specific, so we can't rely on 
+# kuttl asserts to check them. This short script gathers the addresses and checks that
+# the three endpoints are defined and their addresses follow the default pattern
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+namespaced: true
+commands:
+  - script: |
+      set -x
+      template='{{.status.apiEndpoint.admin}}{{":"}}{{.status.apiEndpoint.internal}}{{":"}}{{.status.apiEndpoint.public}}{{"\n"}}'                                                        
+      regex="http:\/\/keystone-admin-openstack\.apps.*:http:\/\/keystone-internal-openstack\.apps.*:http:\/\/keystone-public-openstack\.apps.*"
+      apiEndpoints=$(oc get -n openstack KeystoneAPI  keystone -o go-template=$template) 
+      if [[ "$apiEndpoints" =~ $regex ]]; then
+        exit 0
+      else
+        exit 1
+      fi
