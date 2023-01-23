@@ -244,11 +244,11 @@ kind: TestAssert
 namespaced: true
 commands:
   - script: |
-      set -x
       template='{{.status.apiEndpoint.admin}}{{":"}}{{.status.apiEndpoint.internal}}{{":"}}{{.status.apiEndpoint.public}}{{"\n"}}'
       regex="http:\/\/keystone-admin-openstack\.apps.*:http:\/\/keystone-internal-openstack\.apps.*:http:\/\/keystone-public-openstack\.apps.*"
-      apiEndpoints=$(oc get -n openstack KeystoneAPI  keystone -o go-template=$template)
-      if [[ "$apiEndpoints" =~ $regex ]]; then
+      apiEndpoints=$(oc get -n openstack KeystoneAPI  keystone -o go-template="$template")
+      matches=$(echo "$apiEndpoints" | sed -e "s?$regex??")
+      if [ -z "$matches" ]; then
         exit 0
       else
         exit 1
