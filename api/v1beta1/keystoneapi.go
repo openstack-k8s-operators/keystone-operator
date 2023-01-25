@@ -30,9 +30,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-//
 // GetKeystoneAPI - get keystoneAPI object in namespace
-//
 func GetKeystoneAPI(
 	ctx context.Context,
 	h *helper.Helper,
@@ -69,9 +67,7 @@ func GetKeystoneAPI(
 	return &keystoneList.Items[0], nil
 }
 
-//
 // GetAdminServiceClient - get an admin serviceClient for the keystoneAPI instance
-//
 func GetAdminServiceClient(
 	ctx context.Context,
 	h *helper.Helper,

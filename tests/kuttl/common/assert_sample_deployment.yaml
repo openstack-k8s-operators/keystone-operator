@@ -236,7 +236,7 @@ spec:
     kind: Service
     name: keystone-public
 ---
-# the actual addresses of the apiEndpoints are platform specific, so we can't rely on 
+# the actual addresses of the apiEndpoints are platform specific, so we can't rely on
 # kuttl asserts to check them. This short script gathers the addresses and checks that
 # the three endpoints are defined and their addresses follow the default pattern
 apiVersion: kuttl.dev/v1beta1
@@ -245,9 +245,9 @@ namespaced: true
 commands:
   - script: |
       set -x
-      template='{{.status.apiEndpoint.admin}}{{":"}}{{.status.apiEndpoint.internal}}{{":"}}{{.status.apiEndpoint.public}}{{"\n"}}'                                                        
+      template='{{.status.apiEndpoint.admin}}{{":"}}{{.status.apiEndpoint.internal}}{{":"}}{{.status.apiEndpoint.public}}{{"\n"}}'
       regex="http:\/\/keystone-admin-openstack\.apps.*:http:\/\/keystone-internal-openstack\.apps.*:http:\/\/keystone-public-openstack\.apps.*"
-      apiEndpoints=$(oc get -n openstack KeystoneAPI  keystone -o go-template=$template) 
+      apiEndpoints=$(oc get -n openstack KeystoneAPI  keystone -o go-template=$template)
       if [[ "$apiEndpoints" =~ $regex ]]; then
         exit 0
       else

@@ -19,9 +19,7 @@ import (
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 )
 
-//
 // Keystone Condition Types used by API objects.
-//
 const (
 	// KeystoneAPIReadyCondition Status=True condition which indicates if the KeystoneAPI is configured and operational
 	KeystoneAPIReadyCondition condition.Type = "KeystoneAPIReady"
@@ -39,9 +37,7 @@ const (
 	KeystoneServiceOSUserReadyCondition condition.Type = "KeystoneServiceOSUserReady"
 )
 
-//
 // Common Messages used by API objects.
-//
 const (
 
 	//
