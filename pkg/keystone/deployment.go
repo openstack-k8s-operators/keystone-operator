@@ -146,10 +146,10 @@ func Deployment(
 	}
 
 	// networks to attach to
-	nwAnnotation, err := annotations.GetNADAnnotation(instance.Namespace, instance.Spec.NetworkAttachmentDefinitions)
+	nwAnnotation, err := annotations.GetNADAnnotation(instance.Namespace, instance.Spec.NetworkAttachments)
 	if err != nil {
 		return nil, fmt.Errorf("failed create network annotation from %s: %w",
-			instance.Spec.NetworkAttachmentDefinitions, err)
+			instance.Spec.NetworkAttachments, err)
 	}
 	deployment.Spec.Template.Annotations = util.MergeStringMaps(deployment.Spec.Template.Annotations, nwAnnotation)
 

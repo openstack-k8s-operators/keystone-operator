@@ -127,8 +127,8 @@ type KeystoneAPISpec struct {
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	// NetworkAttachmentDefinitions list of network attachment definitions the service pod gets attached to
-	NetworkAttachmentDefinitions []string `json:"networkAttachmentDefinitions"`
+	// Networks list of NetworkAttachment to expose the services to
+	NetworkAttachments []string `json:"networkAttachments"`
 }
 
 // PasswordSelector to identify the DB and AdminUser password from the Secret
@@ -177,13 +177,13 @@ type KeystoneAPIStatus struct {
 	// Keystone Database Hostname
 	DatabaseHostname string `json:"databaseHostname,omitempty"`
 
-	// Networks in addtion to the cluster network, the service is attached to
-	Networks []string `json:"networks,omitempty"`
+	// NetworkAttachments in addtion to the cluster network, the service is attached to
+	NetworkAttachments []string `json:"networkAttachments,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name="Networks",type="string",JSONPath=".status.networks",description="Networks"
+//+kubebuilder:printcolumn:name="NetworkAttachments",type="string",JSONPath=".status.networkAttachments",description="NetworkAttachments"
 //+kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[0].status",description="Status"
 //+kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[0].message",description="Message"
 

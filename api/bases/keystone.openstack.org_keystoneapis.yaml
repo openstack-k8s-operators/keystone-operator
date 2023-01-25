@@ -16,9 +16,9 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - description: Networks
-      jsonPath: .status.networks
-      name: Networks
+    - description: NetworkAttachments
+      jsonPath: .status.networkAttachments
+      name: NetworkAttachments
       type: string
     - description: Status
       jsonPath: .status.conditions[0].status
@@ -109,9 +109,9 @@ spec:
                   to add additional files. Those get added to the service config dir
                   in /etc/<service> . TODO: -> implement'
                 type: object
-              networkAttachmentDefinitions:
-                description: NetworkAttachmentDefinitions list of network attachment
-                  definitions the service pod gets attached to
+              networkAttachments:
+                description: Networks list of NetworkAttachment to expose the services
+                  to
                 items:
                   type: string
                 type: array
@@ -270,9 +270,9 @@ spec:
                   type: string
                 description: Map of hashes to track e.g. job status
                 type: object
-              networks:
-                description: Networks in addtion to the cluster network, the service
-                  is attached to
+              networkAttachments:
+                description: NetworkAttachments in addtion to the cluster network,
+                  the service is attached to
                 items:
                   type: string
                 type: array

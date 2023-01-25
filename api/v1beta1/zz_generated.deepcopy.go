@@ -105,8 +105,8 @@ func (in *KeystoneAPISpec) DeepCopyInto(out *KeystoneAPISpec) {
 		}
 	}
 	in.Resources.DeepCopyInto(&out.Resources)
-	if in.NetworkAttachmentDefinitions != nil {
-		in, out := &in.NetworkAttachmentDefinitions, &out.NetworkAttachmentDefinitions
+	if in.NetworkAttachments != nil {
+		in, out := &in.NetworkAttachments, &out.NetworkAttachments
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
@@ -146,8 +146,8 @@ func (in *KeystoneAPIStatus) DeepCopyInto(out *KeystoneAPIStatus) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.Networks != nil {
-		in, out := &in.Networks, &out.Networks
+	if in.NetworkAttachments != nil {
+		in, out := &in.NetworkAttachments, &out.NetworkAttachments
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}

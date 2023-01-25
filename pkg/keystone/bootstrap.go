@@ -115,10 +115,10 @@ func BootstrapJob(
 	job.Spec.Template.Spec.Volumes = getVolumes(instance.Name)
 
 	// networks to attach to
-	nwAnnotation, err := annotations.GetNADAnnotation(instance.Namespace, instance.Spec.NetworkAttachmentDefinitions)
+	nwAnnotation, err := annotations.GetNADAnnotation(instance.Namespace, instance.Spec.NetworkAttachments)
 	if err != nil {
 		return nil, fmt.Errorf("failed create network annotation from %s: %w",
-			instance.Spec.NetworkAttachmentDefinitions, err)
+			instance.Spec.NetworkAttachments, err)
 	}
 	job.Spec.Template.Annotations = util.MergeStringMaps(job.Spec.Template.Annotations, nwAnnotation)
 
