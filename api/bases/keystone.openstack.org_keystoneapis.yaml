@@ -17,7 +17,7 @@ spec:
   versions:
   - additionalPrinterColumns:
     - description: NetworkAttachments
-      jsonPath: .status.networkAttachments
+      jsonPath: .spec.networkAttachments
       name: NetworkAttachments
       type: string
     - description: Status
@@ -109,9 +109,51 @@ spec:
                   to add additional files. Those get added to the service config dir
                   in /etc/<service> . TODO: -> implement'
                 type: object
+              externalEndpoints:
+                description: ExternalEndpoints, expose a VIP using a pre-created IPAddressPool
+                items:
+                  description: MetalLBConfig to configure the MetalLB loadbalancer
+                    service
+                  properties:
+                    endpoint:
+                      description: Endpoint, OpenStack endpoint this service maps
+                        to
+                      enum:
+                      - admin
+                      - internal
+                      - public
+                      type: string
+                    ipAddressPool:
+                      description: IPAddressPool expose VIP via MetalLB on the IPAddressPool
+                      minLength: 1
+                      type: string
+                    loadBalancerIPs:
+                      description: LoadBalancerIPs, request given IPs from the pool
+                        if available. Using a list to allow dual stack (IPv4/IPv6)
+                        support
+                      items:
+                        type: string
+                      type: array
+                    sharedIP:
+                      default: true
+                      description: SharedIP if true, VIP/VIPs get shared with multiple
+                        services
+                      type: boolean
+                    sharedIPKey:
+                      default: ""
+                      description: SharedIPKey specifies the sharing key which gets
+                        set as the annotation on the LoadBalancer service. Services
+                        which share the same VIP must have the same SharedIPKey. Defaults
+                        to the IPAddressPool if SharedIP is true, but no SharedIPKey
+                        specified.
+                      type: string
+                  required:
+                  - ipAddressPool
+                  type: object
+                type: array
               networkAttachments:
-                description: Networks list of NetworkAttachment to expose the services
-                  to
+                description: NetworkAttachments is a list of NetworkAttachment resource
+                  names to expose the services to the given network
                 items:
                   type: string
                 type: array
@@ -271,11 +313,12 @@ spec:
                 description: Map of hashes to track e.g. job status
                 type: object
               networkAttachments:
-                description: NetworkAttachments in addtion to the cluster network,
-                  the service is attached to
-                items:
-                  type: string
-                type: array
+                additionalProperties:
+                  items:
+                    type: string
+                  type: array
+                description: NetworkAttachments status of the deployment pods
+                type: object
               readyCount:
                 description: ReadyCount of keystone API instances
                 format: int32

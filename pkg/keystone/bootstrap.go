@@ -16,14 +16,10 @@ limitations under the License.
 package keystone
 
 import (
-	"fmt"
-
 	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 
 	common "github.com/openstack-k8s-operators/lib-common/modules/common"
-	"github.com/openstack-k8s-operators/lib-common/modules/common/annotations"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/env"
-	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,8 +34,9 @@ const (
 func BootstrapJob(
 	instance *keystonev1beta1.KeystoneAPI,
 	labels map[string]string,
+	annotations map[string]string,
 	endpoints map[string]string,
-) (*batchv1.Job, error) {
+) *batchv1.Job {
 	runAsUser := int64(0)
 
 	args := []string{"-c"}
@@ -77,6 +74,9 @@ func BootstrapJob(
 		},
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: annotations,
+				},
 				Spec: corev1.PodSpec{
 					RestartPolicy:      "OnFailure",
 					ServiceAccountName: ServiceAccount,
@@ -114,14 +114,6 @@ func BootstrapJob(
 	job.Spec.Template.Spec.Containers[0].Env = env.MergeEnvs(job.Spec.Template.Spec.Containers[0].Env, envVars)
 	job.Spec.Template.Spec.Volumes = getVolumes(instance.Name)
 
-	// networks to attach to
-	nwAnnotation, err := annotations.GetNADAnnotation(instance.Namespace, instance.Spec.NetworkAttachments)
-	if err != nil {
-		return nil, fmt.Errorf("failed create network annotation from %s: %w",
-			instance.Spec.NetworkAttachments, err)
-	}
-	job.Spec.Template.Annotations = util.MergeStringMaps(job.Spec.Template.Annotations, nwAnnotation)
-
 	initContainerDetails := APIDetails{
 		ContainerImage:       instance.Spec.ContainerImage,
 		DatabaseHost:         instance.Status.DatabaseHostname,
@@ -134,5 +126,5 @@ func BootstrapJob(
 	}
 	job.Spec.Template.Spec.InitContainers = initContainer(initContainerDetails)
 
-	return job, nil
+	return job
 }
