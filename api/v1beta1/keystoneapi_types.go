@@ -127,10 +127,12 @@ type KeystoneAPISpec struct {
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default={}
 	// NetworkAttachments is a list of NetworkAttachment resource names to expose the services to the given network
 	NetworkAttachments []string `json:"networkAttachments,omitempty"`
 
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default={}
 	// ExternalEndpoints, expose a VIP using a pre-created IPAddressPool
 	ExternalEndpoints []MetalLBConfig `json:"externalEndpoints,omitempty"`
 }
@@ -160,6 +162,7 @@ type MetalLBConfig struct {
 	SharedIPKey string `json:"sharedIPKey"`
 
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default={}
 	// LoadBalancerIPs, request given IPs from the pool if available. Using a list to allow dual stack (IPv4/IPv6) support
 	LoadBalancerIPs []string `json:"loadBalancerIPs,omitempty"`
 }

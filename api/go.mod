@@ -3,6 +3,8 @@ module github.com/openstack-k8s-operators/keystone-operator/api
 go 1.19
 
 require (
+	github.com/onsi/ginkgo/v2 v2.6.0
+	github.com/onsi/gomega v1.24.1
 	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20230215134634-d31141e5bbba
 	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.0.0-20230215134634-d31141e5bbba
 	k8s.io/api v0.26.1
