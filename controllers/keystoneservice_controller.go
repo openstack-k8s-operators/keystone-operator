@@ -398,7 +398,7 @@ func (r *KeystoneServiceReconciler) reconcileUser(
 	os *openstack.OpenStack,
 ) (reconcile.Result, error) {
 	r.Log.Info(fmt.Sprintf("Reconciling User %s", instance.Spec.ServiceUser))
-	roleName := "admin"
+	roleNames := []string{"admin", "service"}
 
 	// get the password of the service user from the secret
 	password, ctrlResult, err := secret.GetDataFromSecret(
@@ -415,7 +415,7 @@ func (r *KeystoneServiceReconciler) reconcileUser(
 	}
 
 	//
-	//  create service project if it does not exist
+	// create service project if it does not exist
 	//
 	serviceProjectID, err := os.CreateProject(
 		r.Log,
@@ -423,16 +423,6 @@ func (r *KeystoneServiceReconciler) reconcileUser(
 			Name:        "service",
 			Description: "service",
 		})
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	//
-	//  create role if it does not exist
-	//
-	_, err = os.CreateRole(
-		r.Log,
-		roleName)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -451,16 +441,28 @@ func (r *KeystoneServiceReconciler) reconcileUser(
 		return ctrl.Result{}, err
 	}
 
-	//
-	// add user to admin role
-	//
-	err = os.AssignUserRole(
-		r.Log,
-		roleName,
-		userID,
-		serviceProjectID)
-	if err != nil {
-		return ctrl.Result{}, err
+	for _, roleName := range roleNames {
+		//
+		// create role if it does not exist
+		//
+		_, err = os.CreateRole(
+			r.Log,
+			roleName)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		//
+		// add the role to the user
+		//
+		err = os.AssignUserRole(
+			r.Log,
+			roleName,
+			userID,
+			serviceProjectID)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	r.Log.Info("Reconciled User successfully")
