@@ -142,6 +142,14 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	keystoneAPI, err := keystonev1.GetKeystoneAPI(ctx, helper, instance.Namespace, map[string]string{})
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
+			// If this KeystoneService CR is being deleted and it has not registered any actual
+			// service on the OpenStack side, just redirect execution to the "reconcileDelete()"
+			// logic to avoid potentially hanging on waiting for a KeystoneAPI to appear (which
+			// is not needed anyhow, since there is nothing to clean-up on the OpenStack side)
+			if !instance.DeletionTimestamp.IsZero() && instance.Status.ServiceID == "" {
+				return r.reconcileDelete(ctx, instance, helper, nil, nil)
+			}
+
 			instance.Status.Conditions.Set(condition.FalseCondition(
 				keystonev1.KeystoneAPIReadyCondition,
 				condition.ErrorReason,
@@ -158,6 +166,15 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			keystonev1.KeystoneAPIReadyErrorMessage,
 			err.Error()))
 		return ctrl.Result{}, err
+	}
+
+	// If this KeystoneService CR is being deleted and it has not registered any actual
+	// service on the OpenStack side, just redirect execution to the "reconcileDelete()"
+	// logic to avoid potentially hanging on waiting for the KeystoneAPI to be ready
+	// (which is not needed anyhow, since there is nothing to clean-up on the OpenStack
+	// side)
+	if !instance.DeletionTimestamp.IsZero() && instance.Status.ServiceID == "" {
+		return r.reconcileDelete(ctx, instance, helper, nil, keystoneAPI)
 	}
 
 	//
@@ -211,7 +228,7 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 	instance.Status.Conditions.MarkTrue(keystonev1.AdminServiceClientReadyCondition, keystonev1.AdminServiceClientReadyMessage)
 
-	// Handle service delete
+	// Handle normal service delete
 	if !instance.DeletionTimestamp.IsZero() {
 		return r.reconcileDelete(ctx, instance, helper, os, keystoneAPI)
 	}
@@ -238,8 +255,8 @@ func (r *KeystoneServiceReconciler) reconcileDelete(
 	r.Log.Info("Reconciling Service delete")
 
 	// only cleanup the service if there is the ServiceID reference in the
-	// object status
-	if instance.Status.ServiceID != "" {
+	// object status and if we have an OpenStack backend to use
+	if instance.Status.ServiceID != "" && os != nil {
 		// Delete User
 		err := os.DeleteUser(
 			r.Log,
@@ -261,12 +278,15 @@ func (r *KeystoneServiceReconciler) reconcileDelete(
 		r.Log.Info(fmt.Sprintf("Not deleting service %s as there is no stores service ID", instance.Spec.ServiceName))
 	}
 
-	// Remove the finalizer for this service from the KeystoneAPI
-	if controllerutil.RemoveFinalizer(keystoneAPI, fmt.Sprintf("%s-%s", helper.GetFinalizer(), instance.Name)) {
-		err := r.Update(ctx, keystoneAPI)
+	// There are certain deletion scenarios where we might not have the keystoneAPI
+	if keystoneAPI != nil {
+		// Remove the finalizer for this service from the KeystoneAPI
+		if controllerutil.RemoveFinalizer(keystoneAPI, fmt.Sprintf("%s-%s", helper.GetFinalizer(), instance.Name)) {
+			err := r.Update(ctx, keystoneAPI)
 
-		if err != nil {
-			return ctrl.Result{}, err
+			if err != nil {
+				return ctrl.Result{}, err
+			}
 		}
 	}
 

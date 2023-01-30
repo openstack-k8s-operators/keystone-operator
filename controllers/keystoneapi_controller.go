@@ -611,10 +611,8 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	return ctrl.Result{}, nil
 }
 
-//
 // generateServiceConfigMaps - create create configmaps which hold scripts and service configuration
 // TODO add DefaultConfigOverwrite
-//
 func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	ctx context.Context,
 	instance *keystonev1.KeystoneAPI,
@@ -670,10 +668,8 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	return nil
 }
 
-//
 // reconcileConfigMap -  creates clouds.yaml
 // TODO: most likely should be part of the higher openstack operator
-//
 func (r *KeystoneAPIReconciler) reconcileConfigMap(ctx context.Context, instance *keystonev1.KeystoneAPI) error {
 
 	configMapName := "openstack-config"
@@ -766,9 +762,7 @@ func (r *KeystoneAPIReconciler) reconcileConfigMap(ctx context.Context, instance
 	return err
 }
 
-//
 // ensureFernetKeys - creates secret with fernet keys
-//
 func (r *KeystoneAPIReconciler) ensureFernetKeys(
 	ctx context.Context,
 	instance *keystonev1.KeystoneAPI,
@@ -814,12 +808,10 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 	return nil
 }
 
-//
 // createHashOfInputHashes - creates a hash of hashes which gets added to the resources which requires a restart
 // if any of the input resources change, like configs, passwords, ...
 //
 // returns the hash, whether the hash changed (as a bool) and any error
-//
 func (r *KeystoneAPIReconciler) createHashOfInputHashes(
 	ctx context.Context,
 	instance *keystonev1.KeystoneAPI,
