@@ -2,7 +2,7 @@ name: Workflow on label addition
 
 on:
   pull_request_target:
-    types: [labeled]  
+    types: [labeled]
     branches:
       - 'master'
 

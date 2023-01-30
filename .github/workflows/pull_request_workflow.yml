@@ -21,7 +21,7 @@ jobs:
           required-permission: write
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  
+
       - name: Add comment to PR if user has insufficient permissions
         if: "! steps.check.outputs.has-permission"
         env:
