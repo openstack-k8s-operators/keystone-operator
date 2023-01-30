@@ -1,0 +1,44 @@
+{
+  "timezone": "America/New_York",
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base"
+  ],
+  "dependencyDashboard": true,
+  "logFileLevel": "trace",
+  "enabledManagers": ["gomod"],
+  "postUpdateOptions": ["gomodTidy"],
+  "constraints": {
+    "go": "1.19"
+  },
+  "schedule":[
+    "every weekend"
+  ],
+  "packageRules": [
+    {
+      "matchPackageNames": ["go"],
+      "enabled": false
+    },
+    {
+      "groupName": "openstack-k8s-operators",
+      "matchPackagePatterns": ["^github.com/openstack-k8s-operators"],
+      "enabled": true
+    },
+    {
+      "groupName": "k8s.io",
+      "matchPackagePatterns": ["^k8s.io", "^sigs.k8s.io"],
+      "allowedVersions": "< 1.0.0",
+      "enabled": true
+    },
+    {
+      "groupName": "misc",
+      "matchPackagePatterns": ["^github.com/operator-framework/api", "^github.com/ghodss", "^github.com/go-logr/logr", "^github.com/imdario/mergo", "^go.uber.org/zap"],
+      "enabled": true
+    }
+  ],
+  "postUpgradeTasks": {
+    "commands": ["go mod tidy", "make manifests generate"],
+    "fileFilters": ["go.mod", "go.sum", "**/*.go", "**/*.yaml"],
+    "executionMode": "update"
+  }
+}
