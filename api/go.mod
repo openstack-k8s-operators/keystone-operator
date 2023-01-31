@@ -1,6 +1,6 @@
 module github.com/openstack-k8s-operators/keystone-operator/api
 
-go 1.18
+go 1.19
 
 require (
 	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20230117065141-23eeb95d6729
