@@ -12,6 +12,8 @@ metadata:
   namespace: system
   labels:
     control-plane: controller-manager
+    app.kubernetes.io/name: keystone-operator
+    app.kubernetes.io/component: keystone
 spec:
   selector:
     matchLabels:
@@ -23,6 +25,8 @@ spec:
         kubectl.kubernetes.io/default-container: manager
       labels:
         control-plane: controller-manager
+        app.kubernetes.io/name: keystone-operator
+        app.kubernetes.io/component: keystone
     spec:
       securityContext:
         runAsNonRoot: true
