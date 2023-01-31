@@ -7,11 +7,11 @@ require (
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.24.1
 	github.com/openshift/api v3.9.0+incompatible
-	github.com/openstack-k8s-operators/keystone-operator/api v0.0.0-20220923094431-9fca0c85a9dc
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20230117065141-23eeb95d6729
-	github.com/openstack-k8s-operators/lib-common/modules/database v0.0.0-20221123155618-fe0bc99bca8a
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.0.0-20220923094431-9fca0c85a9dc
-	github.com/openstack-k8s-operators/mariadb-operator/api v0.0.0-20221122141723-fb7400f56094
+	github.com/openstack-k8s-operators/keystone-operator/api v0.0.0-20230131133700-ba9ccde0cfa2
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20230131105859-675e99666dbc
+	github.com/openstack-k8s-operators/lib-common/modules/database v0.0.0-20230131105859-675e99666dbc
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.0.0-20230131105859-675e99666dbc
+	github.com/openstack-k8s-operators/mariadb-operator/api v0.0.0-20230131192916-0f61830d0464
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.25.4
 	k8s.io/apimachinery v0.25.4
@@ -45,7 +45,7 @@ require (
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
-	github.com/gophercloud/gophercloud v1.0.0 // indirect
+	github.com/gophercloud/gophercloud v1.1.1 // indirect
 	github.com/imdario/mergo v0.3.13 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
@@ -64,7 +64,7 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.21.0 // indirect
-	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa // indirect
+	golang.org/x/crypto v0.0.0-20220829220503-c86fa9a7ed90 // indirect
 	golang.org/x/net v0.2.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20220909003341-f21342109be1 // indirect
 	golang.org/x/sys v0.2.0 // indirect
