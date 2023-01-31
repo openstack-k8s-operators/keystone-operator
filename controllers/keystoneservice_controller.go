@@ -370,20 +370,27 @@ func (r *KeystoneServiceReconciler) reconcileService(
 		if err != nil {
 			return err
 		}
-	} else if service.Enabled != instance.Spec.Enabled ||
-		service.Extra["description"] != instance.Spec.ServiceDescription {
-		// update the service ONLY if Enabled or Description changed.
-		err := os.UpdateService(
-			r.Log,
-			openstack.Service{
-				Name:        instance.Spec.ServiceName,
-				Type:        instance.Spec.ServiceType,
-				Description: instance.Spec.ServiceDescription,
-				Enabled:     instance.Spec.Enabled,
-			},
-			service.ID)
-		if err != nil {
-			return err
+	} else {
+		// During adoption there are services in the keystone DB but the
+		// KeystoneService CR is fresh so we have to propagate the service ID
+		// from the DB to the KeystoneService CR.
+		instance.Status.ServiceID = service.ID
+
+		if service.Enabled != instance.Spec.Enabled ||
+			service.Extra["description"] != instance.Spec.ServiceDescription {
+			// update the service ONLY if Enabled or Description changed.
+			err := os.UpdateService(
+				r.Log,
+				openstack.Service{
+					Name:        instance.Spec.ServiceName,
+					Type:        instance.Spec.ServiceType,
+					Description: instance.Spec.ServiceDescription,
+					Enabled:     instance.Spec.Enabled,
+				},
+				service.ID)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
