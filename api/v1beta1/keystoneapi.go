@@ -18,6 +18,7 @@ package v1beta1
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/helper"
@@ -85,7 +86,7 @@ func GetAdminServiceClient(
 		ctx,
 		h,
 		keystoneAPI.Spec.Secret,
-		10,
+		time.Duration(10)*time.Second,
 		keystoneAPI.Spec.PasswordSelectors.Admin)
 	if err != nil {
 		return nil, ctrl.Result{}, err

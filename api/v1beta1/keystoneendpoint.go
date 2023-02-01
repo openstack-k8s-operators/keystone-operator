@@ -35,7 +35,7 @@ import (
 // KeystoneEndpointHelper -
 type KeystoneEndpointHelper struct {
 	endpoint *KeystoneEndpoint
-	timeout  int
+	timeout  time.Duration
 	labels   map[string]string
 	id       map[string]string
 }
@@ -46,7 +46,7 @@ func NewKeystoneEndpoint(
 	namespace string,
 	spec KeystoneEndpointSpec,
 	labels map[string]string,
-	timeout int,
+	timeout time.Duration,
 ) *KeystoneEndpointHelper {
 	endpoint := &KeystoneEndpoint{
 		ObjectMeta: metav1.ObjectMeta{
@@ -91,8 +91,8 @@ func (ke *KeystoneEndpointHelper) CreateOrPatch(
 	})
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
-			h.GetLogger().Info(fmt.Sprintf("KeystoneEndpoint %s not found, reconcile in %ds", endpoint.Name, ke.timeout))
-			return ctrl.Result{RequeueAfter: time.Duration(ke.timeout) * time.Second}, nil
+			h.GetLogger().Info(fmt.Sprintf("KeystoneEndpoint %s not found, reconcile in %s", endpoint.Name, ke.timeout))
+			return ctrl.Result{RequeueAfter: ke.timeout}, nil
 		}
 		return ctrl.Result{}, err
 	}
