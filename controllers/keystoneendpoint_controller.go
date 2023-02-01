@@ -1,17 +1,17 @@
 /*
-Copyright 2022.
+   Copyright 2022.
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+       http://www.apache.org/licenses/LICENSE-2.0
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
 */
 
 package controllers
@@ -124,6 +124,14 @@ func (r *KeystoneEndpointReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	keystoneAPI, err := keystonev1.GetKeystoneAPI(ctx, helper, instance.Namespace, map[string]string{})
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
+			// If this KeystoneEndpoint CR is being deleted and it has not registered any actual
+			// endpoints on the OpenStack side, just redirect execution to the "reconcileDelete()"
+			// logic to avoid potentially hanging on waiting for a KeystoneAPI to appear (which
+			// is not needed anyhow, since there is nothing to clean-up on the OpenStack side)
+			if !instance.DeletionTimestamp.IsZero() && len(instance.Status.EndpointIDs) == 0 {
+				return r.reconcileDelete(ctx, instance, helper, nil, nil)
+			}
+
 			instance.Status.Conditions.Set(condition.FalseCondition(
 				keystonev1.KeystoneAPIReadyCondition,
 				condition.ErrorReason,
@@ -141,6 +149,15 @@ func (r *KeystoneEndpointReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			keystonev1.KeystoneAPIReadyErrorMessage,
 			err.Error()))
 		return ctrl.Result{}, err
+	}
+
+	// If this KeystoneEndpoint CR is being deleted and it has not registered any actual
+	// endpoints on the OpenStack side, just redirect execution to the "reconcileDelete()"
+	// logic to avoid potentially hanging on waiting for the KeystoneAPI to be ready
+	// (which is not needed anyhow, since there is nothing to clean-up on the OpenStack
+	// side)
+	if !instance.DeletionTimestamp.IsZero() && len(instance.Status.EndpointIDs) == 0 {
+		return r.reconcileDelete(ctx, instance, helper, nil, keystoneAPI)
 	}
 
 	//
@@ -195,7 +212,7 @@ func (r *KeystoneEndpointReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 	instance.Status.Conditions.MarkTrue(keystonev1.AdminServiceClientReadyCondition, keystonev1.AdminServiceClientReadyMessage)
 
-	// Handle endpoint delete
+	// Handle normal endpoint delete
 	if !instance.DeletionTimestamp.IsZero() {
 		return r.reconcileDelete(ctx, instance, helper, os, keystoneAPI)
 	}
@@ -220,34 +237,40 @@ func (r *KeystoneEndpointReconciler) reconcileDelete(
 ) (ctrl.Result, error) {
 	util.LogForObject(helper, "Reconciling Endpoint delete", instance)
 
-	// Delete Endpoints -  it is ok to call delete on non existing Endpoints
-	// therefore always call delete for the spec.
-	for endpointType := range instance.Spec.Endpoints {
-		// get the gopher availability mapping for the endpointInterface
-		availability, err := openstack.GetAvailability(endpointType)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
+	// We might not have an OpenStack backend to use in certain situations
+	if os != nil {
+		// Delete Endpoints -  it is ok to call delete on non existing Endpoints
+		// therefore always call delete for the spec.
+		for endpointType := range instance.Spec.Endpoints {
+			// get the gopher availability mapping for the endpointInterface
+			availability, err := openstack.GetAvailability(endpointType)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
 
-		err = os.DeleteEndpoint(
-			r.Log,
-			openstack.Endpoint{
-				Name:         instance.Spec.ServiceName,
-				ServiceID:    instance.Status.ServiceID,
-				Availability: availability,
-			},
-		)
-		if err != nil {
-			return ctrl.Result{}, err
+			err = os.DeleteEndpoint(
+				r.Log,
+				openstack.Endpoint{
+					Name:         instance.Spec.ServiceName,
+					ServiceID:    instance.Status.ServiceID,
+					Availability: availability,
+				},
+			)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
 		}
 	}
 
-	// Remove the finalizer for this endpoint from the KeystoneAPI
-	if controllerutil.RemoveFinalizer(keystoneAPI, fmt.Sprintf("%s-%s", helper.GetFinalizer(), instance.Name)) {
-		err := r.Update(ctx, keystoneAPI)
+	// There are certain deletion scenarios where we might not have the keystoneAPI
+	if keystoneAPI != nil {
+		// Remove the finalizer for this endpoint from the KeystoneAPI
+		if controllerutil.RemoveFinalizer(keystoneAPI, fmt.Sprintf("%s-%s", helper.GetFinalizer(), instance.Name)) {
+			err := r.Update(ctx, keystoneAPI)
 
-		if err != nil {
-			return ctrl.Result{}, err
+			if err != nil {
+				return ctrl.Result{}, err
+			}
 		}
 	}
 
