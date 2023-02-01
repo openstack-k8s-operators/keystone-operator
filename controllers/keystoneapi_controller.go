@@ -338,9 +338,6 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 		endpoint.EndpointInternal: endpoint.Data{
 			Port: keystone.KeystoneInternalPort,
 		},
-		endpoint.EndpointAdmin: endpoint.Data{
-			Port: keystone.KeystoneAdminPort,
-		},
 	}
 
 	for _, metallbcfg := range instance.Spec.ExternalEndpoints {
