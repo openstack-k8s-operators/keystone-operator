@@ -783,9 +783,10 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 			"1": keystone.GenerateFernetKey(),
 		}
 
+		secretName := keystone.ServiceName
 		tmpl := []util.Template{
 			{
-				Name:       keystone.ServiceName,
+				Name:       secretName,
 				Namespace:  instance.Namespace,
 				Type:       util.TemplateTypeNone,
 				CustomData: fernetKeys,
@@ -797,7 +798,7 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 			return nil
 		}
 
-		return fmt.Errorf("OpenStack secret %s not found", instance.Spec.Secret)
+		return fmt.Errorf("OpenStack secret %s not found", secretName)
 	}
 
 	// TODO: fernet key rotation
