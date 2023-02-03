@@ -114,7 +114,13 @@ test: manifests generate fmt vet envtest ## Run tests.
 build: generate fmt vet ## Build manager binary.
 	go build -o bin/manager main.go
 
+.PHONY: generate-cert
+generate-cert:
+	/bin/bash hack/create_self_signed_cert.sh
+
 .PHONY: run
+run: export ENABLE_WEBHOOKS?=false
+run: export OPERATOR_TEMPLATES=./templates/
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
