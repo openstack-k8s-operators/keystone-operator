@@ -794,11 +794,10 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 			},
 		}
 		err := oko_secret.EnsureSecrets(ctx, helper, instance, tmpl, envVars)
-		if err != nil {
-			return nil
-		}
 
-		return fmt.Errorf("OpenStack secret %s not found", secretName)
+		if err != nil {
+			return err
+		}
 	}
 
 	// TODO: fernet key rotation
