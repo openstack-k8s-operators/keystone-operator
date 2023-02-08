@@ -344,6 +344,7 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 		keystone.ServiceName,
 		serviceLabels,
 		keystonePorts,
+		time.Duration(5)*time.Second,
 	)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
