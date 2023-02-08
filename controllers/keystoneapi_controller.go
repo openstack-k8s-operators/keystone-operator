@@ -291,7 +291,7 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 		jobDef,
 		keystonev1.DbSyncHash,
 		instance.Spec.PreserveJobs,
-		5,
+		time.Duration(5)*time.Second,
 		dbSyncHash,
 	)
 	ctrlResult, err = dbSyncjob.DoJob(
@@ -344,6 +344,7 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 		keystone.ServiceName,
 		serviceLabels,
 		keystonePorts,
+		time.Duration(5)*time.Second,
 	)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
@@ -386,7 +387,7 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 		jobDef,
 		keystonev1.BootstrapHash,
 		instance.Spec.PreserveJobs,
-		5,
+		time.Duration(5)*time.Second,
 		instance.Status.Hash[keystonev1.BootstrapHash],
 	)
 	ctrlResult, err = bootstrapjob.DoJob(
@@ -572,7 +573,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 
 	depl := deployment.NewDeployment(
 		deplDef,
-		5,
+		time.Duration(5)*time.Second,
 	)
 
 	ctrlResult, err = depl.CreateOrPatch(ctx, helper)

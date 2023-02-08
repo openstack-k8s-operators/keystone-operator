@@ -35,7 +35,7 @@ import (
 // KeystoneServiceHelper -
 type KeystoneServiceHelper struct {
 	service *KeystoneService
-	timeout int
+	timeout time.Duration
 	labels  map[string]string
 	id      string
 }
@@ -45,7 +45,7 @@ func NewKeystoneService(
 	spec KeystoneServiceSpec,
 	namespace string,
 	labels map[string]string,
-	timeout int,
+	timeout time.Duration,
 ) *KeystoneServiceHelper {
 	service := &KeystoneService{
 		ObjectMeta: metav1.ObjectMeta{
@@ -90,8 +90,8 @@ func (ks *KeystoneServiceHelper) CreateOrPatch(
 	})
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
-			h.GetLogger().Info(fmt.Sprintf("KeystoneService %s not found, reconcile in %ds", service.Name, ks.timeout))
-			return ctrl.Result{RequeueAfter: time.Duration(ks.timeout) * time.Second}, nil
+			h.GetLogger().Info(fmt.Sprintf("KeystoneService %s not found, reconcile in %s", service.Name, ks.timeout))
+			return ctrl.Result{RequeueAfter: ks.timeout}, nil
 		}
 		return ctrl.Result{}, err
 	}
