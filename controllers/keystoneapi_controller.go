@@ -661,12 +661,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			Labels:        cmLabels,
 		},
 	}
-	err := configmap.EnsureConfigMaps(ctx, h, instance, cms, envVars)
-	if err != nil {
-		return nil
-	}
-
-	return nil
+	return configmap.EnsureConfigMaps(ctx, h, instance, cms, envVars)
 }
 
 // reconcileConfigMap -  creates clouds.yaml
