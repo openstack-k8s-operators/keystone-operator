@@ -58,6 +58,34 @@ func getVolumes(name string) []corev1.Volume {
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName: ServiceName,
+					Items: []corev1.KeyToPath{
+						{
+							Key:  "FernetKeys0",
+							Path: "0",
+						},
+						{
+							Key:  "FernetKeys1",
+							Path: "1",
+						},
+					},
+				},
+			},
+		},
+		{
+			Name: "credential-keys",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: ServiceName,
+					Items: []corev1.KeyToPath{
+						{
+							Key:  "CredentialKeys0",
+							Path: "0",
+						},
+						{
+							Key:  "CredentialKeys1",
+							Path: "1",
+						},
+					},
 				},
 			},
 		},
@@ -103,6 +131,11 @@ func getVolumeMounts() []corev1.VolumeMount {
 			MountPath: "/var/lib/fernet-keys",
 			ReadOnly:  true,
 			Name:      "fernet-keys",
+		},
+		{
+			MountPath: "/var/lib/credential-keys",
+			ReadOnly:  true,
+			Name:      "credential-keys",
 		},
 	}
 }

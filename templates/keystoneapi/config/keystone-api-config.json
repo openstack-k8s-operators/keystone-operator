@@ -26,6 +26,12 @@
             "perm": "0644"
         },
         {
+            "source": "/var/lib/credential-keys",
+            "dest": "/etc/keystone/",
+            "owner": "keystone:keystone",
+            "perm": "0700"
+        },
+        {
             "source": "/var/lib/fernet-keys",
             "dest": "/etc/keystone/",
             "owner": "keystone:keystone",

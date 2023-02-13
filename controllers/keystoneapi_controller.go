@@ -498,7 +498,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	}
 
 	//
-	// Create secret holding fernet keys
+	// Create secret holding fernet keys (for token and credential)
 	//
 	// TODO key rotation
 	err = r.ensureFernetKeys(ctx, instance, helper, &configMapVars)
@@ -775,16 +775,18 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 	//
 	// check if secret already exist
 	//
-	secret, hash, err := oko_secret.GetSecret(ctx, helper, keystone.ServiceName, instance.Namespace)
+	secretName := keystone.ServiceName
+	secret, hash, err := oko_secret.GetSecret(ctx, helper, secretName, instance.Namespace)
 	if err != nil && !k8s_errors.IsNotFound(err) {
 		return err
 	} else if k8s_errors.IsNotFound(err) {
 		fernetKeys := map[string]string{
-			"0": keystone.GenerateFernetKey(),
-			"1": keystone.GenerateFernetKey(),
+			"FernetKeys0":     keystone.GenerateFernetKey(),
+			"FernetKeys1":     keystone.GenerateFernetKey(),
+			"CredentialKeys0": keystone.GenerateFernetKey(),
+			"CredentialKeys1": keystone.GenerateFernetKey(),
 		}
 
-		secretName := keystone.ServiceName
 		tmpl := []util.Template{
 			{
 				Name:       secretName,
