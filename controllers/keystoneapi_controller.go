@@ -50,6 +50,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // GetClient -
@@ -177,6 +180,37 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 // SetupWithManager -
 func (r *KeystoneAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
+	configMapFn := func(o client.Object) []reconcile.Request {
+		result := []reconcile.Request{}
+
+		keystones := &keystonev1.KeystoneAPIList{}
+		listOpts := []client.ListOption{
+			client.InNamespace(o.GetNamespace()),
+		}
+
+		if err := r.Client.List(context.Background(), keystones, listOpts...); err != nil {
+			r.Log.Error(err, "Unable to retrieve Keystone CRs %v")
+			return nil
+		}
+
+		for _, cr := range keystones.Items {
+			// TODO: Probably the cm name should be configurable
+			if o.GetName() == "openstack-deployment" {
+				name := client.ObjectKey{
+					Namespace: o.GetNamespace(),
+					Name:      cr.Name,
+				}
+				result = append(result, reconcile.Request{NamespacedName: name})
+			}
+		}
+
+		if len(result) > 0 {
+			return result
+		}
+		return nil
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&keystonev1.KeystoneAPI{}).
 		Owns(&mariadbv1.MariaDBDatabase{}).
@@ -186,6 +220,8 @@ func (r *KeystoneAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.ConfigMap{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&routev1.Route{}).
+		Watches(&source.Kind{Type: &corev1.ConfigMap{}},
+			handler.EnqueueRequestsFromMapFunc(configMapFn)).
 		Complete(r)
 }
 
@@ -471,10 +507,33 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 		return ctrl.Result{}, err
 	}
 	configMapVars[ospSecret.Name] = env.SetValue(hash)
+	// run check OpenStack secret - end
+
+	//
+	// check for required OpenStack configmap holding global configurations
+	//
+	// TODO: Probably the cm name should be configurable
+	ospConfigMap, _, err := configmap.GetConfigMap(ctx, helper, instance, "openstack-deployment", time.Duration(10))
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			instance.Status.Conditions.Set(condition.FalseCondition(
+				condition.InputReadyCondition,
+				condition.RequestedReason,
+				condition.SeverityInfo,
+				condition.InputReadyWaitingMessage))
+			return ctrl.Result{RequeueAfter: time.Second * 10}, fmt.Errorf("OpenStack deployment config not found", instance.Spec.Secret)
+		}
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.InputReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.InputReadyErrorMessage,
+			err.Error()))
+		return ctrl.Result{}, err
+	}
+	// run check OpenStack config - end
 
 	instance.Status.Conditions.MarkTrue(condition.InputReadyCondition, condition.InputReadyMessage)
-
-	// run check OpenStack secret - end
 
 	//
 	// Create ConfigMaps and Secrets required as input for the Service and calculate an overall hash of hashes
@@ -486,7 +545,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	// - %-config configmap holding minimal keystone config required to get the service up, user can add additional files to be added to the service
 	// - parameters which has passwords gets added from the OpenStack secret via the init container
 	//
-	err = r.generateServiceConfigMaps(ctx, instance, helper, &configMapVars)
+	err = r.generateServiceConfigMaps(ctx, instance, helper, ospConfigMap.Data, &configMapVars)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.ServiceConfigReadyCondition,
@@ -618,6 +677,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	ctx context.Context,
 	instance *keystonev1.KeystoneAPI,
 	h *helper.Helper,
+	globalConfig map[string]string,
 	envVars *map[string]env.Setter,
 ) error {
 	//
