@@ -801,12 +801,12 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 		if err != nil {
 			return err
 		}
+	} else {
+		// add hash to envVars
+		(*envVars)[secret.Name] = env.SetValue(hash)
 	}
 
 	// TODO: fernet key rotation
-
-	// add hash to envVars
-	(*envVars)[secret.Name] = env.SetValue(hash)
 
 	return nil
 }
