@@ -36,9 +36,8 @@ SCRIPTPATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 cp -a ${SVC_CFG} ${SVC_CFG_MERGED}
 
 # Merge all templates from config CM
-for dir in /var/lib/config-data/default
-do
-  merge_config_dir ${dir}
+for dir in /var/lib/config-data/default;do
+    merge_config_dir ${dir}
 done
 
 # set secrets
