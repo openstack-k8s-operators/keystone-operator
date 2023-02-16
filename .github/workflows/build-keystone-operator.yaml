@@ -117,6 +117,7 @@ jobs:
         REGISTRY:  ${{ env.imageregistry }}/${{ env.imagenamespace }}
         GITHUB_SHA: ${{ github.sha }}
         BASE_IMAGE: keystone-operator
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Get branch name
       id: branch-name
