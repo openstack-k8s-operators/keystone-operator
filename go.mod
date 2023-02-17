@@ -9,9 +9,9 @@ require (
 	github.com/openshift/api v3.9.0+incompatible
 	github.com/openstack-k8s-operators/infra-operator/apis v0.0.0-20230210143210-6e3aad14c3aa
 	github.com/openstack-k8s-operators/keystone-operator/api v0.0.0-20230213142003-4cb137e438a3
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20230213100743-10d19ef192ad
-	github.com/openstack-k8s-operators/lib-common/modules/database v0.0.0-20230213100743-10d19ef192ad
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.0.0-20230213100743-10d19ef192ad
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20230215134634-d31141e5bbba
+	github.com/openstack-k8s-operators/lib-common/modules/database v0.0.0-20230215134634-d31141e5bbba
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.0.0-20230215134634-d31141e5bbba
 	github.com/openstack-k8s-operators/mariadb-operator/api v0.0.0-20230213105001-8dc6cf6aa963
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.26.1
@@ -19,6 +19,8 @@ require (
 	k8s.io/client-go v0.26.1
 	sigs.k8s.io/controller-runtime v0.14.2
 )
+
+require github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.4.0
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
