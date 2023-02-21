@@ -3,4 +3,4 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestAssert
 namespaced: true
 commands:
-  - script: $KEYSTONE_KUTTL_DIR/../common/scripts/check_debug_in_keystone_pod_logs.sh --reverse
+  - script: $KEYSTONE_KUTTL_DIR/../common/scripts/check_debug_in_keystone_pod_logs.sh

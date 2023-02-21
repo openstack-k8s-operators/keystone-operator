@@ -2,4 +2,5 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 commands:
   - script: |
-      oc patch keystoneapi -n openstack keystone --type='json' -p='[{"op": "replace", "path": "/spec/defaultConfigOverwrite", "value":{"keystone.conf": "debug = true"}}]'
+      oc patch keystoneapi -n openstack keystone --type='json' -p='[{"op": "replace", "path": "/spec/customServiceConfig", "value": "[DEFAULT]\ndebug = false"}]'
+
