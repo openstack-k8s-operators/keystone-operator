@@ -147,6 +147,7 @@ spec:
                         specified.
                       type: string
                   required:
+                  - endpoint
                   - ipAddressPool
                   type: object
                 type: array

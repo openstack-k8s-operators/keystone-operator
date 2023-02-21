@@ -128,16 +128,16 @@ type KeystoneAPISpec struct {
 
 	// +kubebuilder:validation:Optional
 	// NetworkAttachments is a list of NetworkAttachment resource names to expose the services to the given network
-	NetworkAttachments []string `json:"networkAttachments"`
+	NetworkAttachments []string `json:"networkAttachments,omitempty"`
 
 	// +kubebuilder:validation:Optional
 	// ExternalEndpoints, expose a VIP using a pre-created IPAddressPool
-	ExternalEndpoints []MetalLBConfig `json:"externalEndpoints"`
+	ExternalEndpoints []MetalLBConfig `json:"externalEndpoints,omitempty"`
 }
 
 // MetalLBConfig to configure the MetalLB loadbalancer service
 type MetalLBConfig struct {
-	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Enum=internal;public
 	// Endpoint, OpenStack endpoint this service maps to
 	Endpoint endpoint.Endpoint `json:"endpoint"`
@@ -161,7 +161,7 @@ type MetalLBConfig struct {
 
 	// +kubebuilder:validation:Optional
 	// LoadBalancerIPs, request given IPs from the pool if available. Using a list to allow dual stack (IPv4/IPv6) support
-	LoadBalancerIPs []string `json:"loadBalancerIPs"`
+	LoadBalancerIPs []string `json:"loadBalancerIPs,omitempty"`
 }
 
 // PasswordSelector to identify the DB and AdminUser password from the Secret
