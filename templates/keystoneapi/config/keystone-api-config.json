@@ -20,12 +20,6 @@
             "perm": "0644"
         },
         {
-            "source": "/var/lib/config-data/merged/logging.conf",
-            "dest": "/etc/keystone/logging.conf",
-            "owner": "root",
-            "perm": "0644"
-        },
-        {
             "source": "/var/lib/credential-keys",
             "dest": "/etc/keystone/",
             "owner": "keystone:keystone",
