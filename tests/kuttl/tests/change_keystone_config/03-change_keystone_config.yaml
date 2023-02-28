@@ -3,4 +3,3 @@ kind: TestStep
 commands:
   - script: |
       oc patch keystoneapi -n openstack keystone --type='json' -p='[{"op": "replace", "path": "/spec/customServiceConfig", "value": "[DEFAULT]\ndebug = false"}]'
-

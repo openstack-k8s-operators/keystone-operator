@@ -106,8 +106,8 @@ spec:
                   type: string
                 description: 'ConfigOverwrite - interface to overwrite default config
                   files like e.g. policy.json. But can also be used to add additional
-                  files. Those get added to the service config dir in /etc/<service>.
-                  TODO: -> implement'
+                  files. Those get added to the service config dir in /etc/<service>
+                  . TODO: -> implement'
                 type: object
               externalEndpoints:
                 description: ExternalEndpoints, expose a VIP using a pre-created IPAddressPool
