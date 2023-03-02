@@ -1,0 +1,6 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: |
+      PWD=$INSTALL_YAMLS
+      make -C $INSTALL_YAMLS keystone_deploy
