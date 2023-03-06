@@ -78,7 +78,7 @@ func BootstrapJob(
 					Annotations: annotations,
 				},
 				Spec: corev1.PodSpec{
-					RestartPolicy:      "OnFailure",
+					RestartPolicy:      corev1.RestartPolicyOnFailure,
 					ServiceAccountName: ServiceAccount,
 					Containers: []corev1.Container{
 						{
