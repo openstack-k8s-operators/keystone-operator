@@ -16,7 +16,7 @@ spec:
   adminProject: admin
   adminRole: admin
   adminUser: admin
-  containerImage: quay.io/tripleozedcentos9/openstack-keystone:current-tripleo
+  containerImage: quay.io/podified-antelope-centos9/openstack-keystone:current-podified
   customServiceConfig: |
     [DEFAULT]
     debug = true

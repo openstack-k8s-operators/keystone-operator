@@ -18,7 +18,7 @@ spec:
   adminProject: admin
   adminRole: admin
   adminUser: admin
-  containerImage: quay.io/tripleozedcentos9/openstack-keystone:current-tripleo
+  containerImage: quay.io/podified-antelope-centos9/openstack-keystone:current-podified
   customServiceConfig: |
     [DEFAULT]
     debug = true
@@ -73,7 +73,7 @@ spec:
         - /usr/local/bin/kolla_set_configs && /usr/local/bin/kolla_start
         command:
         - /bin/bash
-        image: quay.io/tripleozedcentos9/openstack-keystone:current-tripleo
+        image: quay.io/podified-antelope-centos9/openstack-keystone:current-podified
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
@@ -123,7 +123,7 @@ spec:
           value: keystone
         - name: DatabaseUser
           value: keystone
-        image: quay.io/tripleozedcentos9/openstack-keystone:current-tripleo
+        image: quay.io/podified-antelope-centos9/openstack-keystone:current-podified
         imagePullPolicy: IfNotPresent
         name: init
         resources: {}
