@@ -92,7 +92,7 @@ type KeystoneAPISpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default={database: KeystoneDatabasePassword, admin: AdminPassword}
 	// PasswordSelectors - Selectors to identify the DB and AdminUser password from the Secret
-	PasswordSelectors PasswordSelector `json:"passwordSelectors,omitempty"`
+	PasswordSelectors PasswordSelector `json:"passwordSelectors"`
 
 	// +kubebuilder:validation:Optional
 	// NodeSelector to target subset of worker nodes running this service
@@ -106,10 +106,9 @@ type KeystoneAPISpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=false
 	// PreserveJobs - do not delete jobs after they finished e.g. to check logs
-	PreserveJobs bool `json:"preserveJobs,omitempty"`
+	PreserveJobs bool `json:"preserveJobs"`
 
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default="# add your customization here"
 	// CustomServiceConfig - customize the service config using this parameter to change service defaults,
 	// or overwrite rendered information using raw OpenStack config format. The content gets added to
 	// to /etc/<service>/<service>.conf.d directory as custom.conf file.
@@ -170,11 +169,11 @@ type PasswordSelector struct {
 	// +kubebuilder:default="KeystoneDatabasePassword"
 	// Database - Selector to get the keystone Database user password from the Secret
 	// TODO: not used, need change in mariadb-operator
-	Database string `json:"database,omitempty"`
+	Database string `json:"database"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default="AdminPassword"
 	// Admin - Selector to get the keystone Admin password from the Secret
-	Admin string `json:"admin,omitempty"`
+	Admin string `json:"admin"`
 }
 
 // KeystoneDebug defines the observed state of KeystoneAPI
@@ -182,15 +181,15 @@ type KeystoneDebug struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=false
 	// DBSync enable debug
-	DBSync bool `json:"dbSync,omitempty"`
+	DBSync bool `json:"dbSync"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=false
 	// ReadyCount enable debug
-	Bootstrap bool `json:"bootstrap,omitempty"`
+	Bootstrap bool `json:"bootstrap"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=false
 	// Service enable debug
-	Service bool `json:"service,omitempty"`
+	Service bool `json:"service"`
 }
 
 // KeystoneAPIStatus defines the observed state of KeystoneAPI
