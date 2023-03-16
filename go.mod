@@ -7,11 +7,11 @@ require (
 	github.com/onsi/ginkgo/v2 v2.6.0
 	github.com/onsi/gomega v1.24.1
 	github.com/openshift/api v3.9.0+incompatible
-	github.com/openstack-k8s-operators/infra-operator/apis v0.0.0-20230221114633-d3cedda6974d
-	github.com/openstack-k8s-operators/keystone-operator/api v0.0.0-20230302112213-b4b2a357b4ed
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20230307144813-39ed0da90b23
-	github.com/openstack-k8s-operators/lib-common/modules/database v0.0.0-20230307144813-39ed0da90b23
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.0.0-20230307144813-39ed0da90b23
+	github.com/openstack-k8s-operators/infra-operator/apis v0.0.0-20230313171323-3a588eef4569
+	github.com/openstack-k8s-operators/keystone-operator/api v0.0.0-20230315072511-fb4d7a27cceb
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20230314121334-30ee8131cd07
+	github.com/openstack-k8s-operators/lib-common/modules/database v0.0.0-20230314121334-30ee8131cd07
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.0.0-20230314121334-30ee8131cd07
 	github.com/openstack-k8s-operators/mariadb-operator/api v0.0.0-20230303135615-979250c54a27
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.26.1
