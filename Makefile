@@ -316,5 +316,5 @@ gowork: ## Generate go.work file to support our multi module repository
 
 .PHONY: operator-lint
 operator-lint: gowork ## Runs operator-lint
-	GOBIN=$(LOCALBIN) go install github.com/gibizer/operator-lint@v0.1.0
+	GOBIN=$(LOCALBIN) go install github.com/gibizer/operator-lint@v0.3.0
 	go vet -vettool=$(LOCALBIN)/operator-lint ./... ./api/...
