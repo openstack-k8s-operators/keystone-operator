@@ -6,7 +6,7 @@ spec:
   adminProject: admin
   adminRole: admin
   adminUser: admin
-  containerImage: quay.io/tripleozedcentos9/openstack-keystone:current-tripleo
+  containerImage: quay.io/tripleozedcentos9/openstack-keystone:fake_tag
   customServiceConfig: |
     [DEFAULT]
     debug = true
