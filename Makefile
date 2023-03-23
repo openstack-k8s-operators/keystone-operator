@@ -318,3 +318,17 @@ gowork: ## Generate go.work file to support our multi module repository
 operator-lint: gowork ## Runs operator-lint
 	GOBIN=$(LOCALBIN) go install github.com/gibizer/operator-lint@v0.3.0
 	go vet -vettool=$(LOCALBIN)/operator-lint ./... ./api/...
+
+# Used for webhook testing
+# Please ensure the keystone-controller-manager deployment and
+# webhook definitions are removed from the csv before running
+# this. Also, cleanup the webhook configuration for local testing
+# before deplying with olm again.
+# $oc delete -n openstack validatingwebhookconfiguration/vkeystoneapi.kb.io
+# $oc delete -n openstack mutatingwebhookconfiguration/mkeystoneapi.kb.io
+SKIP_CERT ?=false
+.PHONY: run-with-webhook
+run-with-webhook: export KEYSTONE_API_IMAGE_URL_DEFAULT=quay.io/tripleozedcentos9/openstack-keystone:current-tripleo
+run-with-webhook: manifests generate fmt vet ## Run a controller from your host.
+	/bin/bash hack/configure_local_webhook.sh
+	go run ./main.go

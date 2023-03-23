@@ -3,11 +3,18 @@ module github.com/openstack-k8s-operators/keystone-operator/api
 go 1.19
 
 require (
+	github.com/onsi/ginkgo/v2 v2.6.0
+	github.com/onsi/gomega v1.24.1
 	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20230314121334-30ee8131cd07
 	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.0.0-20230314121334-30ee8131cd07
 	k8s.io/api v0.26.1
 	k8s.io/apimachinery v0.26.1
 	sigs.k8s.io/controller-runtime v0.14.2
+)
+
+require (
+	github.com/go-logr/zapr v1.2.3 // indirect
+	go.uber.org/zap v1.24.0 // indirect
 )
 
 require (
@@ -59,7 +66,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiextensions-apiserver v0.26.1 // indirect; indirect // indirect
-	k8s.io/client-go v0.26.1 // indirect; indirect // indirect
+	k8s.io/client-go v0.26.1 // indirect // indirect
 	k8s.io/component-base v0.26.1 // indirect; indirect // indirect
 	k8s.io/klog/v2 v2.80.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20230131200451-5e46c6e584a1 // indirect; indirect // indirect
