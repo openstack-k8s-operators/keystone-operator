@@ -34,7 +34,7 @@ spec:
   replicas: 0
   resources:
     requests:
-      cpu: "1.0"
+      cpu: "1"
       memory: 500Mi
   secret: osp-secret
 status:
