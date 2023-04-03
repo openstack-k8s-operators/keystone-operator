@@ -61,8 +61,8 @@ spec:
                 description: AdminUser - admin user name
                 type: string
               containerImage:
-                default: quay.io/tripleozedcentos9/openstack-keystone:fake_tag
-                description: Keystone Container Image URL
+                description: Keystone Container Image URL (will be set to environmental
+                  default if empty)
                 type: string
               customServiceConfig:
                 description: CustomServiceConfig - customize the service config using
@@ -249,6 +249,7 @@ spec:
                   keystone KeystoneDatabasePassword, AdminPassword
                 type: string
             required:
+            - containerImage
             - databaseInstance
             - secret
             type: object
