@@ -332,10 +332,10 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	// expose the service (create service, route and return the created endpoint URLs)
 	//
 	var keystonePorts = map[endpoint.Endpoint]endpoint.Data{
-		endpoint.EndpointPublic: endpoint.Data{
+		endpoint.EndpointPublic: {
 			Port: keystone.KeystonePublicPort,
 		},
-		endpoint.EndpointInternal: endpoint.Data{
+		endpoint.EndpointInternal: {
 			Port: keystone.KeystoneInternalPort,
 		},
 	}

@@ -106,10 +106,8 @@ vet: gowork ## Run go vet against code.
 
 .PHONY: tidy
 tidy: ## Run go mod tidy on every mod file in the repo
-	go mod tidy; \
-	pushd "$(LOCALBIN)/../api"; \
-	go mod tidy; \
-	popd;
+	go mod tidy
+	cd ./api && go mod tidy
 
 .PHONY: golangci-lint
 golangci-lint:
