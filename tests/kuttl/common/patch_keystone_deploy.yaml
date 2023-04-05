@@ -1,0 +1,6 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: |
+      oc patch keystoneapi -n openstack keystone --type='json' -p='[{"op": "replace", "path": "/spec/secret", "value":"osp-secret"}]'
+      oc patch keystoneapi -n openstack keystone --type='json' -p='[{"op": "replace", "path": "/spec/storageClass", "value":"local-storage"}]'

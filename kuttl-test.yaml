@@ -1,7 +1,7 @@
 #
 # EXECUTION (from install_yamls repo root):
 #
-#   make kuttl_keystone
+#   make keystone_kuttl
 #
 # ASSUMPTIONS:
 #

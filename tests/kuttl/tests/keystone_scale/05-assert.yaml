@@ -1,0 +1,48 @@
+#
+# Check for:
+#
+# - 0 KeystoneAPI CR
+# - Keystone Deployment with 0 Pods
+#
+
+apiVersion: keystone.openstack.org/v1beta1
+kind: KeystoneAPI
+metadata:
+  finalizers:
+  - KeystoneAPI
+  name: keystone
+  namespace: openstack
+spec:
+  adminProject: admin
+  adminRole: admin
+  adminUser: admin
+  containerImage: quay.io/tripleozedcentos9/openstack-keystone:current-tripleo
+  customServiceConfig: |
+    [DEFAULT]
+    debug = true
+  databaseInstance: openstack
+  databaseUser: keystone
+  debug:
+    bootstrap: false
+    dbSync: false
+    service: false
+  passwordSelectors:
+    admin: AdminPassword
+    database: KeystoneDatabasePassword
+  preserveJobs: false
+  region: regionOne
+  replicas: 0
+  resources:
+    requests:
+      cpu: "1"
+      memory: 500Mi
+  secret: osp-secret
+status:
+  databaseHostname: openstack
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keystone
+spec:
+  replicas: 0

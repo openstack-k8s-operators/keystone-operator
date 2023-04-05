@@ -1,1 +1,7 @@
-../../common/errors_cleanup_keystone.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    openshift.io/scc: anyuid
+  labels:
+    service: keystone
