@@ -106,6 +106,7 @@ func Deployment(
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: ServiceAccount,
+					Volumes:            getVolumes(instance.Name),
 					Containers: []corev1.Container{
 						{
 							Name: ServiceName + "-api",
@@ -128,7 +129,6 @@ func Deployment(
 			},
 		},
 	}
-	deployment.Spec.Template.Spec.Volumes = getVolumes(instance.Name)
 	// If possible two pods of the same service should not
 	// run on the same worker node. If this is not possible
 	// the get still created on the same worker node.
