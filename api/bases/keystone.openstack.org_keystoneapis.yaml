@@ -64,6 +64,12 @@ spec:
                 description: Keystone Container Image URL (will be set to environmental
                   default if empty)
                 type: string
+              customPolicies:
+                description: CustomPolicies - customize the policy rules using this
+                  parameter to change service defaults, or overwrite rendered information
+                  using raw yaml format. The content gets added to to /etc/<service>/policy.d
+                  directory as custom.yaml file.
+                type: string
               customServiceConfig:
                 description: CustomServiceConfig - customize the service config using
                   this parameter to change service defaults, or overwrite rendered
@@ -103,10 +109,9 @@ spec:
               defaultConfigOverwrite:
                 additionalProperties:
                   type: string
-                description: 'ConfigOverwrite - interface to overwrite default config
-                  files like e.g. policy.json. But can also be used to add additional
-                  files. Those get added to the service config dir in /etc/<service>
-                  . TODO: -> implement'
+                description: ConfigOverwrite - interface to overwrite default config
+                  files. But can also be used to add additional files. Those get added
+                  to the service config dir in /etc/<service> .
                 type: object
               externalEndpoints:
                 description: ExternalEndpoints, expose a VIP using a pre-created IPAddressPool

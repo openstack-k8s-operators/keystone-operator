@@ -114,9 +114,14 @@ type KeystoneAPISpec struct {
 	CustomServiceConfig string `json:"customServiceConfig,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	// ConfigOverwrite - interface to overwrite default config files like e.g. policy.json.
+	// CustomPolicies - customize the policy rules using this parameter to change service defaults,
+	// or overwrite rendered information using raw yaml format. The content gets added to
+	// to /etc/<service>/policy.d directory as custom.yaml file.
+	CustomPolicies string `json:"customPolicies,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// ConfigOverwrite - interface to overwrite default config files.
 	// But can also be used to add additional files. Those get added to the service config dir in /etc/<service> .
-	// TODO: -> implement
 	DefaultConfigOverwrite map[string]string `json:"defaultConfigOverwrite,omitempty"`
 
 	// +kubebuilder:validation:Optional

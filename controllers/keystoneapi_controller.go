@@ -690,7 +690,11 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	// custom.conf is going to /etc/<service>/<service>.conf.d
 	// all other files get placed into /etc/<service> to allow overwrite of e.g. policy.json
 	// TODO: make sure custom.conf can not be overwritten
-	customData := map[string]string{common.CustomServiceConfigFileName: instance.Spec.CustomServiceConfig}
+	customData := map[string]string{
+		common.CustomServiceConfigFileName: instance.Spec.CustomServiceConfig,
+		// TODO: Replace this string by CustomPolicyFileName
+		"custom.yaml": instance.Spec.CustomPolicies,
+	}
 	for key, data := range instance.Spec.DefaultConfigOverwrite {
 		customData[key] = data
 	}

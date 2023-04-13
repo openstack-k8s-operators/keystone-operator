@@ -14,6 +14,12 @@
             "perm": "0600"
         },
         {
+            "source": "/var/lib/config-data/merged/custom.yaml",
+            "dest": "/etc/keystone/policy.d/custom.yaml",
+            "owner": "keystone",
+            "perm": "0600"
+        },
+        {
             "source": "/var/lib/config-data/merged/httpd.conf",
             "dest": "/etc/httpd/conf/httpd.conf",
             "owner": "root",
