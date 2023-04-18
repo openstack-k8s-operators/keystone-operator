@@ -18,7 +18,6 @@ spec:
     service: false
   preserveJobs: false
   region: regionOne
-  replicas: 1
   secret: keystone-secret
   resources:
     requests:
