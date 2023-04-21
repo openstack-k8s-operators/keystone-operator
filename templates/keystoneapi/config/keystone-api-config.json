@@ -31,12 +31,5 @@
             "owner": "keystone:keystone",
             "perm": "0700"
         }
-    ],
-    "permissions": [
-        {
-            "path": "/var/log/keystone",
-            "owner": "keystone:keystone",
-            "recurse": true
-        }
     ]
 }
