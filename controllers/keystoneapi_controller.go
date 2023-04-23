@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-logr/logr"
 	routev1 "github.com/openshift/api/route/v1"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	keystone "github.com/openstack-k8s-operators/keystone-operator/pkg/keystone"
@@ -47,12 +46,14 @@ import (
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // GetClient -
@@ -65,21 +66,20 @@ func (r *KeystoneAPIReconciler) GetKClient() kubernetes.Interface {
 	return r.Kclient
 }
 
-// GetLogger -
-func (r *KeystoneAPIReconciler) GetLogger() logr.Logger {
-	return r.Log
-}
-
 // GetScheme -
 func (r *KeystoneAPIReconciler) GetScheme() *runtime.Scheme {
 	return r.Scheme
+}
+
+// GetLog returns a logger object with a prefix of "conroller.name" and aditional controller context fields
+func GetLog(ctx context.Context) logr.Logger {
+	return log.FromContext(ctx).WithName("Controllers").WithName("KeystoneAPI")
 }
 
 // KeystoneAPIReconciler reconciles a KeystoneAPI object
 type KeystoneAPIReconciler struct {
 	client.Client
 	Kclient kubernetes.Interface
-	Log     logr.Logger
 	Scheme  *runtime.Scheme
 }
 
@@ -99,8 +99,6 @@ type KeystoneAPIReconciler struct {
 
 // Reconcile reconcile keystone API requests
 func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, _err error) {
-	_ = r.Log.WithValues("keystoneapi", req.NamespacedName)
-
 	// Fetch the KeystoneAPI instance
 	instance := &keystonev1.KeystoneAPI{}
 	err := r.Client.Get(ctx, req.NamespacedName, instance)
@@ -120,7 +118,7 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		r.Client,
 		r.Kclient,
 		r.Scheme,
-		r.Log,
+		GetLog(ctx),
 	)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -202,8 +200,8 @@ func (r *KeystoneAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *KeystoneAPIReconciler) reconcileDelete(ctx context.Context, instance *keystonev1.KeystoneAPI, helper *helper.Helper) (ctrl.Result, error) {
-	r.Log.Info("Reconciling Service delete")
-
+	l := GetLog(ctx)
+	l.Info("Reconciling Service delete")
 	// remove db finalizer before the keystone one
 	db, err := database.GetDatabaseByName(ctx, helper, instance.Name)
 	if err != nil && !k8s_errors.IsNotFound(err) {
@@ -218,7 +216,7 @@ func (r *KeystoneAPIReconciler) reconcileDelete(ctx context.Context, instance *k
 
 	// Service is deleted so remove the finalizer.
 	controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
-	r.Log.Info("Reconciled Service delete successfully")
+	l.Info("Reconciled Service delete successfully")
 
 	return ctrl.Result{}, nil
 }
@@ -230,8 +228,8 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	serviceLabels map[string]string,
 	serviceAnnotations map[string]string,
 ) (ctrl.Result, error) {
-	r.Log.Info("Reconciling Service init")
-
+	l := GetLog(ctx)
+	l.Info("Reconciling Service init")
 	//
 	// create service DB instance
 	//
@@ -326,7 +324,7 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	}
 	if dbSyncjob.HasChanged() {
 		instance.Status.Hash[keystonev1.DbSyncHash] = dbSyncjob.GetHash()
-		r.Log.Info(fmt.Sprintf("Job %s hash added - %s", jobDef.Name, instance.Status.Hash[keystonev1.DbSyncHash]))
+		l.Info(fmt.Sprintf("Job %s hash added - %s", jobDef.Name, instance.Status.Hash[keystonev1.DbSyncHash]))
 	}
 	instance.Status.Conditions.MarkTrue(condition.DBSyncReadyCondition, condition.DBSyncReadyMessage)
 
@@ -427,38 +425,41 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	}
 	if bootstrapjob.HasChanged() {
 		instance.Status.Hash[keystonev1.BootstrapHash] = bootstrapjob.GetHash()
-		r.Log.Info(fmt.Sprintf("Job %s hash added - %s", jobDef.Name, instance.Status.Hash[keystonev1.BootstrapHash]))
+		l.Info(fmt.Sprintf("Job %s hash added - %s", jobDef.Name, instance.Status.Hash[keystonev1.BootstrapHash]))
 	}
 	instance.Status.Conditions.MarkTrue(condition.BootstrapReadyCondition, condition.BootstrapReadyMessage)
 
 	// run keystone bootstrap - end
 
-	r.Log.Info("Reconciled Service init successfully")
+	l.Info("Reconciled Service init successfully")
 	return ctrl.Result{}, nil
 }
 
 func (r *KeystoneAPIReconciler) reconcileUpdate(ctx context.Context, instance *keystonev1.KeystoneAPI, helper *helper.Helper) (ctrl.Result, error) {
-	r.Log.Info("Reconciling Service update")
+	l := GetLog(ctx)
+	l.Info("Reconciling Service update")
 
 	// TODO: should have minor update tasks if required
 	// - delete dbsync hash from status to rerun it?
 
-	r.Log.Info("Reconciled Service update successfully")
+	l.Info("Reconciled Service update successfully")
 	return ctrl.Result{}, nil
 }
 
 func (r *KeystoneAPIReconciler) reconcileUpgrade(ctx context.Context, instance *keystonev1.KeystoneAPI, helper *helper.Helper) (ctrl.Result, error) {
-	r.Log.Info("Reconciling Service upgrade")
+	l := GetLog(ctx)
+	l.Info("Reconciling Service upgrade")
 
 	// TODO: should have major version upgrade tasks
 	// -delete dbsync hash from status to rerun it?
 
-	r.Log.Info("Reconciled Service upgrade successfully")
+	l.Info("Reconciled Service upgrade successfully")
 	return ctrl.Result{}, nil
 }
 
 func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *keystonev1.KeystoneAPI, helper *helper.Helper) (ctrl.Result, error) {
-	r.Log.Info("Reconciling Service")
+	l := GetLog(ctx)
+	l.Info("Reconciling Service")
 
 	// ConfigMap
 	configMapVars := make(map[string]env.Setter)
@@ -689,7 +690,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 		return ctrl.Result{}, err
 	}
 
-	r.Log.Info("Reconciled Service successfully")
+	l.Info("Reconciled Service successfully")
 	return ctrl.Result{}, nil
 }
 
@@ -898,7 +899,7 @@ func (r *KeystoneAPIReconciler) createHashOfInputHashes(
 	}
 	if hashMap, changed = util.SetHash(instance.Status.Hash, common.InputHashName, hash); changed {
 		instance.Status.Hash = hashMap
-		r.Log.Info(fmt.Sprintf("Input maps hash %s - %s", common.InputHashName, hash))
+		GetLog(ctx).Info(fmt.Sprintf("Input maps hash %s - %s", common.InputHashName, hash))
 	}
 	return hash, changed, nil
 }

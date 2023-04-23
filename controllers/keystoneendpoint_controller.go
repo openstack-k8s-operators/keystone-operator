@@ -26,9 +26,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/go-logr/logr"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	helper "github.com/openstack-k8s-operators/lib-common/modules/common/helper"
@@ -41,7 +39,6 @@ import (
 type KeystoneEndpointReconciler struct {
 	client.Client
 	Kclient kubernetes.Interface
-	Log     logr.Logger
 	Scheme  *runtime.Scheme
 }
 
@@ -54,7 +51,7 @@ type KeystoneEndpointReconciler struct {
 
 // Reconcile keystone endpoint requests
 func (r *KeystoneEndpointReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, _err error) {
-	_ = log.FromContext(ctx)
+	l := GetLog(ctx)
 
 	// Fetch the KeystoneEndpoint instance
 	instance := &keystonev1.KeystoneEndpoint{}
@@ -75,7 +72,8 @@ func (r *KeystoneEndpointReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		r.Client,
 		r.Kclient,
 		r.Scheme,
-		r.Log,
+		//TODO remove later, log used here as to not break the helper struct signiture.
+		l,
 	)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -138,7 +136,7 @@ func (r *KeystoneEndpointReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				condition.SeverityWarning,
 				keystonev1.KeystoneAPIReadyNotFoundMessage,
 			))
-			util.LogForObject(helper, "KeystoneAPI not found!", instance)
+			l.Info("KeystoneAPI not found!")
 
 			return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 		}
@@ -179,7 +177,7 @@ func (r *KeystoneEndpointReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			condition.RequestedReason,
 			condition.SeverityInfo,
 			keystonev1.KeystoneAPIReadyWaitingMessage))
-		util.LogForObject(helper, "KeystoneAPI not yet ready!", instance)
+		l.Info("KeystoneAPI not yet ready!")
 
 		return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 	}
@@ -235,7 +233,9 @@ func (r *KeystoneEndpointReconciler) reconcileDelete(
 	os *openstack.OpenStack,
 	keystoneAPI *keystonev1.KeystoneAPI,
 ) (ctrl.Result, error) {
-	util.LogForObject(helper, "Reconciling Endpoint delete", instance)
+	l := GetLog(ctx)
+
+	l.Info("Reconciling Endpoint delete")
 
 	// We might not have an OpenStack backend to use in certain situations
 	if os != nil {
@@ -249,7 +249,7 @@ func (r *KeystoneEndpointReconciler) reconcileDelete(
 			}
 
 			err = os.DeleteEndpoint(
-				r.Log,
+				l,
 				openstack.Endpoint{
 					Name:         instance.Spec.ServiceName,
 					ServiceID:    instance.Status.ServiceID,
@@ -276,7 +276,7 @@ func (r *KeystoneEndpointReconciler) reconcileDelete(
 
 	// Endpoints are deleted so remove the finalizer.
 	controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
-	util.LogForObject(helper, "Reconciled Endpoint delete successfully", instance)
+	l.Info("Reconciled Endpoint delete successfully")
 
 	return ctrl.Result{}, nil
 }
@@ -287,7 +287,8 @@ func (r *KeystoneEndpointReconciler) reconcileNormal(
 	helper *helper.Helper,
 	os *openstack.OpenStack,
 ) (ctrl.Result, error) {
-	util.LogForObject(helper, "Reconciling Endpoint normal", instance)
+	l := GetLog(ctx)
+	l.Info("Reconciling Endpoint normal")
 
 	//
 	// Wait for KeystoneService is Ready and get the ServiceID from the object
@@ -295,7 +296,7 @@ func (r *KeystoneEndpointReconciler) reconcileNormal(
 	ksSvc, err := keystonev1.GetKeystoneServiceWithName(ctx, helper, instance.Spec.ServiceName, instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
-			util.LogForObject(helper, fmt.Sprintf("KeystoneService %s not found", instance.Spec.ServiceName), instance)
+			l.Info("KeystoneService not found", "KeystoneService", instance.Spec.ServiceName)
 			return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 		}
 
@@ -309,7 +310,7 @@ func (r *KeystoneEndpointReconciler) reconcileNormal(
 	}
 
 	if !ksSvc.IsReady() {
-		util.LogForObject(helper, fmt.Sprintf("KeystoneService %s not ready, waiting to create endpoints", instance.Spec.ServiceName), instance)
+		l.Info("KeystoneService not ready, waiting to create endpoints", "KeystoneService", instance.Spec.ServiceName)
 
 		return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, nil
 	}
@@ -320,6 +321,7 @@ func (r *KeystoneEndpointReconciler) reconcileNormal(
 	// create/update endpoints
 	//
 	err = r.reconcileEndpoints(
+		ctx,
 		instance,
 		helper,
 		os)
@@ -338,17 +340,19 @@ func (r *KeystoneEndpointReconciler) reconcileNormal(
 		instance.Spec.Endpoints,
 	)
 
-	util.LogForObject(helper, "Reconciled Endpoint normal successfully", instance)
+	l.Info("Reconciled Endpoint normal successfully")
 
 	return ctrl.Result{}, nil
 }
 
 func (r *KeystoneEndpointReconciler) reconcileEndpoints(
+	ctx context.Context,
 	instance *keystonev1.KeystoneEndpoint,
 	helper *helper.Helper,
 	os *openstack.OpenStack,
 ) error {
-	util.LogForObject(helper, "Reconciling Endpoints", instance)
+	l := GetLog(ctx)
+	l.Info("Reconciling Endpoints")
 
 	// delete endpoint if it does no longer exist in Spec.Endpoints
 	// but has a reference in Status.EndpointIDs
@@ -362,7 +366,7 @@ func (r *KeystoneEndpointReconciler) reconcileEndpoints(
 				}
 
 				err = os.DeleteEndpoint(
-					r.Log,
+					l,
 					openstack.Endpoint{
 						Name:         instance.Spec.ServiceName,
 						ServiceID:    instance.Status.ServiceID,
@@ -390,7 +394,7 @@ func (r *KeystoneEndpointReconciler) reconcileEndpoints(
 
 		// get registered endpoints for the service and endpointType
 		allEndpoints, err := os.GetEndpoints(
-			r.Log,
+			l,
 			instance.Status.ServiceID,
 			endpointType)
 		if err != nil {
@@ -401,7 +405,7 @@ func (r *KeystoneEndpointReconciler) reconcileEndpoints(
 		if len(allEndpoints) == 0 {
 			// Create the endpoint
 			endpointID, err = os.CreateEndpoint(
-				r.Log,
+				l,
 				openstack.Endpoint{
 					Name:         instance.Spec.ServiceName,
 					ServiceID:    instance.Status.ServiceID,
@@ -417,7 +421,7 @@ func (r *KeystoneEndpointReconciler) reconcileEndpoints(
 			endpoint := allEndpoints[0]
 			if endpointURL != endpoint.URL {
 				endpointID, err = os.UpdateEndpoint(
-					r.Log,
+					l,
 					openstack.Endpoint{
 						Name:         endpoint.Name,
 						ServiceID:    endpoint.ServiceID,
@@ -447,7 +451,7 @@ func (r *KeystoneEndpointReconciler) reconcileEndpoints(
 		}
 	}
 
-	util.LogForObject(helper, "Reconciled Endpoints successfully", instance)
+	l.Info("Reconciled Endpoints successfully")
 
 	return nil
 }

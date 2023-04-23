@@ -22,7 +22,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-logr/logr"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	helper "github.com/openstack-k8s-operators/lib-common/modules/common/helper"
@@ -48,11 +47,6 @@ func (r *KeystoneServiceReconciler) GetKClient() kubernetes.Interface {
 	return r.Kclient
 }
 
-// GetLogger -
-func (r *KeystoneServiceReconciler) GetLogger() logr.Logger {
-	return r.Log
-}
-
 // GetScheme -
 func (r *KeystoneServiceReconciler) GetScheme() *runtime.Scheme {
 	return r.Scheme
@@ -62,7 +56,6 @@ func (r *KeystoneServiceReconciler) GetScheme() *runtime.Scheme {
 type KeystoneServiceReconciler struct {
 	client.Client
 	Kclient kubernetes.Interface
-	Log     logr.Logger
 	Scheme  *runtime.Scheme
 }
 
@@ -74,7 +67,8 @@ type KeystoneServiceReconciler struct {
 
 // Reconcile keystone service requests
 func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, _err error) {
-	_ = r.Log.WithValues("keystoneservice", req.NamespacedName)
+
+	l := GetLog(ctx)
 
 	// Fetch the KeystoneService instance
 	instance := &keystonev1.KeystoneService{}
@@ -95,7 +89,8 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		r.Client,
 		r.Kclient,
 		r.Scheme,
-		r.Log,
+		//TODO remove later, log used here as to not break the helper struct signiture.
+		l,
 	)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -156,7 +151,7 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 				condition.SeverityWarning,
 				keystonev1.KeystoneAPIReadyNotFoundMessage,
 			))
-			r.Log.Info("KeystoneAPI not found!")
+			l.Info("KeystoneAPI not found!")
 			return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 		}
 		instance.Status.Conditions.Set(condition.FalseCondition(
@@ -196,7 +191,7 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			condition.RequestedReason,
 			condition.SeverityInfo,
 			keystonev1.KeystoneAPIReadyWaitingMessage))
-		r.Log.Info("KeystoneAPI not yet ready")
+		l.Info("KeystoneAPI not yet ready")
 		return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 	}
 	instance.Status.Conditions.MarkTrue(keystonev1.KeystoneAPIReadyCondition, keystonev1.KeystoneAPIReadyMessage)
@@ -252,14 +247,15 @@ func (r *KeystoneServiceReconciler) reconcileDelete(
 	os *openstack.OpenStack,
 	keystoneAPI *keystonev1.KeystoneAPI,
 ) (ctrl.Result, error) {
-	r.Log.Info("Reconciling Service delete")
+	l := GetLog(ctx)
+	l.Info("Reconciling Service delete")
 
 	// only cleanup the service if there is the ServiceID reference in the
 	// object status and if we have an OpenStack backend to use
 	if instance.Status.ServiceID != "" && os != nil {
 		// Delete User
 		err := os.DeleteUser(
-			r.Log,
+			l,
 			instance.Spec.ServiceUser)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -267,15 +263,15 @@ func (r *KeystoneServiceReconciler) reconcileDelete(
 
 		// Delete Service
 		err = os.DeleteService(
-			r.Log,
+			l,
 			instance.Status.ServiceID)
 		if err != nil {
-			r.Log.Info(err.Error())
+			l.Info(err.Error())
 			return ctrl.Result{}, err
 		}
 
 	} else {
-		r.Log.Info(fmt.Sprintf("Not deleting service %s as there is no stores service ID", instance.Spec.ServiceName))
+		l.Info("Not deleting service as there is no stores service ID", "KeystoneService", instance.Spec.ServiceName)
 	}
 
 	// There are certain deletion scenarios where we might not have the keystoneAPI
@@ -292,7 +288,7 @@ func (r *KeystoneServiceReconciler) reconcileDelete(
 
 	// Service is deleted so remove the finalizer.
 	controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
-	r.Log.Info("Reconciled Service delete successfully")
+	l.Info("Reconciled Service delete successfully")
 
 	return ctrl.Result{}, nil
 }
@@ -303,12 +299,13 @@ func (r *KeystoneServiceReconciler) reconcileNormal(
 	helper *helper.Helper,
 	os *openstack.OpenStack,
 ) (ctrl.Result, error) {
-	r.Log.Info("Reconciling Service")
+	l := GetLog(ctx)
+	l.Info("Reconciling Service")
 
 	//
 	// Create new service if ServiceID is not already set
 	//
-	err := r.reconcileService(instance, os)
+	err := r.reconcileService(ctx, instance, os)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			keystonev1.KeystoneServiceOSServiceReadyCondition,
@@ -355,19 +352,21 @@ func (r *KeystoneServiceReconciler) reconcileNormal(
 		instance.Spec.ServiceUser,
 	)
 
-	r.Log.Info("Reconciled Service successfully")
+	l.Info("Reconciled Service successfully")
 	return ctrl.Result{}, nil
 }
 
 func (r *KeystoneServiceReconciler) reconcileService(
+	ctx context.Context,
 	instance *keystonev1.KeystoneService,
 	os *openstack.OpenStack,
 ) error {
-	r.Log.Info(fmt.Sprintf("Reconciling Service %s", instance.Spec.ServiceName))
+	l := GetLog(ctx)
+	l.Info("Reconciling Service ", "KeystoneService", instance.Spec.ServiceName)
 
 	// verify if there is already a service in keystone for the type and name
 	service, err := os.GetService(
-		r.Log,
+		l,
 		instance.Spec.ServiceType,
 		instance.Spec.ServiceName,
 	)
@@ -380,7 +379,7 @@ func (r *KeystoneServiceReconciler) reconcileService(
 	if service == nil {
 		// create the service
 		instance.Status.ServiceID, err = os.CreateService(
-			r.Log,
+			l,
 			openstack.Service{
 				Name:        instance.Spec.ServiceName,
 				Type:        instance.Spec.ServiceType,
@@ -400,7 +399,7 @@ func (r *KeystoneServiceReconciler) reconcileService(
 			service.Extra["description"] != instance.Spec.ServiceDescription {
 			// update the service ONLY if Enabled or Description changed.
 			err := os.UpdateService(
-				r.Log,
+				l,
 				openstack.Service{
 					Name:        instance.Spec.ServiceName,
 					Type:        instance.Spec.ServiceType,
@@ -414,7 +413,7 @@ func (r *KeystoneServiceReconciler) reconcileService(
 		}
 	}
 
-	r.Log.Info("Reconciled Service successfully")
+	l.Info("Reconciled Service successfully")
 	return nil
 }
 
@@ -424,7 +423,8 @@ func (r *KeystoneServiceReconciler) reconcileUser(
 	instance *keystonev1.KeystoneService,
 	os *openstack.OpenStack,
 ) (reconcile.Result, error) {
-	r.Log.Info(fmt.Sprintf("Reconciling User %s", instance.Spec.ServiceUser))
+	l := GetLog(ctx)
+	l.Info("Reconciling User", "User", instance.Spec.ServiceUser)
 	roleNames := []string{"admin", "service"}
 
 	// get the password of the service user from the secret
@@ -445,7 +445,7 @@ func (r *KeystoneServiceReconciler) reconcileUser(
 	// create service project if it does not exist
 	//
 	serviceProjectID, err := os.CreateProject(
-		r.Log,
+		l,
 		openstack.Project{
 			Name:        "service",
 			Description: "service",
@@ -458,7 +458,7 @@ func (r *KeystoneServiceReconciler) reconcileUser(
 	// create user if it does not exist
 	//
 	userID, err := os.CreateUser(
-		r.Log,
+		l,
 		openstack.User{
 			Name:      instance.Spec.ServiceUser,
 			Password:  password,
@@ -473,7 +473,7 @@ func (r *KeystoneServiceReconciler) reconcileUser(
 		// create role if it does not exist
 		//
 		_, err = os.CreateRole(
-			r.Log,
+			l,
 			roleName)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -483,7 +483,7 @@ func (r *KeystoneServiceReconciler) reconcileUser(
 		// add the role to the user
 		//
 		err = os.AssignUserRole(
-			r.Log,
+			l,
 			roleName,
 			userID,
 			serviceProjectID)
@@ -492,6 +492,6 @@ func (r *KeystoneServiceReconciler) reconcileUser(
 		}
 	}
 
-	r.Log.Info("Reconciled User successfully")
+	l.Info("Reconciled User successfully")
 	return ctrl.Result{}, nil
 }
