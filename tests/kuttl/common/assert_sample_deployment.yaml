@@ -128,8 +128,8 @@ spec:
         name: init
         resources: {}
       restartPolicy: Always
-      serviceAccount: keystone-operator-keystone
-      serviceAccountName: keystone-operator-keystone
+      serviceAccount: keystone-keystone
+      serviceAccountName: keystone-keystone
 status:
   availableReplicas: 1
   replicas: 1
