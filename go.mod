@@ -3,7 +3,7 @@ module github.com/openstack-k8s-operators/keystone-operator
 go 1.19
 
 require (
-	github.com/go-logr/logr v1.2.3
+	github.com/go-logr/logr v1.2.4
 	github.com/onsi/ginkgo/v2 v2.6.0
 	github.com/onsi/gomega v1.24.1
 	github.com/openshift/api v3.9.0+incompatible
@@ -41,7 +41,7 @@ require (
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gophercloud/gophercloud v1.2.0 // indirect
-	github.com/imdario/mergo v0.3.13 // indirect
+	github.com/imdario/mergo v0.3.15 // indirect; indirect // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
