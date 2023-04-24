@@ -18,8 +18,6 @@ package keystone
 const (
 	// ServiceName -
 	ServiceName = "keystone"
-	// ServiceAccount -
-	ServiceAccount = "keystone-operator-keystone"
 	// DatabaseName -
 	DatabaseName = "keystone"
 

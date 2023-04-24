@@ -268,3 +268,18 @@ func (instance KeystoneAPI) IsReady() bool {
 	return instance.Status.Conditions.IsTrue(condition.ExposeServiceReadyCondition) &&
 		instance.Status.Conditions.IsTrue(condition.DeploymentReadyCondition)
 }
+
+// RbacConditionsSet - set the conditions for the rbac object
+func (instance KeystoneAPI) RbacConditionsSet(c *condition.Condition) {
+	instance.Status.Conditions.Set(c)
+}
+
+// RbacNamespace - return the namespace
+func (instance KeystoneAPI) RbacNamespace() string {
+	return instance.Namespace
+}
+
+// RbacResourceName - return the name to be used for rbac objects (serviceaccount, role, rolebinding)
+func (instance KeystoneAPI) RbacResourceName() string {
+	return "keystone-" + instance.Name
+}

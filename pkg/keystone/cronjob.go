@@ -88,7 +88,7 @@ func CronJob(
 							},
 							Volumes:            getVolumes(instance.Name),
 							RestartPolicy:      corev1.RestartPolicyNever,
-							ServiceAccountName: ServiceAccount,
+							ServiceAccountName: instance.RbacResourceName(),
 						},
 					},
 				},
