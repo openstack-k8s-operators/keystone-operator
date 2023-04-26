@@ -21,8 +21,6 @@ const (
 	// DatabaseName -
 	DatabaseName = "keystone"
 
-	// KeystoneAdminPort -
-	KeystoneAdminPort int32 = 35357
 	// KeystonePublicPort -
 	KeystonePublicPort int32 = 5000
 	// KeystoneInternalPort -
