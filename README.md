@@ -1,7 +1,7 @@
 # keystone-operator
 
 A Kubernetes Operator built using the [Operator Framework](https://github.com/operator-framework) for Go. The Operator provides a way to easily install and manage an OpenStack Keystone installation
-on Kubernetes. This Operator was developed using [TripleO](https://opendev.org/openstack/tripleo-common/src/branch/master/container-images/tripleo_containers.yaml) containers for OpenStack.
+on Kubernetes. This Operator was developed using [TCIB](https://github.com/openstack-k8s-operators/tcib/blob/main/container-images/containers.yaml) containers for OpenStack.
 
 # Deployment
 
@@ -18,7 +18,7 @@ kind: KeystoneAPI
 metadata:
   name: keystone
 spec:
-  containerImage: quay.io/tripleowallabycentos9/openstack-keystone:current-tripleo
+  containerImage: quay.io/podified-antelope-centos9/openstack-keystone:current-podified
   replicas: 1
   secret: keystone-secret
 ```
