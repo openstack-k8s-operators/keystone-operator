@@ -2,7 +2,7 @@
 #
 found=0
 not_found=1
-if [ "$1" == "--reverse" ];then
+if [ "$1" = "--reverse" ];then
     # sometimes we want to check that there is no DEBUG logs
     found=1
     not_found=0
