@@ -8,10 +8,10 @@ if [ "$1" = "--reverse" ];then
     not_found=0
 fi
 
-pod=$(oc get pods -n openstack -l service=keystone -o name)
+pod=$(oc get pods -n $NAMESPACE -l service=keystone -o name)
 # in the case the logs have DEBUG lines, keep only one to avoid cluttering the
 # test output
-debug=$(oc logs -n openstack "$pod" | grep "DEBUG" | head -n 1)
+debug=$(oc logs -n $NAMESPACE "$pod" | grep "DEBUG" | head -n 1)
 
 if [ -n "$debug" ]; then
     exit $found

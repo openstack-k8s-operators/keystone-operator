@@ -11,7 +11,6 @@ metadata:
   finalizers:
   - KeystoneAPI
   name: keystone
-  namespace: openstack
 spec:
   replicas: 3
 status:

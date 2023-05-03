@@ -11,15 +11,13 @@
 #    - chmod 755 /usr/local/bin/kubectl-kuttl
 # 2. An OCP 4.10+ CRC cluster with Podified Operators has been deployed
 # 3. CLI user has access to $KUBECONFIG
-# 4. The environment variable INSTALL_YAMLS is set to the the path of the
-#    install_yamls repo
 
 apiVersion: kuttl.dev/v1beta1
 kind: TestSuite
 reportFormat: JSON
 reportName: kuttl-test-keystone
-namespace: openstack
 timeout: 180
+namespace: keystone-kuttl-tests
 parallel: 1
 suppress:
   - events                     # Remove spammy event logs
