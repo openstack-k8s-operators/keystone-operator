@@ -13,7 +13,6 @@ metadata:
   finalizers:
   - KeystoneAPI
   name: keystone
-  namespace: openstack
 spec:
   adminProject: admin
   adminRole: admin
@@ -38,7 +37,7 @@ spec:
     requests:
       cpu: "1"
       memory: 500Mi
-  secret: osp-secret
+  secret: keystone-secret
 status:
   databaseHostname: openstack
   readyCount: 1
@@ -47,7 +46,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: keystone
-  namespace: openstack
 spec:
   replicas: 1
   template:
@@ -111,12 +109,12 @@ spec:
           valueFrom:
             secretKeyRef:
               key: KeystoneDatabasePassword
-              name: osp-secret
+              name: keystone-secret
         - name: AdminPassword
           valueFrom:
             secretKeyRef:
               key: AdminPassword
-              name: osp-secret
+              name: keystone-secret
         - name: DatabaseHost
           value: openstack
         - name: DatabaseName
@@ -150,7 +148,6 @@ metadata:
     internal: "true"
     service: keystone
   name: keystone-internal
-  namespace: openstack
 spec:
   ports:
     - name: keystone-internal
@@ -165,7 +162,6 @@ metadata:
     public: "true"
     service: keystone
   name: keystone-public
-  namespace: openstack
 spec:
   ports:
     - name: keystone-public
@@ -180,7 +176,6 @@ metadata:
   labels:
     public: "true"
     service: keystone
-  namespace: openstack
 spec:
   port:
     targetPort: keystone-public
@@ -193,15 +188,15 @@ spec:
 # the three endpoints are defined and their addresses follow the default pattern
 apiVersion: kuttl.dev/v1beta1
 kind: TestAssert
-namespaced: true
 commands:
   - script: |
       template='{{.status.apiEndpoint.internal}}{{":"}}{{.status.apiEndpoint.public}}{{"\n"}}'
-      regex="http:\/\/keystone-internal.openstack.*:http:\/\/keystone-public-openstack\.apps.*"
-      apiEndpoints=$(oc get -n openstack KeystoneAPI  keystone -o go-template="$template")
+      regex="http:\/\/keystone-internal.$NAMESPACE.*:http:\/\/keystone-public-$NAMESPACE\.apps.*"
+      apiEndpoints=$(oc get -n $NAMESPACE KeystoneAPI  keystone -o go-template="$template")
       matches=$(echo "$apiEndpoints" | sed -e "s?$regex??")
       if [ -z "$matches" ]; then
         exit 0
       else
+        echo "Endpoints URLS: $apiEndpoints do not match regex"
         exit 1
       fi

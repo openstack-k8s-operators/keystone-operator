@@ -13,13 +13,11 @@ metadata:
   finalizers:
   - KeystoneAPI
   name: keystone
-  namespace: openstack
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: keystone
-  namespace: openstack
 ---
 # the openshift annotations can't be checked through the deployment above
 apiVersion: v1
@@ -37,7 +35,6 @@ metadata:
     internal: "true"
     service: keystone
   name: keystone-internal
-  namespace: openstack
 ---
 apiVersion: v1
 kind: Service
@@ -46,7 +43,6 @@ metadata:
     public: "true"
     service: keystone
   name: keystone-public
-  namespace: openstack
 ---
 apiVersion: route.openshift.io/v1
 kind: Route
@@ -55,4 +51,3 @@ metadata:
   labels:
     public: "true"
     service: keystone
-  namespace: openstack

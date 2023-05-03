@@ -4,4 +4,3 @@ delete:
 - apiVersion: keystone.openstack.org/v1beta1
   kind: KeystoneAPI
   name: keystone
-  namespace: openstack

@@ -11,7 +11,6 @@ metadata:
   finalizers:
   - KeystoneAPI
   name: keystone
-  namespace: openstack
 spec:
   adminProject: admin
   adminRole: admin
@@ -36,7 +35,7 @@ spec:
     requests:
       cpu: "1"
       memory: 500Mi
-  secret: osp-secret
+  secret: keystone-secret
 status:
   databaseHostname: openstack
 ---
