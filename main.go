@@ -128,12 +128,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Acquire environmental defaults and initialize KeystoneAPI defaults with them
-	keystoneAPIDefaults := keystonev1.KeystoneAPIDefaults{
-		ContainerImageURL: os.Getenv("KEYSTONE_API_IMAGE_URL_DEFAULT"),
-	}
-
-	keystonev1.SetupKeystoneAPIDefaults(keystoneAPIDefaults)
+	// Acquire environmental defaults and initialize operator defaults with them
+	keystonev1.SetupDefaults()
 
 	// Setup webhooks if requested
 	if strings.ToLower(os.Getenv("ENABLE_WEBHOOKS")) != "false" {
