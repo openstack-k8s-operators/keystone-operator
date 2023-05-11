@@ -21,6 +21,7 @@ import (
 
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -37,6 +38,11 @@ const (
 
 	// FernetKeysHash completed
 	FernetKeysHash = "fernetkeys"
+
+	// Container image fall-back defaults
+
+	// KeystoneAPIContainerImage is the fall-back container image for KeystoneAPI
+	KeystoneAPIContainerImage = "quay.io/podified-antelope-centos9/openstack-keystone:current-podified"
 )
 
 // KeystoneAPISpec defines the desired state of KeystoneAPI
@@ -282,4 +288,14 @@ func (instance KeystoneAPI) RbacNamespace() string {
 // RbacResourceName - return the name to be used for rbac objects (serviceaccount, role, rolebinding)
 func (instance KeystoneAPI) RbacResourceName() string {
 	return "keystone-" + instance.Name
+}
+
+// SetupDefaults - initializes any CRD field defaults based on environment variables (the defaulting mechanism itself is implemented via webhooks)
+func SetupDefaults() {
+	// Acquire environmental defaults and initialize Keystone defaults with them
+	keystoneDefaults := KeystoneAPIDefaults{
+		ContainerImageURL: util.GetEnvVar("KEYSTONE_API_IMAGE_URL_DEFAULT", KeystoneAPIContainerImage),
+	}
+
+	SetupKeystoneAPIDefaults(keystoneDefaults)
 }
