@@ -17,4 +17,4 @@ spec:
         insecureSkipVerify: true
   selector:
     matchLabels:
-      app.kubernetes.io/name: keystone-operator
+      openstack.org/operator-name: keystone

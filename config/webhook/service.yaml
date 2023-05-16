@@ -17,4 +17,4 @@ spec:
       protocol: TCP
       targetPort: 9443
   selector:
-    app.kubernetes.io/name: keystone-operator
+    openstack.org/operator-name: keystone
