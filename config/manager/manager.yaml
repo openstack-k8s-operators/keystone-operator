@@ -12,12 +12,11 @@ metadata:
   namespace: system
   labels:
     control-plane: controller-manager
-    app.kubernetes.io/name: keystone-operator
-    app.kubernetes.io/component: keystone
+    openstack.org/operator-name: keystone
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/name: keystone-operator
+      openstack.org/operator-name: keystone
   replicas: 1
   template:
     metadata:
@@ -25,8 +24,7 @@ spec:
         kubectl.kubernetes.io/default-container: manager
       labels:
         control-plane: controller-manager
-        app.kubernetes.io/name: keystone-operator
-        app.kubernetes.io/component: keystone
+        openstack.org/operator-name: keystone
     spec:
       securityContext:
         runAsNonRoot: true
