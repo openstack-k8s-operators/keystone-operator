@@ -274,6 +274,11 @@ spec:
               apiEndpoint:
                 additionalProperties:
                   type: string
+                description: API endpoint (deprecated)
+                type: object
+              apiEndpoints:
+                additionalProperties:
+                  type: string
                 description: API endpoint
                 type: object
               conditions:

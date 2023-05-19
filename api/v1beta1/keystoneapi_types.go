@@ -221,7 +221,10 @@ type KeystoneAPIStatus struct {
 	Hash map[string]string `json:"hash,omitempty"`
 
 	// API endpoint
-	APIEndpoints map[string]string `json:"apiEndpoint,omitempty"`
+	APIEndpoints map[string]string `json:"apiEndpoints,omitempty"`
+
+	// API endpoint (deprecated)
+	APIEndpoint map[string]string `json:"apiEndpoint,omitempty"`
 
 	// Conditions
 	Conditions condition.Conditions `json:"conditions,omitempty" optional:"true"`

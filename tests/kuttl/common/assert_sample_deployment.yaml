@@ -190,7 +190,7 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestAssert
 commands:
   - script: |
-      template='{{.status.apiEndpoint.internal}}{{":"}}{{.status.apiEndpoint.public}}{{"\n"}}'
+      template='{{.status.apiEndpoints.internal}}{{":"}}{{.status.apiEndpoints.public}}{{"\n"}}'
       regex="http:\/\/keystone-internal.$NAMESPACE.*:http:\/\/keystone-public-$NAMESPACE\.apps.*"
       apiEndpoints=$(oc get -n $NAMESPACE KeystoneAPI  keystone -o go-template="$template")
       matches=$(echo "$apiEndpoints" | sed -e "s?$regex??")
