@@ -269,10 +269,9 @@ func (instance KeystoneAPI) GetEndpoint(endpointType endpoint.Endpoint) (string,
 	return "", fmt.Errorf("%s endpoint not found", string(endpointType))
 }
 
-// IsReady - returns true if service is ready to server requests
+// IsReady - returns true if KeystoneAPI is reconciled successfully
 func (instance KeystoneAPI) IsReady() bool {
-	return instance.Status.Conditions.IsTrue(condition.ExposeServiceReadyCondition) &&
-		instance.Status.Conditions.IsTrue(condition.DeploymentReadyCondition)
+	return instance.Status.Conditions.IsTrue(condition.ReadyCondition)
 }
 
 // RbacConditionsSet - set the conditions for the rbac object
