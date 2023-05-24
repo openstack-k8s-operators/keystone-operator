@@ -66,7 +66,7 @@ func init() {
 	SchemeBuilder.Register(&KeystoneEndpoint{}, &KeystoneEndpointList{})
 }
 
-// IsReady - returns true if endpoint got created ok in keystone
+// IsReady - returns true if KeystoneEndpoint is reconciled successfully
 func (instance KeystoneEndpoint) IsReady() bool {
-	return instance.Status.Conditions.IsTrue(KeystoneServiceOSEndpointsReadyCondition)
+	return instance.Status.Conditions.IsTrue(condition.ReadyCondition)
 }
