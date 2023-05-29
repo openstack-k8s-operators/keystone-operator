@@ -81,12 +81,7 @@ func (ks *KeystoneServiceHelper) CreateOrPatch(
 		service.Spec = ks.service.Spec
 		service.Labels = util.MergeStringMaps(service.Labels, ks.service.Labels)
 
-		err := controllerutil.SetControllerReference(h.GetBeforeObject(), service, h.GetScheme())
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return controllerutil.SetControllerReference(h.GetBeforeObject(), service, h.GetScheme())
 	})
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {

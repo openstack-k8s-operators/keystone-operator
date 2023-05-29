@@ -82,12 +82,7 @@ func (ke *KeystoneEndpointHelper) CreateOrPatch(
 		endpoint.Spec = ke.endpoint.Spec
 		endpoint.Labels = util.MergeStringMaps(endpoint.Labels, ke.endpoint.Labels)
 
-		err := controllerutil.SetControllerReference(h.GetBeforeObject(), endpoint, h.GetScheme())
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return controllerutil.SetControllerReference(h.GetBeforeObject(), endpoint, h.GetScheme())
 	})
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
