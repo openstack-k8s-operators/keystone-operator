@@ -52,10 +52,6 @@ spec:
                 default: admin
                 description: AdminProject - admin project name
                 type: string
-              adminRole:
-                default: admin
-                description: AdminRole - admin role name
-                type: string
               adminUser:
                 default: admin
                 description: AdminUser - admin user name
