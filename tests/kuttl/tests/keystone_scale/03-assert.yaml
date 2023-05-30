@@ -3,6 +3,7 @@
 #
 # - 1 KeystoneAPI CR
 # - 3 Pods for KeystoneAPI CR
+# - 1 CronJob for KeystoneAPI CR
 #
 
 apiVersion: keystone.openstack.org/v1beta1
@@ -24,3 +25,11 @@ spec:
   replicas: 3
 status:
   availableReplicas: 3
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: keystone-cron
+spec:
+  schedule: 1 * * * *
+  suspend: false
