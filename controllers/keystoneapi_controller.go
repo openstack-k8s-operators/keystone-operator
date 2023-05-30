@@ -191,6 +191,9 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if instance.Status.Hash == nil {
 		instance.Status.Hash = map[string]string{}
 	}
+	if instance.Status.APIEndpoint == nil {
+		instance.Status.APIEndpoint = map[string]string{}
+	}
 	if instance.Status.APIEndpoints == nil {
 		instance.Status.APIEndpoints = map[string]string{}
 	}
@@ -430,10 +433,8 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	// Update instance status with service endpoint url from route host information
 	//
 	// TODO: need to support https default here
-	if instance.Status.APIEndpoints == nil {
-		instance.Status.APIEndpoints = map[string]string{}
-	}
 	instance.Status.APIEndpoints = apiEndpoints
+	instance.Status.APIEndpoint = apiEndpoints
 
 	// expose service - end
 
