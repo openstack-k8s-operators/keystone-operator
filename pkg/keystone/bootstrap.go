@@ -52,7 +52,6 @@ func BootstrapJob(
 	envVars["KOLLA_BOOTSTRAP"] = env.SetValue("true")
 	envVars["OS_BOOTSTRAP_USERNAME"] = env.SetValue(instance.Spec.AdminUser)
 	envVars["OS_BOOTSTRAP_PROJECT_NAME"] = env.SetValue(instance.Spec.AdminProject)
-	envVars["OS_BOOTSTRAP_ROLE_NAME"] = env.SetValue(instance.Spec.AdminRole)
 	envVars["OS_BOOTSTRAP_SERVICE_NAME"] = env.SetValue(ServiceName)
 	envVars["OS_BOOTSTRAP_REGION_ID"] = env.SetValue(instance.Spec.Region)
 

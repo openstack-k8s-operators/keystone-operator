@@ -71,11 +71,6 @@ type KeystoneAPISpec struct {
 
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=admin
-	// AdminRole - admin role name
-	AdminRole string `json:"adminRole"`
-
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=admin
 	// AdminUser - admin user name
 	AdminUser string `json:"adminUser"`
 
