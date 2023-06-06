@@ -594,7 +594,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	//
 
 	serviceLabels := map[string]string{
-		common.AppSelector: keystone.ServiceName,
+		common.AppSelector: instance.Name,
 	}
 
 	// networks to attach to
@@ -822,6 +822,8 @@ func (r *KeystoneAPIReconciler) reconcileCloudConfig(
 		"OS_CLOUD":    "default",
 	}
 
+	// NOTE: We still use static name for this because the name is used by
+	//       infra-operator
 	cms := []util.Template{
 		{
 			Name:          "openstack-config",
@@ -863,6 +865,8 @@ func (r *KeystoneAPIReconciler) reconcileCloudConfig(
 		"secure.yaml": string(secretVal),
 	}
 
+	// NOTE: We still use static name for this because the name is used by
+	//       infra-operator
 	secrets := []util.Template{
 		{
 			Name:          "openstack-config-secret",
@@ -890,7 +894,7 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 	//
 	// check if secret already exist
 	//
-	secretName := keystone.ServiceName
+	secretName := instance.Name
 	secret, hash, err := oko_secret.GetSecret(ctx, helper, secretName, instance.Namespace)
 	if err != nil && !k8s_errors.IsNotFound(err) {
 		return err

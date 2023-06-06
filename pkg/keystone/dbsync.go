@@ -52,7 +52,7 @@ func DbSyncJob(
 
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      ServiceName + "-db-sync",
+			Name:      instance.Name + "-db-sync",
 			Namespace: instance.Namespace,
 			Labels:    labels,
 		},
@@ -84,7 +84,7 @@ func DbSyncJob(
 		},
 	}
 
-	job.Spec.Template.Spec.Volumes = getVolumes(ServiceName)
+	job.Spec.Template.Spec.Volumes = getVolumes(instance.Name)
 	initContainerDetails := APIDetails{
 		ContainerImage:       instance.Spec.ContainerImage,
 		DatabaseHost:         instance.Status.DatabaseHostname,

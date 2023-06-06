@@ -54,7 +54,7 @@ func CronJob(
 
 	cronjob := &batchv1.CronJob{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      ServiceName + "-cron",
+			Name:      instance.Name + "-cron",
 			Namespace: instance.Namespace,
 		},
 		Spec: batchv1.CronJobSpec{
