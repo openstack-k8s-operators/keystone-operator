@@ -161,13 +161,6 @@ func (in *KeystoneAPIStatus) DeepCopyInto(out *KeystoneAPIStatus) {
 			(*out)[key] = val
 		}
 	}
-	if in.APIEndpoint != nil {
-		in, out := &in.APIEndpoint, &out.APIEndpoint
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
-	}
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
 		*out = make(condition.Conditions, len(*in))
