@@ -1,7 +1,5 @@
 {
-  "timezone": "America/New_York",
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
+"extends": [
     "config:base"
   ],
   "dependencyDashboard": true,
@@ -16,29 +14,32 @@
   ],
   "packageRules": [
     {
-      "matchPackageNames": ["go"],
+      "matchPackageNames": ["github.com/openstack-k8s-operators/keystone-operator/api"],
       "enabled": false
     },
     {
       "groupName": "openstack-k8s-operators",
-      "matchPackagePatterns": ["^github.com/openstack-k8s-operators"],
-      "enabled": true
+      "matchPackagePrefixes": ["github.com/openstack-k8s-operators"],
+      "excludePackageNames": ["github.com/openstack-k8s-operators/keystone-operator/api"],
+      "schedule": [
+        "every weekend"
+      ]
     },
     {
       "groupName": "k8s.io",
-      "matchPackagePatterns": ["^k8s.io", "^sigs.k8s.io"],
-      "allowedVersions": "< 1.0.0",
-      "enabled": true
-    },
-    {
-      "groupName": "misc",
-      "matchPackagePatterns": ["^github.com/operator-framework/api", "^github.com/ghodss", "^github.com/go-logr/logr", "^github.com/imdario/mergo", "^go.uber.org/zap"],
-      "enabled": true
+      "matchPackagePrefixes": [
+        "k8s.io",
+        "sigs.k8s.io"
+      ],
+      "schedule": [
+        "every weekend"
+      ],
+      "allowedVersions": "< 1.0.0"
     }
   ],
   "postUpgradeTasks": {
     "commands": ["make gowork", "make tidy", "make manifests generate"],
-    "fileFilters": ["go.mod", "go.sum", "**/*.go", "**/*.yaml"],
+    "fileFilters": ["**/go.mod", "**/go.sum", "**/*.go", "**/*.yaml"],
     "executionMode": "update"
   }
 }
