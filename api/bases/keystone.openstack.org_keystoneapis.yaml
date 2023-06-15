@@ -267,11 +267,6 @@ spec:
           status:
             description: KeystoneAPIStatus defines the observed state of KeystoneAPI
             properties:
-              apiEndpoint:
-                additionalProperties:
-                  type: string
-                description: API endpoint (deprecated)
-                type: object
               apiEndpoints:
                 additionalProperties:
                   type: string
