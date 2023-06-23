@@ -48,6 +48,7 @@ func CronJob(
 	envVars := map[string]env.Setter{}
 	envVars["KOLLA_CONFIG_FILE"] = env.SetValue(KollaConfig)
 	envVars["KOLLA_CONFIG_STRATEGY"] = env.SetValue("COPY_ALWAYS")
+	envVars["TZ"] = env.SetValue(instance.Spec.TimeZone)
 
 	parallelism := int32(1)
 	completions := int32(1)
@@ -58,6 +59,7 @@ func CronJob(
 			Namespace: instance.Namespace,
 		},
 		Spec: batchv1.CronJobSpec{
+			TimeZone:          &instance.Spec.TimeZone,
 			Schedule:          instance.Spec.TrustFlushSchedule,
 			Suspend:           &instance.Spec.TrustFlushSuspend,
 			ConcurrencyPolicy: batchv1.ForbidConcurrent,

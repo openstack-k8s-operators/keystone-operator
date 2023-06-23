@@ -64,6 +64,7 @@ func BootstrapJob(
 	if _, ok := endpoints["public"]; ok {
 		envVars["OS_BOOTSTRAP_PUBLIC_URL"] = env.SetValue(endpoints["public"])
 	}
+	envVars["TZ"] = env.SetValue(instance.Spec.TimeZone)
 
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{

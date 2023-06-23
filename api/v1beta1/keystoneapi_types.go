@@ -147,6 +147,11 @@ type KeystoneAPISpec struct {
 	// +kubebuilder:validation:Optional
 	// ExternalEndpoints, expose a VIP using a pre-created IPAddressPool
 	ExternalEndpoints []MetalLBConfig `json:"externalEndpoints,omitempty"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:default=UTC
+	// TimeZone - Timezone in pods
+	TimeZone string `json:"timeZone"`
 }
 
 // MetalLBConfig to configure the MetalLB loadbalancer service

@@ -31,6 +31,7 @@ type APIDetails struct {
 	DBPasswordSelector   string
 	UserPasswordSelector string
 	VolumeMounts         []corev1.VolumeMount
+	TimeZone             string
 }
 
 const (
@@ -51,6 +52,7 @@ func initContainer(init APIDetails) []corev1.Container {
 	envVars["DatabaseHost"] = env.SetValue(init.DatabaseHost)
 	envVars["DatabaseUser"] = env.SetValue(init.DatabaseUser)
 	envVars["DatabaseName"] = env.SetValue(init.DatabaseName)
+	envVars["TZ"] = env.SetValue(init.TimeZone)
 
 	envs := []corev1.EnvVar{
 		{

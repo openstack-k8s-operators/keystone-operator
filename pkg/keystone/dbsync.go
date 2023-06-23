@@ -49,6 +49,7 @@ func DbSyncJob(
 	envVars["KOLLA_CONFIG_FILE"] = env.SetValue(KollaConfig)
 	envVars["KOLLA_CONFIG_STRATEGY"] = env.SetValue("COPY_ALWAYS")
 	envVars["KOLLA_BOOTSTRAP"] = env.SetValue("true")
+	envVars["TZ"] = env.SetValue(instance.Spec.TimeZone)
 
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{

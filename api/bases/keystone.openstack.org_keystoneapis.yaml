@@ -245,6 +245,10 @@ spec:
                 description: Secret containing OpenStack password information for
                   keystone KeystoneDatabasePassword, AdminPassword
                 type: string
+              timeZone:
+                default: UTC
+                description: TimeZone - Timezone in pods
+                type: string
               trustFlushArgs:
                 default: ""
                 description: TrustFlushArgs - Arguments added to keystone-manage trust_flush
@@ -263,6 +267,7 @@ spec:
             - containerImage
             - databaseInstance
             - secret
+            - timeZone
             type: object
           status:
             description: KeystoneAPIStatus defines the observed state of KeystoneAPI

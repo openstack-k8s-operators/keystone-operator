@@ -88,6 +88,7 @@ func Deployment(
 	envVars["KOLLA_CONFIG_FILE"] = env.SetValue(KollaConfig)
 	envVars["KOLLA_CONFIG_STRATEGY"] = env.SetValue("COPY_ALWAYS")
 	envVars["CONFIG_HASH"] = env.SetValue(configHash)
+	envVars["TZ"] = env.SetValue(instance.Spec.TimeZone)
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -152,6 +153,7 @@ func Deployment(
 		DBPasswordSelector:   instance.Spec.PasswordSelectors.Database,
 		UserPasswordSelector: instance.Spec.PasswordSelectors.Admin,
 		VolumeMounts:         getInitVolumeMounts(),
+		TimeZone:             instance.Spec.TimeZone,
 	}
 	deployment.Spec.Template.Spec.InitContainers = initContainer(initContainerDetails)
 
