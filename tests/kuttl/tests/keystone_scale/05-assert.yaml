@@ -37,6 +37,9 @@ spec:
   secret: keystone-secret
 status:
   databaseHostname: openstack
+  conditions:
+  - status: "False"
+    type: Ready
 ---
 apiVersion: apps/v1
 kind: Deployment

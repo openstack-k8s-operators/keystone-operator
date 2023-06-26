@@ -15,6 +15,9 @@ spec:
   replicas: 1
 status:
   readyCount: 1
+  conditions:
+  - status: "True"
+    type: Ready
 ---
 apiVersion: apps/v1
 kind: Deployment

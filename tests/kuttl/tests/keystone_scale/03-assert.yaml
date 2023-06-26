@@ -16,6 +16,9 @@ spec:
   replicas: 3
 status:
   readyCount: 3
+  conditions:
+  - status: "True"
+    type: Ready
 ---
 apiVersion: apps/v1
 kind: Deployment
