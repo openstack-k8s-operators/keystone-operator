@@ -23,8 +23,14 @@ limitations under the License.
 package v1beta1
 
 import (
+	"fmt"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
+
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
@@ -87,7 +93,25 @@ func (r *KeystoneAPI) ValidateCreate() error {
 func (r *KeystoneAPI) ValidateUpdate(old runtime.Object) error {
 	keystoneapilog.Info("validate update", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object update.
+	oldKeystoneAPI, ok := old.(*KeystoneAPI)
+	if !ok || oldKeystoneAPI == nil {
+		return apierrors.NewInternalError(fmt.Errorf("unable to convert existing object"))
+	}
+
+	if r.Spec.DatabaseInstance != oldKeystoneAPI.Spec.DatabaseInstance {
+		return apierrors.NewForbidden(
+			schema.GroupResource{
+				Group:    GroupVersion.WithKind("KeystoneAPI").Group,
+				Resource: GroupVersion.WithKind("KeystoneAPI").Kind,
+			}, r.GetName(), &field.Error{
+				Type:     field.ErrorTypeForbidden,
+				Field:    "*",
+				BadValue: r.Name,
+				Detail:   "Invalid value: \"databaseInstance\": Value is immutable",
+			},
+		)
+	}
+
 	return nil
 }
 
