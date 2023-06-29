@@ -159,9 +159,6 @@ spec:
                   this service
                 type: object
               passwordSelectors:
-                default:
-                  admin: AdminPassword
-                  database: KeystoneDatabasePassword
                 description: PasswordSelectors - Selectors to identify the DB and
                   AdminUser password from the Secret
                 properties:

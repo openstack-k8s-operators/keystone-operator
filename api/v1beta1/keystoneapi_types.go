@@ -105,7 +105,7 @@ type KeystoneAPISpec struct {
 	TrustFlushSuspend bool `json:"trustFlushSuspend"`
 
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default={database: KeystoneDatabasePassword, admin: AdminPassword}
+	// +kubebuilder:default={}
 	// PasswordSelectors - Selectors to identify the DB and AdminUser password from the Secret
 	PasswordSelectors PasswordSelector `json:"passwordSelectors"`
 
