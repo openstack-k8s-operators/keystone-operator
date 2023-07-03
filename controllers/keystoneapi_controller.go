@@ -18,9 +18,11 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	routev1 "github.com/openshift/api/route/v1"
+	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	keystone "github.com/openstack-k8s-operators/keystone-operator/pkg/keystone"
 	"github.com/openstack-k8s-operators/lib-common/modules/common"
@@ -96,6 +98,7 @@ type KeystoneAPIReconciler struct {
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete;
 // +kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get;list;watch;create;update;patch;delete;
 // +kubebuilder:rbac:groups=mariadb.openstack.org,resources=mariadbdatabases,verbs=get;list;watch;create;update;patch;delete;
+// +kubebuilder:rbac:groups=memcached.openstack.org,resources=memcacheds,verbs=get;list;watch;
 // +kubebuilder:rbac:groups=k8s.cni.cncf.io,resources=network-attachment-definitions,verbs=get;list;watch
 
 // service account, role, rolebinding
@@ -175,6 +178,7 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			condition.UnknownCondition(condition.DeploymentReadyCondition, condition.InitReason, condition.DeploymentReadyInitMessage),
 			condition.UnknownCondition(condition.NetworkAttachmentsReadyCondition, condition.InitReason, condition.NetworkAttachmentsReadyInitMessage),
 			condition.UnknownCondition(condition.CronJobReadyCondition, condition.InitReason, condition.CronJobReadyInitMessage),
+			condition.UnknownCondition(keystonev1.KeystoneMemcachedReadyCondition, condition.InitReason, keystonev1.KeystoneMemcachedReadyInitMessage),
 			// service account, role, rolebinding conditions
 			condition.UnknownCondition(condition.ServiceAccountReadyCondition, condition.InitReason, condition.ServiceAccountReadyInitMessage),
 			condition.UnknownCondition(condition.RoleReadyCondition, condition.InitReason, condition.RoleReadyInitMessage),
@@ -533,6 +537,41 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	// run check OpenStack secret - end
 
 	//
+	// Check for required memcached used for caching
+	//
+	memcached, err := r.getKeystoneMemcached(ctx, helper, instance)
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			instance.Status.Conditions.Set(condition.FalseCondition(
+				keystonev1.KeystoneMemcachedReadyCondition,
+				condition.RequestedReason,
+				condition.SeverityInfo,
+				keystonev1.KeystoneMemcachedReadyWaitingMessage))
+			return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, fmt.Errorf("memcached %s not found", instance.Spec.MemcachedInstance)
+		}
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			keystonev1.KeystoneMemcachedReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			keystonev1.KeystoneMemcachedReadyErrorMessage,
+			err.Error()))
+		return ctrl.Result{}, err
+	}
+
+	if !memcached.IsReady() {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			keystonev1.KeystoneMemcachedReadyCondition,
+			condition.RequestedReason,
+			condition.SeverityInfo,
+			keystonev1.KeystoneMemcachedReadyWaitingMessage))
+		return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, fmt.Errorf("memcached %s is not ready", memcached.Name)
+	}
+	// Mark the Memcached Service as Ready if we get to this point with no errors
+	instance.Status.Conditions.MarkTrue(
+		keystonev1.KeystoneMemcachedReadyCondition, keystonev1.KeystoneMemcachedReadyMessage)
+	// run check memcached - end
+
+	//
 	// Create ConfigMaps and Secrets required as input for the Service and calculate an overall hash of hashes
 	//
 
@@ -542,7 +581,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	// - %-config configmap holding minimal keystone config required to get the service up, user can add additional files to be added to the service
 	// - parameters which has passwords gets added from the OpenStack secret via the init container
 	//
-	err = r.generateServiceConfigMaps(ctx, instance, helper, &configMapVars)
+	err = r.generateServiceConfigMaps(ctx, instance, helper, &configMapVars, memcached)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.ServiceConfigReadyCondition,
@@ -742,6 +781,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	instance *keystonev1.KeystoneAPI,
 	h *helper.Helper,
 	envVars *map[string]env.Setter,
+	mc *memcachedv1.Memcached,
 ) error {
 	//
 	// create Configmap/Secret required for keystone input
@@ -761,7 +801,11 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		customData[key] = data
 	}
 
-	templateParameters := make(map[string]interface{})
+	memcachedServers := strings.Join(mc.Status.ServerList, "', '")
+
+	templateParameters := map[string]interface{}{
+		"memcachedServers": fmt.Sprintf("'%s'", memcachedServers),
+	}
 
 	cms := []util.Template{
 		// ScriptsConfigMap
@@ -943,4 +987,24 @@ func (r *KeystoneAPIReconciler) createHashOfInputHashes(
 		GetLog(ctx).Info(fmt.Sprintf("Input maps hash %s - %s", common.InputHashName, hash))
 	}
 	return hash, changed, nil
+}
+
+// getKeystoneMemcached - gets the Memcached instance used for keystone cache backend
+func (r *KeystoneAPIReconciler) getKeystoneMemcached(
+	ctx context.Context,
+	h *helper.Helper,
+	instance *keystonev1.KeystoneAPI,
+) (*memcachedv1.Memcached, error) {
+	memcached := &memcachedv1.Memcached{}
+	err := h.GetClient().Get(
+		ctx,
+		types.NamespacedName{
+			Name:      instance.Spec.MemcachedInstance,
+			Namespace: instance.Namespace,
+		},
+		memcached)
+	if err != nil {
+		return nil, err
+	}
+	return memcached, err
 }

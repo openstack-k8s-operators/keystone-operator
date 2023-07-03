@@ -59,6 +59,11 @@ type KeystoneAPISpec struct {
 	// TODO: -> implement needs work in mariadb-operator, right now only keystone
 	DatabaseUser string `json:"databaseUser"`
 
+	// +kubebuilder:validation:Required
+	// +kubebuilder:default=memcached
+	// Memcached instance name.
+	MemcachedInstance string `json:"memcachedInstance"`
+
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=regionOne
 	// Region - optional region name for the keystone service
