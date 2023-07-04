@@ -27,6 +27,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
+	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	test "github.com/openstack-k8s-operators/lib-common/modules/test"
 	mariadbv1 "github.com/openstack-k8s-operators/mariadb-operator/api/v1beta1"
@@ -74,6 +75,9 @@ var _ = BeforeSuite(func() {
 	mariaDBCRDs, err := test.GetCRDDirFromModule(
 		"github.com/openstack-k8s-operators/mariadb-operator/api", "../../go.mod", "bases")
 	Expect(err).ShouldNot(HaveOccurred())
+	memcachedCRDs, err := test.GetCRDDirFromModule(
+		"github.com/openstack-k8s-operators/infra-operator/apis", "../../go.mod", "bases")
+	Expect(err).ShouldNot(HaveOccurred())
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
@@ -81,6 +85,7 @@ var _ = BeforeSuite(func() {
 			filepath.Join("..", "..", "config", "crd", "bases"),
 			mariaDBCRDs,
 			routev1CRDs,
+			memcachedCRDs,
 		},
 		ErrorIfCRDPathMissing: true,
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
@@ -100,6 +105,8 @@ var _ = BeforeSuite(func() {
 	err = keystonev1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 	err = mariadbv1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+	err = memcachedv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 	err = corev1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())

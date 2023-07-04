@@ -23,7 +23,7 @@ require (
 require (
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.4.0
 	github.com/openstack-k8s-operators/lib-common/modules/test v0.0.0-20230612101529-af40f24b2b62
-	github.com/openstack-k8s-operators/lib-common/modules/test-operators v0.0.0-20230627132558-cd98c8b86310
+	github.com/openstack-k8s-operators/lib-common/modules/test-operators v0.0.0-20230706134423-a73e22fd2335
 )
 
 require (

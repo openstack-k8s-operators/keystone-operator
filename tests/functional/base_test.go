@@ -19,6 +19,7 @@ package functional_test
 import (
 	. "github.com/onsi/gomega"
 
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -70,4 +71,12 @@ func CreateKeystoneAPISecret(namespace string, name string) *corev1.Secret {
 func KeystoneConditionGetter(name types.NamespacedName) condition.Conditions {
 	instance := GetKeystoneAPI(name)
 	return instance.Status.Conditions
+}
+
+func GetCronJob(name types.NamespacedName) *batchv1.CronJob {
+	instance := &batchv1.CronJob{}
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, name, instance)).Should(Succeed())
+	}, timeout, interval).Should(Succeed())
+	return instance
 }
