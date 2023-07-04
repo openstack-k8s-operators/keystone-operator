@@ -16,7 +16,6 @@ require (
 	github.com/go-logr/zapr v1.2.3 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
-	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/tools v0.9.3 // indirect
 )
@@ -79,3 +78,9 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
+
+// map to latest commit from release-4.13 tag
+// must consistent with lib-common
+replace github.com/openshift/api => github.com/openshift/api v0.0.0-20230414143018-3367bc7e6ac7
+
+replace github.com/openstack-k8s-operators/lib-common/modules/common => github.com/stuggi/lib-common/modules/common v0.0.0-20230713142642-ad7565492dfa

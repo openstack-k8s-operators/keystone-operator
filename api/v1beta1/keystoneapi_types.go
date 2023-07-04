@@ -21,6 +21,7 @@ import (
 
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/route"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -152,6 +153,16 @@ type KeystoneAPISpec struct {
 	// +kubebuilder:validation:Optional
 	// ExternalEndpoints, expose a VIP using a pre-created IPAddressPool
 	ExternalEndpoints []MetalLBConfig `json:"externalEndpoints,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// Override, provides the ability to override the generated manifest of several child resources.
+	Override KeystoneAPIOverrideSpec `json:"override,omitempty"`
+}
+
+// KeystoneAPIOverrideSpec to override the generated manifest of several child resources.
+type KeystoneAPIOverrideSpec struct {
+	// +kubebuilder:validation:Optional
+	Route *route.OverrideSpec `json:"route,omitempty"`
 }
 
 // MetalLBConfig to configure the MetalLB loadbalancer service

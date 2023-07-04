@@ -162,6 +162,232 @@ spec:
                 description: NodeSelector to target subset of worker nodes running
                   this service
                 type: object
+              override:
+                description: Override, provides the ability to override the generated
+                  manifest of several child resources.
+                properties:
+                  route:
+                    description: OverrideSpec configuration for the Route created
+                      to serve traffic to the cluster.
+                    properties:
+                      metadata:
+                        description: EmbeddedLabelsAnnotations is an embedded subset
+                          of the fields included in k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta.
+                          Only labels and annotations are included. New labels/annotations
+                          get merged with the ones created by the operator. If a privided
+                          annotation/label is the same as one created by the service
+                          operator, the ones provided via this override will replace
+                          the one from the operator.
+                        properties:
+                          annotations:
+                            additionalProperties:
+                              type: string
+                            description: 'Annotations is an unstructured key value
+                              map stored with a resource that may be set by external
+                              tools to store and retrieve arbitrary metadata. They
+                              are not queryable and should be preserved when modifying
+                              objects. More info: http://kubernetes.io/docs/user-guide/annotations'
+                            type: object
+                          labels:
+                            additionalProperties:
+                              type: string
+                            description: 'Map of string keys and values that can be
+                              used to organize and categorize (scope and select) objects.
+                              May match selectors of replication controllers and services.
+                              More info: http://kubernetes.io/docs/user-guide/labels'
+                            type: object
+                        type: object
+                      spec:
+                        description: "Spec defines the behavior of a Route. https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+                          \n The spec will be merged using StrategicMergePatch - Provided
+                          parameters will override the ones from the original spec.
+                          - Required parameters of sub structs have to be named. -
+                          For parameters which are list of struct it depends on the
+                          patchStrategy defined on the list https://kubernetes.io/docs/tasks/manage-kubernetes-objects/update-api-object-kubectl-patch/#notes-on-the-strategic-merge-patch
+                          If `patchStrategy:\"merge\"` is set, src and dst list gets
+                          merged, otherwise they get replaced."
+                        properties:
+                          alternateBackends:
+                            description: alternateBackends allows up to 3 additional
+                              backends to be assigned to the route. Only the Service
+                              kind is allowed, and it will be defaulted to Service.
+                              Use the weight field in RouteTargetReference object
+                              to specify relative preference.
+                            items:
+                              description: TargetReference specifies the target that
+                                resolve into endpoints. Only the 'Service' kind is
+                                allowed. Use 'weight' field to emphasize one over
+                                others. Copy of RouteTargetReference in https://github.com/openshift/api/blob/master/route/v1/types.go,
+                                parameters set to be optional, have omitempty, and
+                                no default.
+                              properties:
+                                kind:
+                                  description: The kind of target that the route is
+                                    referring to. Currently, only 'Service' is allowed
+                                  enum:
+                                  - Service
+                                  - ""
+                                  type: string
+                                name:
+                                  description: name of the service/target that is
+                                    being referred to. e.g. name of the service
+                                  type: string
+                                weight:
+                                  description: weight as an integer between 0 and
+                                    256, default 100, that specifies the target's
+                                    relative weight against other target reference
+                                    objects. 0 suppresses requests to this backend.
+                                  format: int32
+                                  maximum: 256
+                                  minimum: 0
+                                  type: integer
+                              type: object
+                            maxItems: 3
+                            type: array
+                          host:
+                            description: host is an alias/DNS that points to the service.
+                              Optional. If not specified a route name will typically
+                              be automatically chosen. Must follow DNS952 subdomain
+                              conventions.
+                            maxLength: 253
+                            pattern: ^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*$
+                            type: string
+                          path:
+                            description: path that the router watches for, to route
+                              traffic for to the service. Optional
+                            pattern: ^/
+                            type: string
+                          port:
+                            description: If specified, the port to be used by the
+                              router. Most routers will use all endpoints exposed
+                              by the service by default - set this value to instruct
+                              routers which port to use.
+                            properties:
+                              targetPort:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                description: The target port on pods selected by the
+                                  service this route points to. If this is a string,
+                                  it will be looked up as a named port in the target
+                                  endpoints port list. Required
+                                x-kubernetes-int-or-string: true
+                            required:
+                            - targetPort
+                            type: object
+                          subdomain:
+                            description: "subdomain is a DNS subdomain that is requested
+                              within the ingress controller's domain (as a subdomain).
+                              If host is set this field is ignored. An ingress controller
+                              may choose to ignore this suggested name, in which case
+                              the controller will report the assigned name in the
+                              status.ingress array or refuse to admit the route. If
+                              this value is set and the server does not support this
+                              field host will be populated automatically. Otherwise
+                              host is left empty. The field may have multiple parts
+                              separated by a dot, but not all ingress controllers
+                              may honor the request. This field may not be changed
+                              after creation except by a user with the update routes/custom-host
+                              permission. \n Example: subdomain `frontend` automatically
+                              receives the router subdomain `apps.mycluster.com` to
+                              have a full hostname `frontend.apps.mycluster.com`."
+                            maxLength: 253
+                            pattern: ^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*$
+                            type: string
+                          tls:
+                            description: The tls field provides the ability to configure
+                              certificates and termination for the route.
+                            properties:
+                              caCertificate:
+                                description: caCertificate provides the cert authority
+                                  certificate contents
+                                type: string
+                              certificate:
+                                description: certificate provides certificate contents.
+                                  This should be a single serving certificate, not
+                                  a certificate chain. Do not include a CA certificate.
+                                type: string
+                              destinationCACertificate:
+                                description: destinationCACertificate provides the
+                                  contents of the ca certificate of the final destination.  When
+                                  using reencrypt termination this file should be
+                                  provided in order to have routers use it for health
+                                  checks on the secure connection. If this field is
+                                  not specified, the router may provide its own destination
+                                  CA and perform hostname validation using the short
+                                  service name (service.namespace.svc), which allows
+                                  infrastructure generated certificates to automatically
+                                  verify.
+                                type: string
+                              insecureEdgeTerminationPolicy:
+                                description: "insecureEdgeTerminationPolicy indicates
+                                  the desired behavior for insecure connections to
+                                  a route. While each router may make its own decisions
+                                  on which ports to expose, this is normally port
+                                  80. \n * Allow - traffic is sent to the server on
+                                  the insecure port (default) * Disable - no traffic
+                                  is allowed on the insecure port. * Redirect - clients
+                                  are redirected to the secure port."
+                                type: string
+                              key:
+                                description: key provides key file contents
+                                type: string
+                              termination:
+                                description: "termination indicates termination type.
+                                  \n * edge - TLS termination is done by the router
+                                  and http is used to communicate with the backend
+                                  (default) * passthrough - Traffic is sent straight
+                                  to the destination without the router providing
+                                  TLS termination * reencrypt - TLS termination is
+                                  done by the router and https is used to communicate
+                                  with the backend"
+                                enum:
+                                - edge
+                                - reencrypt
+                                - passthrough
+                                type: string
+                            required:
+                            - termination
+                            type: object
+                          to:
+                            description: to is an object the route should use as the
+                              primary backend. Only the Service kind is allowed, and
+                              it will be defaulted to Service. If the weight field
+                              (0-256 default 100) is set to zero, no traffic will
+                              be sent to this backend.
+                            properties:
+                              kind:
+                                description: The kind of target that the route is
+                                  referring to. Currently, only 'Service' is allowed
+                                enum:
+                                - Service
+                                - ""
+                                type: string
+                              name:
+                                description: name of the service/target that is being
+                                  referred to. e.g. name of the service
+                                type: string
+                              weight:
+                                description: weight as an integer between 0 and 256,
+                                  default 100, that specifies the target's relative
+                                  weight against other target reference objects. 0
+                                  suppresses requests to this backend.
+                                format: int32
+                                maximum: 256
+                                minimum: 0
+                                type: integer
+                            type: object
+                          wildcardPolicy:
+                            description: Wildcard policy if any for the route. Currently
+                              only 'Subdomain' or 'None' is allowed.
+                            enum:
+                            - None
+                            - Subdomain
+                            - ""
+                            type: string
+                        type: object
+                    type: object
+                type: object
               passwordSelectors:
                 default:
                   admin: AdminPassword
