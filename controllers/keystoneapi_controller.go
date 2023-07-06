@@ -895,10 +895,8 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		customData[key] = data
 	}
 
-	memcachedServers := strings.Join(mc.Status.ServerList, "', '")
-
 	templateParameters := map[string]interface{}{
-		"memcachedServers": fmt.Sprintf("'%s'", memcachedServers),
+		"memcachedServers": strings.Join(mc.Status.ServerList, ","),
 	}
 
 	cms := []util.Template{
