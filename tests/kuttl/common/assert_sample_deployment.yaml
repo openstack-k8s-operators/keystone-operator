@@ -26,6 +26,7 @@ spec:
     bootstrap: false
     dbSync: false
     service: false
+  memcachedInstance: memcached
   passwordSelectors:
     admin: AdminPassword
     database: KeystoneDatabasePassword
