@@ -57,7 +57,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // GetClient -
@@ -211,6 +214,37 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 // SetupWithManager -
 func (r *KeystoneAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	logger := mgr.GetLogger()
+
+	memcachedFn := func(o client.Object) []reconcile.Request {
+		result := []reconcile.Request{}
+
+		// get all KeystoneAPI CRs
+		keystoneAPIs := &keystonev1.KeystoneAPIList{}
+		listOpts := []client.ListOption{
+			client.InNamespace(o.GetNamespace()),
+		}
+		if err := r.Client.List(context.Background(), keystoneAPIs, listOpts...); err != nil {
+			logger.Error(err, "Unable to retrieve KeystoneAPI CRs %w")
+			return nil
+		}
+
+		for _, cr := range keystoneAPIs.Items {
+			if o.GetName() == cr.Spec.MemcachedInstance {
+				name := client.ObjectKey{
+					Namespace: o.GetNamespace(),
+					Name:      cr.Name,
+				}
+				logger.Info(fmt.Sprintf("Memcached %s is used by KeystoneAPI CR %s", o.GetName(), cr.Name))
+				result = append(result, reconcile.Request{NamespacedName: name})
+			}
+		}
+		if len(result) > 0 {
+			return result
+		}
+		return nil
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&keystonev1.KeystoneAPI{}).
 		Owns(&mariadbv1.MariaDBDatabase{}).
@@ -221,6 +255,8 @@ func (r *KeystoneAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.ConfigMap{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&routev1.Route{}).
+		Watches(&source.Kind{Type: &memcachedv1.Memcached{}},
+			handler.EnqueueRequestsFromMapFunc(memcachedFn)).
 		Complete(r)
 }
 
