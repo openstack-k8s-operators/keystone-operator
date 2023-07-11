@@ -101,7 +101,8 @@ type KeystoneAPIReconciler struct {
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete;
 // +kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get;list;watch;create;update;patch;delete;
 // +kubebuilder:rbac:groups=mariadb.openstack.org,resources=mariadbdatabases,verbs=get;list;watch;create;update;patch;delete;
-// +kubebuilder:rbac:groups=memcached.openstack.org,resources=memcacheds,verbs=get;list;watch;
+// +kubebuilder:rbac:groups=memcached.openstack.org,resources=memcacheds,verbs=get;list;watch;update
+// +kubebuilder:rbac:groups=memcached.openstack.org,resources=memcacheds/finalizers,verbs=update
 // +kubebuilder:rbac:groups=k8s.cni.cncf.io,resources=network-attachment-definitions,verbs=get;list;watch
 
 // service account, role, rolebinding
@@ -266,6 +267,39 @@ func (r *KeystoneAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *KeystoneAPIReconciler) reconcileDelete(ctx context.Context, instance *keystonev1.KeystoneAPI, helper *helper.Helper) (ctrl.Result, error) {
 	l := GetLog(ctx)
 	l.Info("Reconciling Service delete")
+
+	// We need to allow all KeystoneEndpoint and KeystoneService processing to finish
+	// in the case of a delete before we remove the finalizers.  For instance, in the
+	// case of the Memcached dependency, if Memcached is deleted before all Keystone
+	// cleanup has finished, then the Keystone logic will likely hit a 500 error and
+	// thus its deletion will hang indefinitely.
+	for _, finalizer := range instance.Finalizers {
+		// If this finalizer is not our KeystoneAPI finalizer, then it is either
+		// a KeystoneService or KeystoneEndpointer finalizer, which indicates that
+		// there is more Keystone processing that needs to finish before we can
+		// allow our DB and Memcached dependencies to be potentially deleted
+		// themselves
+		if finalizer != helper.GetFinalizer() {
+			return ctrl.Result{}, nil
+		}
+	}
+
+	// Remove our finalizer from Memcached
+	memcached, err := r.getKeystoneMemcached(ctx, helper, instance)
+	if err != nil && !k8s_errors.IsNotFound(err) {
+		return ctrl.Result{}, err
+	}
+
+	if !k8s_errors.IsNotFound(err) && memcached != nil {
+		if controllerutil.RemoveFinalizer(memcached, helper.GetFinalizer()) {
+			err := r.Update(ctx, memcached)
+
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	}
+
 	// remove db finalizer before the keystone one
 	db, err := database.GetDatabaseByName(ctx, helper, instance.Name)
 	if err != nil && !k8s_errors.IsNotFound(err) {
@@ -595,6 +629,21 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 			keystonev1.KeystoneMemcachedReadyErrorMessage,
 			err.Error()))
 		return ctrl.Result{}, err
+	}
+
+	// Add finalizer to Memcached to prevent it from being deleted now that we're using it
+	if controllerutil.AddFinalizer(memcached, helper.GetFinalizer()) {
+		err := r.Update(ctx, memcached)
+
+		if err != nil {
+			instance.Status.Conditions.Set(condition.FalseCondition(
+				keystonev1.KeystoneMemcachedReadyCondition,
+				condition.ErrorReason,
+				condition.SeverityWarning,
+				keystonev1.KeystoneMemcachedReadyErrorMessage,
+				err.Error()))
+			return ctrl.Result{}, err
+		}
 	}
 
 	if !memcached.IsReady() {
