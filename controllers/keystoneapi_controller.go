@@ -194,6 +194,7 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		// Register overall status immediately to have an early feedback e.g. in the cli
 		return ctrl.Result{}, nil
 	}
+
 	if instance.Status.Hash == nil {
 		instance.Status.Hash = map[string]string{}
 	}
@@ -290,14 +291,18 @@ func (r *KeystoneAPIReconciler) reconcileDelete(ctx context.Context, instance *k
 		return ctrl.Result{}, err
 	}
 
-	if !k8s_errors.IsNotFound(err) && memcached != nil {
+	if !k8s_errors.IsNotFound(err) {
 		if controllerutil.RemoveFinalizer(memcached, helper.GetFinalizer()) {
 			err := r.Update(ctx, memcached)
-
 			if err != nil {
 				return ctrl.Result{}, err
 			}
 		}
+	}
+
+	err = r.removeFinalizerFromOldKeystoneMemcacheds(ctx, helper, instance)
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
 	// remove db finalizer before the keystone one
@@ -857,6 +862,18 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+	// create OpenStackClient config - end
+
+	err = r.removeFinalizerFromOldKeystoneMemcacheds(ctx, helper, instance)
+	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			keystonev1.KeystoneMemcachedReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			keystonev1.KeystoneMemcachedReadyErrorMessage,
+			err.Error()))
+		return ctrl.Result{}, err
+	}
 
 	l.Info("Reconciled Service successfully")
 	return ctrl.Result{}, nil
@@ -1095,4 +1112,33 @@ func (r *KeystoneAPIReconciler) getKeystoneMemcached(
 		return nil, err
 	}
 	return memcached, err
+}
+
+// removeFinalizerFromOldKeystoneMemcached - remove finalizer from the Memcached instances previously used
+func (r *KeystoneAPIReconciler) removeFinalizerFromOldKeystoneMemcacheds(
+	ctx context.Context,
+	h *helper.Helper,
+	instance *keystonev1.KeystoneAPI,
+) error {
+
+	memcacheds := &memcachedv1.MemcachedList{}
+	listOpts := []client.ListOption{
+		client.InNamespace(instance.Namespace),
+	}
+	if err := h.GetClient().List(ctx, memcacheds, listOpts...); err != nil {
+		return err
+	}
+
+	for _, memcached := range memcacheds.Items {
+		if memcached.Name != instance.Spec.MemcachedInstance {
+			if controllerutil.RemoveFinalizer(&memcached, h.GetFinalizer()) {
+				err := r.Update(ctx, &memcached)
+				if err != nil && !k8s_errors.IsNotFound(err) {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
 }
