@@ -204,7 +204,14 @@ rules:
   verbs:
   - get
   - list
+  - update
   - watch
+- apiGroups:
+  - memcached.openstack.org
+  resources:
+  - memcacheds/finalizers
+  verbs:
+  - update
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
