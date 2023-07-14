@@ -74,6 +74,7 @@ var _ = Describe("Keystone controller", func() {
 			Keystone := GetKeystoneAPI(keystoneApiName)
 			Expect(Keystone.Spec.DatabaseInstance).Should(Equal("openstack"))
 			Expect(Keystone.Spec.DatabaseUser).Should(Equal("keystone"))
+			Expect(*(Keystone.Spec.Replicas)).Should(Equal(int32(1)))
 		})
 
 		It("should have the Status fields initialized", func() {
