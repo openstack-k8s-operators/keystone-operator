@@ -27,6 +27,11 @@ spec:
       kind: KeystoneService
       name: keystoneservices.keystone.openstack.org
       version: v1beta1
+    - description: OpenStackClient is the Schema for the openstackclients API
+      displayName: OpenStack Client
+      kind: OpenStackClient
+      name: openstackclients.client.openstack.org
+      version: v1beta1
   description: Keystone Operator
   displayName: Keystone Operator
   icon:

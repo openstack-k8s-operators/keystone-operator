@@ -327,6 +327,8 @@ operator-lint: gowork ## Runs operator-lint
 # before deplying with olm again.
 # $oc delete -n openstack validatingwebhookconfiguration/vkeystoneapi.kb.io
 # $oc delete -n openstack mutatingwebhookconfiguration/mkeystoneapi.kb.io
+# $oc delete -n openstack validatingwebhookconfiguration/vopenstackclient.kb.io
+# $oc delete -n openstack mutatingwebhookconfiguration/mopenstackclient.kb.io
 SKIP_CERT ?=false
 .PHONY: run-with-webhook
 run-with-webhook: manifests generate fmt vet ## Run a controller from your host.
