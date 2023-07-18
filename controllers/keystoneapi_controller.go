@@ -175,6 +175,7 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		cl := condition.CreateList(
 			condition.UnknownCondition(condition.DBReadyCondition, condition.InitReason, condition.DBReadyInitMessage),
 			condition.UnknownCondition(condition.DBSyncReadyCondition, condition.InitReason, condition.DBSyncReadyInitMessage),
+			condition.UnknownCondition(condition.MemcachedReadyCondition, condition.InitReason, condition.MemcachedReadyInitMessage),
 			condition.UnknownCondition(condition.ExposeServiceReadyCondition, condition.InitReason, condition.ExposeServiceReadyInitMessage),
 			condition.UnknownCondition(condition.BootstrapReadyCondition, condition.InitReason, condition.BootstrapReadyInitMessage),
 			condition.UnknownCondition(condition.InputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
@@ -182,7 +183,6 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			condition.UnknownCondition(condition.DeploymentReadyCondition, condition.InitReason, condition.DeploymentReadyInitMessage),
 			condition.UnknownCondition(condition.NetworkAttachmentsReadyCondition, condition.InitReason, condition.NetworkAttachmentsReadyInitMessage),
 			condition.UnknownCondition(condition.CronJobReadyCondition, condition.InitReason, condition.CronJobReadyInitMessage),
-			condition.UnknownCondition(keystonev1.KeystoneMemcachedReadyCondition, condition.InitReason, keystonev1.KeystoneMemcachedReadyInitMessage),
 			// service account, role, rolebinding conditions
 			condition.UnknownCondition(condition.ServiceAccountReadyCondition, condition.InitReason, condition.ServiceAccountReadyInitMessage),
 			condition.UnknownCondition(condition.RoleReadyCondition, condition.InitReason, condition.RoleReadyInitMessage),
@@ -616,17 +616,17 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			instance.Status.Conditions.Set(condition.FalseCondition(
-				keystonev1.KeystoneMemcachedReadyCondition,
+				condition.MemcachedReadyCondition,
 				condition.RequestedReason,
 				condition.SeverityInfo,
-				keystonev1.KeystoneMemcachedReadyWaitingMessage))
+				condition.MemcachedReadyWaitingMessage))
 			return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, fmt.Errorf("memcached %s not found", instance.Spec.MemcachedInstance)
 		}
 		instance.Status.Conditions.Set(condition.FalseCondition(
-			keystonev1.KeystoneMemcachedReadyCondition,
+			condition.MemcachedReadyCondition,
 			condition.ErrorReason,
 			condition.SeverityWarning,
-			keystonev1.KeystoneMemcachedReadyErrorMessage,
+			condition.MemcachedReadyErrorMessage,
 			err.Error()))
 		return ctrl.Result{}, err
 	}
@@ -637,10 +637,10 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 
 		if err != nil {
 			instance.Status.Conditions.Set(condition.FalseCondition(
-				keystonev1.KeystoneMemcachedReadyCondition,
+				condition.MemcachedReadyCondition,
 				condition.ErrorReason,
 				condition.SeverityWarning,
-				keystonev1.KeystoneMemcachedReadyErrorMessage,
+				condition.MemcachedReadyErrorMessage,
 				err.Error()))
 			return ctrl.Result{}, err
 		}
@@ -648,15 +648,15 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 
 	if !memcached.IsReady() {
 		instance.Status.Conditions.Set(condition.FalseCondition(
-			keystonev1.KeystoneMemcachedReadyCondition,
+			condition.MemcachedReadyCondition,
 			condition.RequestedReason,
 			condition.SeverityInfo,
-			keystonev1.KeystoneMemcachedReadyWaitingMessage))
+			condition.MemcachedReadyWaitingMessage))
 		return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, fmt.Errorf("memcached %s is not ready", memcached.Name)
 	}
 	// Mark the Memcached Service as Ready if we get to this point with no errors
 	instance.Status.Conditions.MarkTrue(
-		keystonev1.KeystoneMemcachedReadyCondition, keystonev1.KeystoneMemcachedReadyMessage)
+		condition.MemcachedReadyCondition, condition.MemcachedReadyMessage)
 	// run check memcached - end
 
 	//

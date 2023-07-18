@@ -35,9 +35,6 @@ const (
 
 	// KeystoneServiceOSUserReadyCondition Status=True condition which indicates if the service user got created in the keystone instance is ready/was successful
 	KeystoneServiceOSUserReadyCondition condition.Type = "KeystoneServiceOSUserReady"
-
-	// KeystoneMemcachedReadyCondition - Indicates the Keystone memcached service is ready to be consumed by Keystone
-	KeystoneMemcachedReadyCondition condition.Type = "KeystoneMemcachedReady"
 )
 
 // Common Messages used by API objects.
@@ -114,19 +111,4 @@ const (
 
 	// KeystoneServiceOSUserReadyErrorMessage
 	KeystoneServiceOSUserReadyErrorMessage = "Keystone Service user error occured %s"
-
-	//
-	// KeystoneMemcachedReady condition messages
-	//
-	// KeystoneMemcachedReadyInitMessage -
-	KeystoneMemcachedReadyInitMessage = "Keystone Memcached create not started"
-
-	// KeystoneMemcachedReadyMessage - Provides the message to clarify memcached has been provisioned
-	KeystoneMemcachedReadyMessage = "Keystone Memcached instance has been provisioned"
-
-	// KeystoneMemcachedReadyWaitingMessage - Provides the message to clarify memcached has not been provisioned
-	KeystoneMemcachedReadyWaitingMessage = "Keystone Memcached instance has not been provisioned"
-
-	// KeystoneMemcachedReadyErrorMessage -
-	KeystoneMemcachedReadyErrorMessage = "Keystone Memcached error occurred %s"
 )
