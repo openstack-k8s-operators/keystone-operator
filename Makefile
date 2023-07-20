@@ -115,9 +115,12 @@ golangci-lint:
 	test -s $(LOCALBIN)/golangci-lint || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.51.2
 	$(LOCALBIN)/golangci-lint run --fix --verbose
 
+PROCS?=$(shell expr $(shell nproc --ignore 2) / 2)
+PROC_CMD = --procs ${PROCS}
+
 .PHONY: test
-test: manifests generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
+test: manifests generate fmt vet envtest ginkgo ## Run tests.
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" $(GINKGO) --trace --cover --coverpkg=../../pkg/keystone,../../controllers,../../api/v1beta1 --coverprofile cover.out --covermode=atomic ${PROC_CMD} $(GINKGO_ARGS) ./tests/...
 
 ##@ Build
 
@@ -190,6 +193,7 @@ $(LOCALBIN):
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
+GINKGO ?= $(LOCALBIN)/ginkgo
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v3.8.7
@@ -211,6 +215,11 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+.PHONY: ginkgo
+ginkgo: $(GINKGO) ## Download ginkgo locally if necessary.
+$(GINKGO): $(LOCALBIN)
+	test -s $(LOCALBIN)/ginkgo || GOBIN=$(LOCALBIN) go install github.com/onsi/ginkgo/v2/ginkgo
 
 .PHONY: bundle
 bundle: manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
@@ -294,9 +303,7 @@ govet: get-ci-tools
 	GOWORK=off $(CI_TOOLS_REPO_DIR)/test-runner/govet.sh ./api
 
 # Run go test against code
-gotest: get-ci-tools
-	GOWORK=off $(CI_TOOLS_REPO_DIR)/test-runner/gotest.sh
-	GOWORK=off $(CI_TOOLS_REPO_DIR)/test-runner/gotest.sh ./api
+gotest: test
 
 # Run golangci-lint test against code
 golangci: get-ci-tools

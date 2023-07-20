@@ -826,6 +826,12 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 
 	if instance.Status.ReadyCount > 0 {
 		instance.Status.Conditions.MarkTrue(condition.DeploymentReadyCondition, condition.DeploymentReadyMessage)
+	} else {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.DeploymentReadyCondition,
+			condition.RequestedReason,
+			condition.SeverityInfo,
+			condition.DeploymentReadyRunningMessage))
 	}
 	// create Deployment - end
 
@@ -889,10 +895,8 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		customData[key] = data
 	}
 
-	memcachedServers := strings.Join(mc.Status.ServerList, "', '")
-
 	templateParameters := map[string]interface{}{
-		"memcachedServers": fmt.Sprintf("'%s'", memcachedServers),
+		"memcachedServers": strings.Join(mc.Status.ServerList, ","),
 	}
 
 	cms := []util.Template{
