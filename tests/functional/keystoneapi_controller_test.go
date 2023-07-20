@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
-	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 )
 
@@ -149,7 +148,7 @@ var _ = Describe("Keystone controller", func() {
 			th.ExpectCondition(
 				keystoneApiName,
 				ConditionGetterFunc(KeystoneConditionGetter),
-				keystonev1.KeystoneMemcachedReadyCondition,
+				condition.MemcachedReadyCondition,
 				corev1.ConditionFalse,
 			)
 			th.ExpectCondition(
@@ -183,7 +182,7 @@ var _ = Describe("Keystone controller", func() {
 			th.ExpectCondition(
 				keystoneApiName,
 				ConditionGetterFunc(KeystoneConditionGetter),
-				keystonev1.KeystoneMemcachedReadyCondition,
+				condition.MemcachedReadyCondition,
 				corev1.ConditionTrue,
 			)
 			th.ExpectCondition(
