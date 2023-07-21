@@ -16,7 +16,7 @@ spec:
     service: false
   preserveJobs: false
   region: regionOne
-  secret: keystone-secret
+  secret: osp-secret
   resources:
     requests:
       memory: "500Mi"
