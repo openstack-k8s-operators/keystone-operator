@@ -33,7 +33,7 @@ import (
 	mariadbv1 "github.com/openstack-k8s-operators/mariadb-operator/api/v1beta1"
 
 	"github.com/openstack-k8s-operators/keystone-operator/controllers"
-	. "github.com/openstack-k8s-operators/lib-common/modules/test-operators/helpers"
+	. "github.com/openstack-k8s-operators/lib-common/modules/test/helpers"
 	//+kubebuilder:scaffold:imports
 )
 

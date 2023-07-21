@@ -22,9 +22,10 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/openstack-k8s-operators/lib-common/modules/test/helpers"
+	. "github.com/openstack-k8s-operators/lib-common/modules/common/test/helpers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
@@ -57,7 +58,7 @@ var _ = Describe("Keystone controller", func() {
 			Namespace: namespace,
 		}
 		memcachedSpec = memcachedv1.MemcachedSpec{
-			Replicas: int32(3),
+			Replicas: pointer.Int32(3),
 		}
 
 		err := os.Setenv("OPERATOR_TEMPLATES", "../../templates")
