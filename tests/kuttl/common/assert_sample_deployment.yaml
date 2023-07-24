@@ -5,7 +5,6 @@
 # - Deployment with 1 Pod for KeystoneAPI CR
 # - Keystone-internal Service
 # - Keystone-public Service
-# - Keystone-public Route
 
 apiVersion: keystone.openstack.org/v1beta1
 kind: KeystoneAPI
@@ -168,20 +167,6 @@ spec:
   selector:
     service: keystone
   type: ClusterIP
----
-apiVersion: route.openshift.io/v1
-kind: Route
-metadata:
-  name: keystone-public
-  labels:
-    public: "true"
-    service: keystone
-spec:
-  port:
-    targetPort: keystone-public
-  to:
-    kind: Service
-    name: keystone-public
 ---
 # the actual addresses of the apiEndpoints are platform specific, so we can't rely on
 # kuttl asserts to check them. This short script gathers the addresses and checks that

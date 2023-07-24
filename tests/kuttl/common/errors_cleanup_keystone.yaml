@@ -5,7 +5,6 @@
 # No Deployment for KeystoneAPI CR
 # No Pods in keystone Deployment
 # No Keystone Services
-# No Keystone Routes
 #
 apiVersion: keystone.openstack.org/v1beta1
 kind: KeystoneAPI
@@ -43,11 +42,3 @@ metadata:
     public: "true"
     service: keystone
   name: keystone-public
----
-apiVersion: route.openshift.io/v1
-kind: Route
-metadata:
-  name: keystone-public
-  labels:
-    public: "true"
-    service: keystone
