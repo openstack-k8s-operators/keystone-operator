@@ -3,17 +3,14 @@ module github.com/openstack-k8s-operators/keystone-operator/api
 go 1.19
 
 require (
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.1.1-0.20230913075424-2680ce4b6ad2
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.1.1-0.20230913075424-2680ce4b6ad2
-	k8s.io/api v0.26.8
-	k8s.io/apimachinery v0.26.8
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.1.1-0.20230919113507-d74c2f31d216
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.1.1-0.20230919113507-d74c2f31d216
+	k8s.io/api v0.26.9
+	k8s.io/apimachinery v0.26.9
 	sigs.k8s.io/controller-runtime v0.14.6
 )
 
-require (
-	go.uber.org/zap v1.26.0 // indirect
-	golang.org/x/tools v0.13.0 // indirect
-)
+require github.com/openshift/api v3.9.0+incompatible // indirect
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -42,7 +39,6 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
-	github.com/openshift/api v3.9.0+incompatible // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.14.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
@@ -61,9 +57,9 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.26.8 // indirect; indirect // indirect
-	k8s.io/client-go v0.26.8 // indirect
-	k8s.io/component-base v0.26.8 // indirect; indirect // indirect
+	k8s.io/apiextensions-apiserver v0.26.9 // indirect; indirect // indirect
+	k8s.io/client-go v0.26.9 // indirect
+	k8s.io/component-base v0.26.9 // indirect; indirect // indirect
 	k8s.io/klog/v2 v2.100.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20230308215209-15aac26d736a // indirect; indirect // indirect
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect; indirect // indirect

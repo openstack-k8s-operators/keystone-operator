@@ -5,7 +5,6 @@
 # - Deployment with 1 Pod for KeystoneAPI CR
 # - Keystone-internal Service
 # - Keystone-public Service
-# - Keystone-public Route
 
 apiVersion: keystone.openstack.org/v1beta1
 kind: KeystoneAPI
@@ -142,7 +141,7 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    internal: "true"
+    endpoint: internal
     service: keystone
   name: keystone-internal
 spec:
@@ -156,7 +155,7 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    public: "true"
+    endpoint: public
     service: keystone
   name: keystone-public
 spec:
@@ -166,20 +165,9 @@ spec:
     service: keystone
   type: ClusterIP
 ---
-apiVersion: route.openshift.io/v1
-kind: Route
-metadata:
-  name: keystone-public
-  labels:
-    public: "true"
-    service: keystone
-spec:
-  port:
-    targetPort: keystone-public
-  to:
-    kind: Service
-    name: keystone-public
----
+# the actual addresses of the apiEndpoints are platform specific, so we can't rely on
+# kuttl asserts to check them. This short script gathers the addresses and checks that
+# the three endpoints are defined and their addresses follow the default pattern
 apiVersion: kuttl.dev/v1beta1
 kind: TestAssert
 commands:
@@ -188,7 +176,7 @@ commands:
       # kuttl asserts to check them. This short script gathers the addresses and checks that
       # the three endpoints are defined and their addresses follow the default pattern
       template='{{.status.apiEndpoints.internal}}{{":"}}{{.status.apiEndpoints.public}}{{"\n"}}'
-      regex="http:\/\/keystone-internal.$NAMESPACE.*:http:\/\/keystone-public-$NAMESPACE\.apps.*"
+      regex="http:\/\/keystone-internal.$NAMESPACE.*:http:\/\/keystone-public.$NAMESPACE.*"
       apiEndpoints=$(oc get -n $NAMESPACE KeystoneAPI  keystone -o go-template="$template")
       matches=$(echo "$apiEndpoints" | sed -e "s?$regex??")
       if [ -z "$matches" ]; then

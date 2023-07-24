@@ -16,7 +16,7 @@ limitations under the License.
 package keystone
 
 import (
-	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
+	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 
 	common "github.com/openstack-k8s-operators/lib-common/modules/common"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/env"
@@ -32,7 +32,7 @@ const (
 
 // BootstrapJob func
 func BootstrapJob(
-	instance *keystonev1beta1.KeystoneAPI,
+	instance *keystonev1.KeystoneAPI,
 	labels map[string]string,
 	annotations map[string]string,
 	endpoints map[string]string,

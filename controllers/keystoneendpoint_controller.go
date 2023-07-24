@@ -280,7 +280,7 @@ func (r *KeystoneEndpointReconciler) reconcileDelete(
 				return ctrl.Result{}, err
 			}
 		}
-	} else if ! k8s_errors.IsNotFound(err) {
+	} else if !k8s_errors.IsNotFound(err) {
 		return ctrl.Result{}, err
 	}
 

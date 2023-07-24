@@ -25,7 +25,7 @@ import (
 	. "github.com/openstack-k8s-operators/lib-common/modules/common/test/helpers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
@@ -58,7 +58,7 @@ var _ = Describe("Keystone controller", func() {
 			Namespace: namespace,
 		}
 		memcachedSpec = memcachedv1.MemcachedSpec{
-			Replicas: pointer.Int32(3),
+			Replicas: ptr.To(int32(3)),
 		}
 
 		err := os.Setenv("OPERATOR_TEMPLATES", "../../templates")
@@ -460,6 +460,138 @@ var _ = Describe("Keystone controller", func() {
 				Namespace: keystoneApiName.Namespace,
 				Name:      "openstack-config-secret",
 			})
+		})
+	})
+
+	When("A KeystoneAPI is created with service override", func() {
+		BeforeEach(func() {
+			spec := GetDefaultKeystoneAPISpec()
+			serviceOverride := map[string]interface{}{}
+			serviceOverride["internal"] = map[string]interface{}{
+				"metadata": map[string]map[string]string{
+					"annotations": {
+						"dnsmasq.network.openstack.org/hostname": "keystone-internal.openstack.svc",
+						"metallb.universe.tf/address-pool":       "osp-internalapi",
+						"metallb.universe.tf/allow-shared-ip":    "osp-internalapi",
+						"metallb.universe.tf/loadBalancerIPs":    "internal-lb-ip-1,internal-lb-ip-2",
+					},
+					"labels": {
+						"internal": "true",
+						"service":  "keystone",
+					},
+				},
+				"spec": map[string]interface{}{
+					"type": "LoadBalancer",
+				},
+			}
+
+			spec["override"] = map[string]interface{}{
+				"service": serviceOverride,
+			}
+
+			keystone := CreateKeystoneAPI(keystoneApiName, spec)
+			DeferCleanup(th.DeleteInstance, keystone)
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(th.DeleteMemcached, th.CreateMemcached(namespace, "memcached", memcachedSpec))
+			th.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			DeferCleanup(
+				th.DeleteDBService,
+				th.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneApiName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			th.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+			th.SimulateDeploymentReplicaReady(deploymentName)
+		})
+
+		It("registers LoadBalancer services keystone endpoints", func() {
+			instance := th.GetKeystoneAPI(keystoneApiName)
+			Expect(instance).NotTo(BeNil())
+			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("public", "http://keystone-public."+keystoneApiName.Namespace+".svc:5000"))
+			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("internal", "http://keystone-internal."+keystoneApiName.Namespace+".svc:5000"))
+		})
+
+		It("creates LoadBalancer service", func() {
+			// As the internal endpoint is configured in ExternalEndpoints it
+			// gets a LoadBalancer Service with MetalLB annotations
+			service := th.GetService(types.NamespacedName{Namespace: namespace, Name: "keystone-internal"})
+			Expect(service.Annotations).To(
+				HaveKeyWithValue("dnsmasq.network.openstack.org/hostname", "keystone-internal.openstack.svc"))
+			Expect(service.Annotations).To(
+				HaveKeyWithValue("metallb.universe.tf/address-pool", "osp-internalapi"))
+			Expect(service.Annotations).To(
+				HaveKeyWithValue("metallb.universe.tf/allow-shared-ip", "osp-internalapi"))
+			Expect(service.Annotations).To(
+				HaveKeyWithValue("metallb.universe.tf/loadBalancerIPs", "internal-lb-ip-1,internal-lb-ip-2"))
+
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionTrue,
+			)
+		})
+	})
+
+	When("A KeystoneAPI is created with service override endpointURL set", func() {
+		BeforeEach(func() {
+			spec := GetDefaultKeystoneAPISpec()
+			serviceOverride := map[string]interface{}{}
+			serviceOverride["public"] = map[string]interface{}{
+				"endpointURL": "http://keystone-openstack.apps-crc.testing",
+			}
+
+			spec["override"] = map[string]interface{}{
+				"service": serviceOverride,
+			}
+
+			keystone := CreateKeystoneAPI(keystoneApiName, spec)
+			DeferCleanup(th.DeleteInstance, keystone)
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(th.DeleteMemcached, th.CreateMemcached(namespace, "memcached", memcachedSpec))
+			th.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			DeferCleanup(
+				th.DeleteDBService,
+				th.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneApiName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			th.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+			th.SimulateDeploymentReplicaReady(deploymentName)
+		})
+
+		It("registers endpointURL as public keystone endpoint", func() {
+			instance := th.GetKeystoneAPI(keystoneApiName)
+			Expect(instance).NotTo(BeNil())
+			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("public", "http://keystone-openstack.apps-crc.testing"))
+			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("internal", "http://keystone-internal."+keystoneApiName.Namespace+".svc:5000"))
+
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionTrue,
+			)
 		})
 	})
 })

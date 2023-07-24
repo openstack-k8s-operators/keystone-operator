@@ -21,6 +21,7 @@ import (
 
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -150,37 +151,15 @@ type KeystoneAPISpec struct {
 	NetworkAttachments []string `json:"networkAttachments,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	// ExternalEndpoints, expose a VIP using a pre-created IPAddressPool
-	ExternalEndpoints []MetalLBConfig `json:"externalEndpoints,omitempty"`
+	// Override, provides the ability to override the generated manifest of several child resources.
+	Override APIOverrideSpec `json:"override,omitempty"`
 }
 
-// MetalLBConfig to configure the MetalLB loadbalancer service
-type MetalLBConfig struct {
-	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:Enum=internal;public
-	// Endpoint, OpenStack endpoint this service maps to
-	Endpoint endpoint.Endpoint `json:"endpoint"`
-
-	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:MinLength=1
-	// IPAddressPool expose VIP via MetalLB on the IPAddressPool
-	IPAddressPool string `json:"ipAddressPool"`
-
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=true
-	// SharedIP if true, VIP/VIPs get shared with multiple services
-	SharedIP bool `json:"sharedIP"`
-
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=""
-	// SharedIPKey specifies the sharing key which gets set as the annotation on the LoadBalancer service.
-	// Services which share the same VIP must have the same SharedIPKey. Defaults to the IPAddressPool if
-	// SharedIP is true, but no SharedIPKey specified.
-	SharedIPKey string `json:"sharedIPKey"`
-
-	// +kubebuilder:validation:Optional
-	// LoadBalancerIPs, request given IPs from the pool if available. Using a list to allow dual stack (IPv4/IPv6) support
-	LoadBalancerIPs []string `json:"loadBalancerIPs,omitempty"`
+// APIOverrideSpec to override the generated manifest of several child resources.
+type APIOverrideSpec struct {
+	// Override configuration for the Service created to serve traffic to the cluster.
+	// The key must be the endpoint type (public, internal)
+	Service map[service.Endpoint]service.RoutedOverrideSpec `json:"service,omitempty"`
 }
 
 // PasswordSelector to identify the DB and AdminUser password from the Secret
