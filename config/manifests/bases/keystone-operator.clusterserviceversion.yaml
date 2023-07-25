@@ -5,6 +5,7 @@ metadata:
     alm-examples: '[]'
     capabilities: Basic Install
     operatorframework.io/suggested-namespace: openstack
+    operators.openshift.io/infrastructure-features: '["disconnected"]'
     operators.operatorframework.io/operator-type: non-standalone
   name: keystone-operator.v0.0.0
   namespace: placeholder
