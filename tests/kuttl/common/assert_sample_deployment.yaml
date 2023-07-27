@@ -37,7 +37,7 @@ spec:
     requests:
       cpu: "1"
       memory: 500Mi
-  secret: keystone-secret
+  secret: osp-secret
 status:
   databaseHostname: openstack
   readyCount: 1
@@ -109,12 +109,12 @@ spec:
           valueFrom:
             secretKeyRef:
               key: KeystoneDatabasePassword
-              name: keystone-secret
+              name: osp-secret
         - name: AdminPassword
           valueFrom:
             secretKeyRef:
               key: AdminPassword
-              name: keystone-secret
+              name: osp-secret
         - name: DatabaseHost
           value: openstack
         - name: DatabaseName

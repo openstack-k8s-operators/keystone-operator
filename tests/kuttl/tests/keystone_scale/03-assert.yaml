@@ -1,9 +1,8 @@
 #
 # Check for:
 #
-# - 1 KeystoneAPI CR
-# - 3 Pods for KeystoneAPI CR
-# - 1 CronJob for KeystoneAPI CR
+# - 0 KeystoneAPI CR
+# - Keystone Deployment with 0 Pods
 #
 
 apiVersion: keystone.openstack.org/v1beta1
@@ -13,23 +12,35 @@ metadata:
   - KeystoneAPI
   name: keystone
 spec:
-  replicas: 3
+  adminProject: admin
+  adminUser: admin
+  containerImage: quay.io/podified-antelope-centos9/openstack-keystone:current-podified
+  customServiceConfig: |
+    [DEFAULT]
+    debug = true
+  databaseInstance: openstack
+  databaseUser: keystone
+  debug:
+    bootstrap: false
+    dbSync: false
+    service: false
+  passwordSelectors:
+    admin: AdminPassword
+    database: KeystoneDatabasePassword
+  preserveJobs: false
+  region: regionOne
+  replicas: 0
+  resources:
+    requests:
+      cpu: "1"
+      memory: 500Mi
+  secret: osp-secret
 status:
-  readyCount: 3
+  databaseHostname: openstack
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: keystone
 spec:
-  replicas: 3
-status:
-  availableReplicas: 3
----
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: keystone-cron
-spec:
-  schedule: 1 * * * *
-  suspend: false
+  replicas: 0

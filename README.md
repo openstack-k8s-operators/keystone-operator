@@ -20,7 +20,7 @@ metadata:
 spec:
   containerImage: quay.io/podified-antelope-centos9/openstack-keystone:current-podified
   replicas: 1
-  secret: keystone-secret
+  secret: osp-secret
 ```
 
 ## Example: configure Keystone with additional networks
