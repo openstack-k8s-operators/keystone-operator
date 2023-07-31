@@ -263,7 +263,9 @@ func (r *KeystoneServiceReconciler) reconcileDelete(
 		// Delete User
 		err := os.DeleteUser(
 			l,
-			instance.Spec.ServiceUser)
+			instance.Spec.ServiceUser,
+			"default",
+		)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -456,6 +458,7 @@ func (r *KeystoneServiceReconciler) reconcileUser(
 		openstack.Project{
 			Name:        "service",
 			Description: "service",
+			DomainID:    "default",
 		})
 	if err != nil {
 		return ctrl.Result{}, err
@@ -470,6 +473,7 @@ func (r *KeystoneServiceReconciler) reconcileUser(
 			Name:      instance.Spec.ServiceUser,
 			Password:  password,
 			ProjectID: serviceProjectID,
+			DomainID:  "default",
 		})
 	if err != nil {
 		return ctrl.Result{}, err
