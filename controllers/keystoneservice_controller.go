@@ -457,6 +457,7 @@ func (r *KeystoneServiceReconciler) reconcileUser(
 		openstack.Project{
 			Name:        "service",
 			Description: "service",
+			DomainID:    "default",
 		})
 	if err != nil {
 		return ctrl.Result{}, err
