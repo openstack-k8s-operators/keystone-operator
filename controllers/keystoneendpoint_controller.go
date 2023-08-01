@@ -47,7 +47,8 @@ type KeystoneEndpointReconciler struct {
 //+kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneendpoints/finalizers,verbs=update
 //+kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis,verbs=get;list;update;patch
 //+kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis/finalizers,verbs=update
-//+kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneservices,verbs=get;list
+//+kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneservices,verbs=get;list;update;patch
+//+kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneservices/finalizers,verbs=update
 
 // Reconcile keystone endpoint requests
 func (r *KeystoneEndpointReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, _err error) {
@@ -269,6 +270,20 @@ func (r *KeystoneEndpointReconciler) reconcileDelete(
 		}
 	}
 
+	ksSvc, err := keystonev1.GetKeystoneServiceWithName(ctx, helper, instance.Spec.ServiceName, instance.Namespace)
+	if err == nil {
+		// Remove the finalizer for this endpoint from the Service
+		if controllerutil.RemoveFinalizer(ksSvc, fmt.Sprintf("%s-%s", helper.GetFinalizer(), instance.Name)) {
+			err := r.Update(ctx, ksSvc)
+
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	} else if ! k8s_errors.IsNotFound(err) {
+		return ctrl.Result{}, err
+	}
+
 	// There are certain deletion scenarios where we might not have the keystoneAPI
 	if keystoneAPI != nil {
 		// Remove the finalizer for this endpoint from the KeystoneAPI
@@ -323,6 +338,18 @@ func (r *KeystoneEndpointReconciler) reconcileNormal(
 	}
 
 	instance.Status.ServiceID = ksSvc.Status.ServiceID
+
+	//
+	// Add a finalizer to KeystoneService, because KeystoneEndpoint is dependent on
+	// the service entry created by KeystoneService
+	//
+	if controllerutil.AddFinalizer(ksSvc, fmt.Sprintf("%s-%s", helper.GetFinalizer(), instance.Name)) {
+		err := r.Update(ctx, ksSvc)
+
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
 
 	//
 	// create/update endpoints
