@@ -1,0 +1,28 @@
+#
+# Check for:
+#
+# - 1 KeystoneAPI CR
+# - 1 KeystoneService CR
+#
+apiVersion: keystone.openstack.org/v1beta1
+kind: KeystoneAPI
+metadata:
+  finalizers:
+  - KeystoneAPI
+  - KeystoneService-placement
+  name: keystone
+---
+apiVersion: keystone.openstack.org/v1beta1
+kind: KeystoneService
+metadata:
+  finalizers:
+  - KeystoneService
+  name: placement
+spec:
+  enabled: true
+  passwordSelector: PlacementPassword
+  secret: osp-secret
+  serviceDescription: Placement service
+  serviceName: placement
+  serviceType: placement
+  serviceUser: placement

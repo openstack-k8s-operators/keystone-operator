@@ -1,0 +1,9 @@
+#
+# Check for:
+#
+# - No KeystoneEndpoint CR
+#
+apiVersion: keystone.openstack.org/v1beta1
+kind: KeystoneEndpoint
+metadata:
+  name: placement

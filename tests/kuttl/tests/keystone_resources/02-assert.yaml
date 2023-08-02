@@ -1,0 +1,36 @@
+#
+# Check for:
+#
+# - 1 KeystoneAPI CR
+# - 1 KeystoneService CR
+# - 1 KeystoneEndpoint CR
+#
+apiVersion: keystone.openstack.org/v1beta1
+kind: KeystoneAPI
+metadata:
+  finalizers:
+  - KeystoneAPI
+  - KeystoneService-placement
+  - KeystoneEndpoint-placement
+  name: keystone
+---
+apiVersion: keystone.openstack.org/v1beta1
+kind: KeystoneService
+metadata:
+  finalizers:
+  - KeystoneService
+  - KeystoneEndpoint-placement
+  name: placement
+---
+apiVersion: keystone.openstack.org/v1beta1
+kind: KeystoneEndpoint
+metadata:
+  finalizers:
+  - KeystoneEndpoint
+  name: placement
+spec:
+  endpoints:
+    admin: http://placement-admin-openstack.apps-crc.testing
+    internal: http://placement-internal-openstack.apps-crc.testing
+    public: http://placement-public-openstack.apps-crc.testing
+  serviceName: placement
