@@ -136,9 +136,11 @@ func (ke *KeystoneEndpointHelper) Delete(
 	}
 
 	// Endpoint is deleted so remove the finalizer.
-	controllerutil.RemoveFinalizer(endpoint, h.GetFinalizer())
-	if err := h.GetClient().Update(ctx, endpoint); err != nil && !k8s_errors.IsNotFound(err) {
-		return err
+	if controllerutil.RemoveFinalizer(endpoint, h.GetFinalizer()) {
+		err := h.GetClient().Update(ctx, endpoint)
+		if err != nil && !k8s_errors.IsNotFound(err) {
+			return err
+		}
 	}
 
 	h.GetLogger().Info(fmt.Sprintf("KeystoneEndpoint %s in namespace %s deleted", endpoint.Name, endpoint.Namespace))

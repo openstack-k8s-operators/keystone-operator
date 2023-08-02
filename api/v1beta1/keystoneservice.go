@@ -135,9 +135,11 @@ func (ks *KeystoneServiceHelper) Delete(
 	}
 
 	// Service is deleted so remove the finalizer.
-	controllerutil.RemoveFinalizer(service, h.GetFinalizer())
-	if err := h.GetClient().Update(ctx, service); err != nil && !k8s_errors.IsNotFound(err) {
-		return err
+	if controllerutil.RemoveFinalizer(service, h.GetFinalizer()) {
+		err := h.GetClient().Update(ctx, service)
+		if err != nil && !k8s_errors.IsNotFound(err) {
+			return err
+		}
 	}
 
 	h.GetLogger().Info(fmt.Sprintf("KeystoneService %s in namespace %s deleted", service.Name, service.Namespace))
