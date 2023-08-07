@@ -2,6 +2,7 @@
 # Check for:
 #
 # - 1 KeystoneAPI CR
+# - 2 Secrets for fernet keys
 # - 1 Pods for KeystoneAPI CR
 #
 
@@ -16,10 +17,38 @@ spec:
 status:
   readyCount: 1
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keystone-fernet
+  ownerReferences:
+    - apiVersion: keystone.openstack.org/v1beta1
+      blockOwnerDeletion: true
+      controller: true
+      kind: KeystoneAPI
+      name: keystone
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keystone-credential
+  ownerReferences:
+    - apiVersion: keystone.openstack.org/v1beta1
+      blockOwnerDeletion: true
+      controller: true
+      kind: KeystoneAPI
+      name: keystone
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: keystone
+  ownerReferences:
+    - apiVersion: keystone.openstack.org/v1beta1
+      blockOwnerDeletion: true
+      controller: true
+      kind: KeystoneAPI
+      name: keystone
 spec:
   replicas: 1
 status:

@@ -57,17 +57,7 @@ func getVolumes(name string) []corev1.Volume {
 			Name: "fernet-keys",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: ServiceName,
-					Items: []corev1.KeyToPath{
-						{
-							Key:  "FernetKeys0",
-							Path: "0",
-						},
-						{
-							Key:  "FernetKeys1",
-							Path: "1",
-						},
-					},
+					SecretName: name + "-fernet",
 				},
 			},
 		},
@@ -75,17 +65,7 @@ func getVolumes(name string) []corev1.Volume {
 			Name: "credential-keys",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: ServiceName,
-					Items: []corev1.KeyToPath{
-						{
-							Key:  "CredentialKeys0",
-							Path: "0",
-						},
-						{
-							Key:  "CredentialKeys1",
-							Path: "1",
-						},
-					},
+					SecretName: name + "-credential",
 				},
 			},
 		},

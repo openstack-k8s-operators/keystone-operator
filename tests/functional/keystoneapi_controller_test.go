@@ -216,7 +216,11 @@ var _ = Describe("Keystone controller", func() {
 		})
 		It("should create a Secret for fernet keys", func() {
 			th.GetSecret(types.NamespacedName{
-				Name:      keystoneApiName.Name,
+				Name:      keystoneApiName.Name + "-fernet",
+				Namespace: namespace,
+			})
+			th.GetSecret(types.NamespacedName{
+				Name:      keystoneApiName.Name + "-credential",
 				Namespace: namespace,
 			})
 		})

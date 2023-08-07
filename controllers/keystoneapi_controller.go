@@ -684,7 +684,18 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	// Create secret holding fernet keys (for token and credential)
 	//
 	// TODO key rotation
-	err = r.ensureFernetKeys(ctx, instance, helper, &configMapVars)
+	err = r.ensureFernetKeys(ctx, instance, instance.Name+"-fernet", helper, &configMapVars)
+	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.ServiceConfigReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.ServiceConfigReadyErrorMessage,
+			err.Error()))
+		return ctrl.Result{}, err
+	}
+
+	err = r.ensureFernetKeys(ctx, instance, instance.Name+"-credential", helper, &configMapVars)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.ServiceConfigReadyCondition,
@@ -1014,6 +1025,7 @@ func (r *KeystoneAPIReconciler) reconcileCloudConfig(
 func (r *KeystoneAPIReconciler) ensureFernetKeys(
 	ctx context.Context,
 	instance *keystonev1.KeystoneAPI,
+	secretName string,
 	helper *helper.Helper,
 	envVars *map[string]env.Setter,
 ) error {
@@ -1022,16 +1034,13 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 	//
 	// check if secret already exist
 	//
-	secretName := keystone.ServiceName
 	secret, hash, err := oko_secret.GetSecret(ctx, helper, secretName, instance.Namespace)
 	if err != nil && !k8s_errors.IsNotFound(err) {
 		return err
 	} else if k8s_errors.IsNotFound(err) {
 		fernetKeys := map[string]string{
-			"FernetKeys0":     keystone.GenerateFernetKey(),
-			"FernetKeys1":     keystone.GenerateFernetKey(),
-			"CredentialKeys0": keystone.GenerateFernetKey(),
-			"CredentialKeys1": keystone.GenerateFernetKey(),
+			"0": keystone.GenerateFernetKey(),
+			"1": keystone.GenerateFernetKey(),
 		}
 
 		tmpl := []util.Template{

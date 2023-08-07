@@ -84,7 +84,7 @@ func DbSyncJob(
 		},
 	}
 
-	job.Spec.Template.Spec.Volumes = getVolumes(ServiceName)
+	job.Spec.Template.Spec.Volumes = getVolumes(instance.Name)
 	initContainerDetails := APIDetails{
 		ContainerImage:       instance.Spec.ContainerImage,
 		DatabaseHost:         instance.Status.DatabaseHostname,
