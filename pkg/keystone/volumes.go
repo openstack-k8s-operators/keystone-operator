@@ -128,6 +128,12 @@ func getVolumeMounts() []corev1.VolumeMount {
 			ReadOnly:  false,
 		},
 		{
+			Name:      "config-data-merged",
+			MountPath: "/var/lib/kolla/config_files/config.json",
+			SubPath:   "keystone-api-config.json",
+			ReadOnly:  true,
+		},
+		{
 			MountPath: "/var/lib/fernet-keys",
 			ReadOnly:  true,
 			Name:      "fernet-keys",

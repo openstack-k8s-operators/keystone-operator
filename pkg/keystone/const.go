@@ -25,7 +25,4 @@ const (
 	KeystonePublicPort int32 = 5000
 	// KeystoneInternalPort -
 	KeystoneInternalPort int32 = 5000
-
-	// KollaConfig -
-	KollaConfig = "/var/lib/config-data/merged/keystone-api-config.json"
 )
