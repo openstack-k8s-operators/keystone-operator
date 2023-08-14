@@ -16,7 +16,6 @@ metadata:
 spec:
   adminProject: admin
   adminUser: admin
-  containerImage: quay.io/podified-antelope-centos9/openstack-keystone:current-podified
   customServiceConfig: |
     [DEFAULT]
     debug = true
@@ -71,7 +70,6 @@ spec:
         - /usr/local/bin/kolla_set_configs && /usr/local/bin/kolla_start
         command:
         - /bin/bash
-        image: quay.io/podified-antelope-centos9/openstack-keystone:current-podified
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
@@ -121,7 +119,6 @@ spec:
           value: keystone
         - name: DatabaseUser
           value: keystone
-        image: quay.io/podified-antelope-centos9/openstack-keystone:current-podified
         imagePullPolicy: IfNotPresent
         name: init
         resources: {}
@@ -183,13 +180,13 @@ spec:
     kind: Service
     name: keystone-public
 ---
-# the actual addresses of the apiEndpoints are platform specific, so we can't rely on
-# kuttl asserts to check them. This short script gathers the addresses and checks that
-# the three endpoints are defined and their addresses follow the default pattern
 apiVersion: kuttl.dev/v1beta1
 kind: TestAssert
 commands:
   - script: |
+      # the actual addresses of the apiEndpoints are platform specific, so we can't rely on
+      # kuttl asserts to check them. This short script gathers the addresses and checks that
+      # the three endpoints are defined and their addresses follow the default pattern
       template='{{.status.apiEndpoints.internal}}{{":"}}{{.status.apiEndpoints.public}}{{"\n"}}'
       regex="http:\/\/keystone-internal.$NAMESPACE.*:http:\/\/keystone-public-$NAMESPACE\.apps.*"
       apiEndpoints=$(oc get -n $NAMESPACE KeystoneAPI  keystone -o go-template="$template")
@@ -200,3 +197,25 @@ commands:
         echo "Endpoints URLS: $apiEndpoints do not match regex"
         exit 1
       fi
+
+      # when using image digests the containerImage URLs are SHA's so we verify them with a script
+      tupleTemplate='{{ range (index .spec.template.spec.containers 1).env }}{{ .name }}{{ "#" }}{{ .value}}{{"\n"}}{{ end }}'
+      imageTuples=$(oc get -n openstack-operators deployment keystone-operator-controller-manager -o go-template="$tupleTemplate")
+      # format of imageTuple is: RELATED_IMAGE_KEYSTONE_<service>#<image URL with SHA> separated by newlines
+      for ITEM in $(echo $imageTuples); do
+        # it is an image
+        if echo $ITEM | grep 'RELATED_IMAGE' &> /dev/null; then
+          NAME=$(echo $ITEM | sed -e 's|^RELATED_IMAGE_KEYSTONE_\([^_]*\)_.*|\1|')
+          IMG_FROM_ENV=$(echo $ITEM | sed -e 's|^.*#\(.*\)|\1|')
+          template='{{.spec.containerImage}}'
+          case $NAME in
+            API)
+              SERVICE_IMAGE=$(oc get -n $NAMESPACE keystoneapi keystone -o go-template="$template")
+              ;;
+          esac
+          if [ "$SERVICE_IMAGE" != "$IMG_FROM_ENV" ]; then
+            echo "$NAME image does not equal $VALUE"
+            exit 1
+          fi
+        fi
+      done

@@ -293,7 +293,7 @@ func (instance KeystoneAPI) RbacResourceName() string {
 func SetupDefaults() {
 	// Acquire environmental defaults and initialize Keystone defaults with them
 	keystoneDefaults := KeystoneAPIDefaults{
-		ContainerImageURL: util.GetEnvVar("KEYSTONE_API_IMAGE_URL_DEFAULT", KeystoneAPIContainerImage),
+		ContainerImageURL: util.GetEnvVar("RELATED_IMAGE_KEYSTONE_API_IMAGE_URL_DEFAULT", KeystoneAPIContainerImage),
 	}
 
 	SetupKeystoneAPIDefaults(keystoneDefaults)
