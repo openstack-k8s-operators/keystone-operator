@@ -104,6 +104,7 @@ func Deployment(
 					Labels:      labels,
 				},
 				Spec: corev1.PodSpec{
+					ImagePullSecrets:   instance.Spec.ImagePullSecrets,
 					ServiceAccountName: instance.RbacResourceName(),
 					Volumes:            getVolumes(instance.Name),
 					Containers: []corev1.Container{

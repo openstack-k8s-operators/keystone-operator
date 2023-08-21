@@ -61,6 +61,7 @@ func DbSyncJob(
 					Annotations: annotations,
 				},
 				Spec: corev1.PodSpec{
+					ImagePullSecrets:   instance.Spec.ImagePullSecrets,
 					RestartPolicy:      corev1.RestartPolicyOnFailure,
 					ServiceAccountName: instance.RbacResourceName(),
 					Containers: []corev1.Container{

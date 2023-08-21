@@ -70,6 +70,7 @@ func CronJob(
 					Completions: &completions,
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
+							ImagePullSecrets: instance.Spec.ImagePullSecrets,
 							Containers: []corev1.Container{
 								{
 									Name:  ServiceName + "-cron",

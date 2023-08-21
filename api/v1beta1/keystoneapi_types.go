@@ -84,6 +84,10 @@ type KeystoneAPISpec struct {
 	ContainerImage string `json:"containerImage"`
 
 	// +kubebuilder:validation:Optional
+	// List of Secret resource containing access credentials to the registry.
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
+
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=1
 	// +kubebuilder:validation:Maximum=32
 	// +kubebuilder:validation:Minimum=0
