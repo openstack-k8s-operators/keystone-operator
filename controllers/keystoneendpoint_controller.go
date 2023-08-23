@@ -334,7 +334,7 @@ func (r *KeystoneEndpointReconciler) reconcileNormal(
 	if !ksSvc.IsReady() {
 		l.Info("KeystoneService not ready, waiting to create endpoints", "KeystoneService", instance.Spec.ServiceName)
 
-		return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, nil
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
 
 	instance.Status.ServiceID = ksSvc.Status.ServiceID

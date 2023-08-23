@@ -439,7 +439,7 @@ func (r *KeystoneServiceReconciler) reconcileUser(
 		ctx,
 		h,
 		instance.Spec.Secret,
-		time.Duration(10)*time.Second,
+		10*time.Second,
 		instance.Spec.PasswordSelector)
 	if err != nil {
 		return ctrl.Result{}, err

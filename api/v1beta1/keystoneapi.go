@@ -86,7 +86,7 @@ func GetAdminServiceClient(
 		ctx,
 		h,
 		keystoneAPI.Spec.Secret,
-		time.Duration(10)*time.Second,
+		10*time.Second,
 		keystoneAPI.Spec.PasswordSelectors.Admin)
 	if err != nil {
 		return nil, ctrl.Result{}, err
