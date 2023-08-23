@@ -419,7 +419,7 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 		jobDef,
 		keystonev1.DbSyncHash,
 		instance.Spec.PreserveJobs,
-		time.Duration(5)*time.Second,
+		5*time.Second,
 		dbSyncHash,
 	)
 	ctrlResult, err = dbSyncjob.DoJob(
@@ -481,7 +481,7 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 		keystone.ServiceName,
 		serviceLabels,
 		keystonePorts,
-		time.Duration(5)*time.Second,
+		5*time.Second,
 	)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
@@ -517,7 +517,7 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 		jobDef,
 		keystonev1.BootstrapHash,
 		instance.Spec.PreserveJobs,
-		time.Duration(5)*time.Second,
+		5*time.Second,
 		instance.Status.Hash[keystonev1.BootstrapHash],
 	)
 	ctrlResult, err = bootstrapjob.DoJob(
@@ -620,7 +620,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 				condition.RequestedReason,
 				condition.SeverityInfo,
 				condition.MemcachedReadyWaitingMessage))
-			return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, fmt.Errorf("memcached %s not found", instance.Spec.MemcachedInstance)
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, fmt.Errorf("memcached %s not found", instance.Spec.MemcachedInstance)
 		}
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.MemcachedReadyCondition,
@@ -652,7 +652,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 			condition.RequestedReason,
 			condition.SeverityInfo,
 			condition.MemcachedReadyWaitingMessage))
-		return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, fmt.Errorf("memcached %s is not ready", memcached.Name)
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, fmt.Errorf("memcached %s is not ready", memcached.Name)
 	}
 	// Mark the Memcached Service as Ready if we get to this point with no errors
 	instance.Status.Conditions.MarkTrue(
@@ -781,7 +781,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	deplDef := keystone.Deployment(instance, inputHash, serviceLabels, serviceAnnotations)
 	depl := deployment.NewDeployment(
 		deplDef,
-		time.Duration(5)*time.Second,
+		5*time.Second,
 	)
 
 	ctrlResult, err = depl.CreateOrPatch(ctx, helper)
@@ -839,7 +839,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	cronjobDef := keystone.CronJob(instance, serviceLabels, serviceAnnotations)
 	cronjob := cronjob.NewCronJob(
 		cronjobDef,
-		time.Duration(5)*time.Second,
+		5*time.Second,
 	)
 
 	ctrlResult, err = cronjob.CreateOrPatch(ctx, helper)
