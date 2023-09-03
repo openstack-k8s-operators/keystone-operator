@@ -83,8 +83,8 @@ func (r *KeystoneAPIReconciler) GetScheme() *runtime.Scheme {
 	return r.Scheme
 }
 
-// GetLog returns a logger object with a prefix of "conroller.name" and aditional controller context fields
-func GetLog(ctx context.Context) logr.Logger {
+// GetLog returns a logger object with a logging prefix of "controller.name" and additional controller context fields
+func (r *KeystoneAPIReconciler) GetLogger(ctx context.Context) logr.Logger {
 	return log.FromContext(ctx).WithName("Controllers").WithName("KeystoneAPI")
 }
 
@@ -123,6 +123,7 @@ type KeystoneAPIReconciler struct {
 
 // Reconcile reconcile keystone API requests
 func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, _err error) {
+	Log := r.GetLogger(ctx)
 	// Fetch the KeystoneAPI instance
 	instance := &keystonev1.KeystoneAPI{}
 	err := r.Client.Get(ctx, req.NamespacedName, instance)
@@ -142,7 +143,7 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		r.Client,
 		r.Kclient,
 		r.Scheme,
-		GetLog(ctx),
+		Log,
 	)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -239,8 +240,8 @@ var allWatchFields = []string{
 }
 
 // SetupWithManager -
-func (r *KeystoneAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	logger := mgr.GetLogger()
+func (r *KeystoneAPIReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+	Log := r.GetLogger(ctx)
 
 	// index passwordSecretField
 	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &keystonev1.KeystoneAPI{}, passwordSecretField, func(rawObj client.Object) []string {
@@ -298,8 +299,8 @@ func (r *KeystoneAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		listOpts := []client.ListOption{
 			client.InNamespace(o.GetNamespace()),
 		}
-		if err := r.Client.List(context.Background(), keystoneAPIs, listOpts...); err != nil {
-			logger.Error(err, "Unable to retrieve KeystoneAPI CRs %w")
+		if err := r.Client.List(ctx, keystoneAPIs, listOpts...); err != nil {
+			Log.Error(err, "Unable to retrieve KeystoneAPI CRs %w")
 			return nil
 		}
 
@@ -309,7 +310,7 @@ func (r *KeystoneAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 					Namespace: o.GetNamespace(),
 					Name:      cr.Name,
 				}
-				logger.Info(fmt.Sprintf("Memcached %s is used by KeystoneAPI CR %s", o.GetName(), cr.Name))
+				Log.Info(fmt.Sprintf("Memcached %s is used by KeystoneAPI CR %s", o.GetName(), cr.Name))
 				result = append(result, reconcile.Request{NamespacedName: name})
 			}
 		}
@@ -345,7 +346,7 @@ func (r *KeystoneAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *KeystoneAPIReconciler) findObjectsForSrc(ctx context.Context, src client.Object) []reconcile.Request {
 	requests := []reconcile.Request{}
 
-	l := log.FromContext(ctx).WithName("Controllers").WithName("KeystoneAPI")
+	Log := r.GetLogger(context.Background())
 
 	for _, field := range allWatchFields {
 		crList := &keystonev1.KeystoneAPIList{}
@@ -359,7 +360,7 @@ func (r *KeystoneAPIReconciler) findObjectsForSrc(ctx context.Context, src clien
 		}
 
 		for _, item := range crList.Items {
-			l.Info(fmt.Sprintf("input source %s changed, reconcile: %s - %s", src.GetName(), item.GetName(), item.GetNamespace()))
+			Log.Info(fmt.Sprintf("input source %s changed, reconcile: %s - %s", src.GetName(), item.GetName(), item.GetNamespace()))
 
 			requests = append(requests,
 				reconcile.Request{
@@ -376,8 +377,8 @@ func (r *KeystoneAPIReconciler) findObjectsForSrc(ctx context.Context, src clien
 }
 
 func (r *KeystoneAPIReconciler) reconcileDelete(ctx context.Context, instance *keystonev1.KeystoneAPI, helper *helper.Helper) (ctrl.Result, error) {
-	l := GetLog(ctx)
-	l.Info("Reconciling Service delete")
+	Log := r.GetLogger(ctx)
+	Log.Info("Reconciling Service delete")
 
 	// We need to allow all KeystoneEndpoint and KeystoneService processing to finish
 	// in the case of a delete before we remove the finalizers.  For instance, in the
@@ -424,7 +425,7 @@ func (r *KeystoneAPIReconciler) reconcileDelete(ctx context.Context, instance *k
 
 	// Service is deleted so remove the finalizer.
 	controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
-	l.Info("Reconciled Service delete successfully")
+	Log.Info("Reconciled Service delete successfully")
 
 	return ctrl.Result{}, nil
 }
@@ -436,9 +437,8 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	serviceLabels map[string]string,
 	serviceAnnotations map[string]string,
 ) (ctrl.Result, error) {
-	l := GetLog(ctx)
-	l.Info("Reconciling Service init")
-
+	Log := r.GetLogger(ctx)
+	Log.Info("Reconciling Service init")
 	//
 	// Service account, role, binding
 	//
@@ -497,7 +497,7 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	}
 	if dbSyncjob.HasChanged() {
 		instance.Status.Hash[keystonev1.DbSyncHash] = dbSyncjob.GetHash()
-		l.Info(fmt.Sprintf("Job %s hash added - %s", jobDef.Name, instance.Status.Hash[keystonev1.DbSyncHash]))
+		Log.Info(fmt.Sprintf("Job %s hash added - %s", jobDef.Name, instance.Status.Hash[keystonev1.DbSyncHash]))
 	}
 	instance.Status.Conditions.MarkTrue(condition.DBSyncReadyCondition, condition.DBSyncReadyMessage)
 
@@ -655,35 +655,35 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	}
 	if bootstrapjob.HasChanged() {
 		instance.Status.Hash[keystonev1.BootstrapHash] = bootstrapjob.GetHash()
-		l.Info(fmt.Sprintf("Job %s hash added - %s", jobDef.Name, instance.Status.Hash[keystonev1.BootstrapHash]))
+		Log.Info(fmt.Sprintf("Job %s hash added - %s", jobDef.Name, instance.Status.Hash[keystonev1.BootstrapHash]))
 	}
 	instance.Status.Conditions.MarkTrue(condition.BootstrapReadyCondition, condition.BootstrapReadyMessage)
 
 	// run keystone bootstrap - end
 
-	l.Info("Reconciled Service init successfully")
+	Log.Info("Reconciled Service init successfully")
 	return ctrl.Result{}, nil
 }
 
 func (r *KeystoneAPIReconciler) reconcileUpdate(ctx context.Context, instance *keystonev1.KeystoneAPI, helper *helper.Helper) (ctrl.Result, error) {
-	l := GetLog(ctx)
-	l.Info("Reconciling Service update")
+	Log := r.GetLogger(ctx)
+	Log.Info("Reconciling Service update")
 
 	// TODO: should have minor update tasks if required
 	// - delete dbsync hash from status to rerun it?
 
-	l.Info("Reconciled Service update successfully")
+	Log.Info("Reconciled Service update successfully")
 	return ctrl.Result{}, nil
 }
 
 func (r *KeystoneAPIReconciler) reconcileUpgrade(ctx context.Context, instance *keystonev1.KeystoneAPI, helper *helper.Helper) (ctrl.Result, error) {
-	l := GetLog(ctx)
-	l.Info("Reconciling Service upgrade")
+	Log := r.GetLogger(ctx)
+	Log.Info("Reconciling Service upgrade")
 
 	// TODO: should have major version upgrade tasks
 	// -delete dbsync hash from status to rerun it?
 
-	l.Info("Reconciled Service upgrade successfully")
+	Log.Info("Reconciled Service upgrade successfully")
 	return ctrl.Result{}, nil
 }
 
@@ -692,8 +692,8 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	instance *keystonev1.KeystoneAPI,
 	helper *helper.Helper,
 ) (ctrl.Result, error) {
-	l := GetLog(ctx)
-	l.Info("Reconciling Service")
+	Log := r.GetLogger(ctx)
+	Log.Info("Reconciling Service")
 
 	serviceLabels := map[string]string{
 		common.AppSelector:   keystone.ServiceName,
@@ -803,13 +803,13 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 		return ctrl.Result{}, err
 	}
 	if op != controllerutil.OperationResultNone {
-		l.Info(fmt.Sprintf("TransportURL %s successfully reconciled - operation: %s", transportURL.Name, string(op)))
+		Log.Info(fmt.Sprintf("TransportURL %s successfully reconciled - operation: %s", transportURL.Name, string(op)))
 	}
 
 	instance.Status.TransportURLSecret = transportURL.Status.SecretName
 
 	if instance.Status.TransportURLSecret == "" {
-		l.Info(fmt.Sprintf("Waiting for TransportURL %s secret to be created", transportURL.Name))
+		Log.Info(fmt.Sprintf("Waiting for TransportURL %s secret to be created", transportURL.Name))
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.RabbitMqTransportURLReadyCondition,
 			condition.RequestedReason,
@@ -817,7 +817,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 			condition.RabbitMqTransportURLReadyRunningMessage))
 		return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, nil
 	}
-	l.Info(fmt.Sprintf("TransportURL secret name %s", transportURL.Status.SecretName))
+	Log.Info(fmt.Sprintf("TransportURL secret name %s", transportURL.Status.SecretName))
 	instance.Status.Conditions.MarkTrue(condition.RabbitMqTransportURLReadyCondition, condition.RabbitMqTransportURLReadyMessage)
 	// run check rabbitmq - end
 
@@ -1125,7 +1125,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 		return ctrl.Result{}, err
 	}
 
-	l.Info("Reconciled Service successfully")
+	Log.Info("Reconciled Service successfully")
 	return ctrl.Result{}, nil
 }
 
@@ -1383,6 +1383,7 @@ func (r *KeystoneAPIReconciler) createHashOfInputHashes(
 	instance *keystonev1.KeystoneAPI,
 	envVars map[string]env.Setter,
 ) (string, bool, error) {
+	Log := r.GetLogger(ctx)
 	var hashMap map[string]string
 	changed := false
 	mergedMapVars := env.MergeEnvs([]corev1.EnvVar{}, envVars)
@@ -1392,7 +1393,7 @@ func (r *KeystoneAPIReconciler) createHashOfInputHashes(
 	}
 	if hashMap, changed = util.SetHash(instance.Status.Hash, common.InputHashName, hash); changed {
 		instance.Status.Hash = hashMap
-		GetLog(ctx).Info(fmt.Sprintf("Input maps hash %s - %s", common.InputHashName, hash))
+		Log.Info(fmt.Sprintf("Input maps hash %s - %s", common.InputHashName, hash))
 	}
 	return hash, changed, nil
 }
