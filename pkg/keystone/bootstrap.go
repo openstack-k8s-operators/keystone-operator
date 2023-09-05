@@ -27,7 +27,7 @@ import (
 
 const (
 	// BootstrapCommand -
-	BootstrapCommand = "/usr/local/bin/kolla_set_configs && keystone-manage bootstrap"
+	BootstrapCommand = "/usr/local/bin/kolla_set_configs && /usr/local/bin/kolla_copy_cacerts && keystone-manage bootstrap"
 )
 
 // BootstrapJob func
@@ -102,7 +102,7 @@ func BootstrapJob(
 									},
 								},
 							},
-							VolumeMounts: getVolumeMounts(),
+							VolumeMounts: getVolumeMounts(instance),
 						},
 					},
 				},
@@ -110,7 +110,7 @@ func BootstrapJob(
 		},
 	}
 	job.Spec.Template.Spec.Containers[0].Env = env.MergeEnvs(job.Spec.Template.Spec.Containers[0].Env, envVars)
-	job.Spec.Template.Spec.Volumes = getVolumes(instance.Name)
+	job.Spec.Template.Spec.Volumes = getVolumes(instance)
 
 	initContainerDetails := APIDetails{
 		ContainerImage:       instance.Spec.ContainerImage,
@@ -120,7 +120,7 @@ func BootstrapJob(
 		OSPSecret:            instance.Spec.Secret,
 		DBPasswordSelector:   instance.Spec.PasswordSelectors.Database,
 		UserPasswordSelector: instance.Spec.PasswordSelectors.Admin,
-		VolumeMounts:         getInitVolumeMounts(),
+		VolumeMounts:         getInitVolumeMounts(instance),
 	}
 	job.Spec.Template.Spec.InitContainers = initContainer(initContainerDetails)
 

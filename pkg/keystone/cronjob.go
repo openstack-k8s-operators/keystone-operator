@@ -27,7 +27,7 @@ import (
 
 const (
 	// TrustFlushCommand -
-	TrustFlushCommand = "/usr/local/bin/kolla_set_configs && keystone-manage trust_flush"
+	TrustFlushCommand = "/usr/local/bin/kolla_set_configs && /usr/local/bin/kolla_copy_cacerts && keystone-manage trust_flush"
 )
 
 // CronJob func
@@ -79,13 +79,13 @@ func CronJob(
 									},
 									Args:         args,
 									Env:          env.MergeEnvs([]corev1.EnvVar{}, envVars),
-									VolumeMounts: getVolumeMounts(),
+									VolumeMounts: getVolumeMounts(instance),
 									SecurityContext: &corev1.SecurityContext{
 										RunAsUser: &runAsUser,
 									},
 								},
 							},
-							Volumes:            getVolumes(instance.Name),
+							Volumes:            getVolumes(instance),
 							RestartPolicy:      corev1.RestartPolicyNever,
 							ServiceAccountName: instance.RbacResourceName(),
 						},
@@ -106,7 +106,7 @@ func CronJob(
 		OSPSecret:            instance.Spec.Secret,
 		DBPasswordSelector:   instance.Spec.PasswordSelectors.Database,
 		UserPasswordSelector: instance.Spec.PasswordSelectors.Admin,
-		VolumeMounts:         getInitVolumeMounts(),
+		VolumeMounts:         getInitVolumeMounts(instance),
 	}
 	cronjob.Spec.JobTemplate.Spec.Template.Spec.InitContainers = initContainer(initContainerDetails)
 

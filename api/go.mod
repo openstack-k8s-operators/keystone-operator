@@ -3,15 +3,15 @@ module github.com/openstack-k8s-operators/keystone-operator/api
 go 1.19
 
 require (
-	github.com/go-logr/logr v1.2.4
-	github.com/google/uuid v1.3.1
-	github.com/onsi/gomega v1.28.0
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.3.1-0.20231011150636-e8a0540a3c32
+	github.com/go-logr/logr v1.3.0
+	github.com/google/uuid v1.4.0
+	github.com/onsi/gomega v1.30.0
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.3.1-0.20231113161013-c2905b3dfe21
 	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.1.1-0.20231001084618-12369665b166
-	github.com/openstack-k8s-operators/lib-common/modules/test v0.1.2-0.20231001084618-12369665b166
-	k8s.io/api v0.26.9
-	k8s.io/apimachinery v0.26.9
-	sigs.k8s.io/controller-runtime v0.14.6
+	github.com/openstack-k8s-operators/lib-common/modules/test v0.3.1-0.20230922161820-e6fe1f3e921b
+	k8s.io/api v0.26.10
+	k8s.io/apimachinery v0.26.10
+	sigs.k8s.io/controller-runtime v0.14.7
 )
 
 require (
@@ -28,7 +28,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/gnostic v0.6.9 // indirect
-	github.com/google/go-cmp v0.5.9 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/gophercloud/gophercloud v1.7.0
 	github.com/imdario/mergo v0.3.16 // indirect
@@ -47,10 +47,10 @@ require (
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
-	golang.org/x/net v0.15.0 // indirect
+	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
+	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/oauth2 v0.4.0 // indirect
-	golang.org/x/sys v0.13.0 // indirect
+	golang.org/x/sys v0.14.0 // indirect
 	golang.org/x/term v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
@@ -60,9 +60,9 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.26.9 // indirect; indirect // indirect
-	k8s.io/client-go v0.26.9 // indirect
-	k8s.io/component-base v0.26.9 // indirect; indirect // indirect
+	k8s.io/apiextensions-apiserver v0.26.10 // indirect; indirect // indirect
+	k8s.io/client-go v0.26.10 // indirect
+	k8s.io/component-base v0.26.10 // indirect; indirect // indirect
 	k8s.io/klog/v2 v2.100.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20230308215209-15aac26d736a // indirect; indirect // indirect
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect; indirect // indirect

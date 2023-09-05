@@ -594,4 +594,107 @@ var _ = Describe("Keystone controller", func() {
 			)
 		})
 	})
+
+	When("A KeystoneAPI instance is configured with TLS and memcached and secrets are available", func() {
+		BeforeEach(func() {
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetDefaultKeystoneAPITLSSpec()))
+			DeferCleanup(k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(k8sClient.Delete, ctx, CreateKeystoneAPICert(namespace, CertName))
+			DeferCleanup(k8sClient.Delete, ctx, CreateKeystoneAPICaCert(namespace, CaCertName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+		})
+
+		It("should have memcached ready and service config ready", func() {
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.MemcachedReadyCondition,
+				corev1.ConditionTrue,
+			)
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.InputReadyCondition,
+				corev1.ConditionTrue,
+			)
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.ServiceConfigReadyCondition,
+				corev1.ConditionTrue,
+			)
+		})
+
+		It("should create a ConfigMap with TLS enabled for database access", func() {
+			cm := th.GetConfigMap(types.NamespacedName{
+				Namespace: keystoneApiName.Namespace,
+				Name:      fmt.Sprintf("%s-%s", keystoneApiName.Name, "config-data"),
+			})
+			Expect(cm.Data["my.cnf"]).Should(ContainSubstring("ssl=1\n"))
+			Expect(cm.Data["my.cnf"]).Should(MatchRegexp("ssl-ca=[^\n]*\n"))
+			Expect(cm.Data["my.cnf"]).Should(MatchRegexp("ssl-cert=[^\n]*\n"))
+		})
+	})
+
+	When("A KeystoneAPI instance is configured with TLS and keystone DB has been created", func() {
+		BeforeEach(func() {
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetDefaultKeystoneAPITLSSpec()))
+			DeferCleanup(k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(k8sClient.Delete, ctx, CreateKeystoneAPICert(namespace, CertName))
+			DeferCleanup(k8sClient.Delete, ctx, CreateKeystoneAPICaCert(namespace, CaCertName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneApiName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+			th.SimulateJobSuccess(dbSyncJobName)
+		})
+
+		It("should have memcached and service config and database ready", func() {
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.MemcachedReadyCondition,
+				corev1.ConditionTrue,
+			)
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.InputReadyCondition,
+				corev1.ConditionTrue,
+			)
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.ServiceConfigReadyCondition,
+				corev1.ConditionTrue,
+			)
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.DBReadyCondition,
+				corev1.ConditionTrue,
+			)
+		})
+
+		It("should use a FQDN for the database hostname", func() {
+			Keystone := GetKeystoneAPI(keystoneApiName)
+			Expect(Keystone.Status.DatabaseHostname).To(MatchRegexp(`[a-zA-Z0-9\-]*(\.[a-zA-Z0-9\-]+)+`))
+		})
+	})
 })

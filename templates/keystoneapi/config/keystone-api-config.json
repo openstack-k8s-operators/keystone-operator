@@ -30,6 +30,27 @@
             "dest": "/etc/keystone/",
             "owner": "keystone:keystone",
             "perm": "0700"
+        },
+        {
+            "source": "/var/lib/config-data/tls-certificates/tls.key",
+            "dest": "/etc/pki/tls/private/tls.key",
+            "owner": "keystone",
+            "perm": "0600",
+            "optional": true
+        },
+        {
+            "source": "/var/lib/config-data/tls-certificates/tls.crt",
+            "dest": "/etc/pki/tls/certs/tls.crt",
+            "owner": "keystone",
+            "perm": "0755",
+            "optional": true
+        },
+        {
+            "source": "/var/lib/config-data/merged/my.cnf",
+            "dest": "/etc/my.cnf",
+            "owner": "keystone",
+            "perm": "0600",
+            "optional": true
         }
     ]
 }

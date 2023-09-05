@@ -23,6 +23,7 @@ import (
 	"github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/tls"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -153,6 +154,10 @@ type KeystoneAPISpec struct {
 	// +kubebuilder:validation:Optional
 	// Override, provides the ability to override the generated manifest of several child resources.
 	Override APIOverrideSpec `json:"override,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// TLS certificate and CA for internal TLS traffic
+	TLS *tls.TLS `json:"tls,omitempty"`
 }
 
 // APIOverrideSpec to override the generated manifest of several child resources.

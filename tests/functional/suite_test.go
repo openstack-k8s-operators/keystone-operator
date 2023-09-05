@@ -58,6 +58,8 @@ const (
 	timeout = time.Second * 2
 
 	SecretName = "test-osp-secret"
+	CertName   = "test-osp-cert"
+	CaCertName = "test-osp-ca-cert"
 
 	interval = time.Millisecond * 200
 )

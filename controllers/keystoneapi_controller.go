@@ -948,8 +948,15 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		customData[key] = data
 	}
 
+	var mysqlTLSConfig string
+	if instance.Spec.TLS != nil {
+		mysqlTLSConfig = instance.Spec.TLS.CreateDatabaseClientConfig()
+	} else {
+		mysqlTLSConfig = ""
+	}
 	templateParameters := map[string]interface{}{
 		"memcachedServers": strings.Join(mc.Status.ServerList, ","),
+		"mysqlTLSConfig":   mysqlTLSConfig,
 	}
 
 	cms := []util.Template{

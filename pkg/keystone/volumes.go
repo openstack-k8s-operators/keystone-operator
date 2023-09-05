@@ -16,22 +16,23 @@ limitations under the License.
 package keystone
 
 import (
+	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 )
 
 // getVolumes - service volumes
-func getVolumes(name string) []corev1.Volume {
+func getVolumes(instance *keystonev1.KeystoneAPI) []corev1.Volume {
 	var scriptsVolumeDefaultMode int32 = 0755
 	var config0640AccessMode int32 = 0640
 
-	return []corev1.Volume{
+	volumes := []corev1.Volume{
 		{
 			Name: "scripts",
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					DefaultMode: &scriptsVolumeDefaultMode,
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: name + "-scripts",
+						Name: instance.Name + "-scripts",
 					},
 				},
 			},
@@ -42,7 +43,18 @@ func getVolumes(name string) []corev1.Volume {
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					DefaultMode: &config0640AccessMode,
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: name + "-config-data",
+						Name: instance.Name + "-config-data",
+					},
+				},
+			},
+		},
+		{
+			Name: "mysql-config-data",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					DefaultMode: &config0640AccessMode,
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "openstack-config-data",
 					},
 				},
 			},
@@ -91,11 +103,17 @@ func getVolumes(name string) []corev1.Volume {
 		},
 	}
 
+	if instance.Spec.TLS != nil {
+		caVolumes := instance.Spec.TLS.CreateVolumes()
+		volumes = append(volumes, caVolumes...)
+	}
+
+	return volumes
 }
 
 // getInitVolumeMounts - general init task VolumeMounts
-func getInitVolumeMounts() []corev1.VolumeMount {
-	return []corev1.VolumeMount{
+func getInitVolumeMounts(instance *keystonev1.KeystoneAPI) []corev1.VolumeMount {
+	volumeMounts := []corev1.VolumeMount{
 		{
 			Name:      "scripts",
 			MountPath: "/usr/local/bin/container-scripts",
@@ -112,11 +130,18 @@ func getInitVolumeMounts() []corev1.VolumeMount {
 			ReadOnly:  false,
 		},
 	}
+
+	if instance.Spec.TLS != nil {
+		caVolumeMounts := instance.Spec.TLS.CreateVolumeMounts()
+		volumeMounts = append(volumeMounts, caVolumeMounts...)
+	}
+
+	return volumeMounts
 }
 
 // getVolumeMounts - general VolumeMounts
-func getVolumeMounts() []corev1.VolumeMount {
-	return []corev1.VolumeMount{
+func getVolumeMounts(instance *keystonev1.KeystoneAPI) []corev1.VolumeMount {
+	volumeMounts := []corev1.VolumeMount{
 		{
 			Name:      "scripts",
 			MountPath: "/usr/local/bin/container-scripts",
@@ -143,5 +168,17 @@ func getVolumeMounts() []corev1.VolumeMount {
 			ReadOnly:  true,
 			Name:      "credential-keys",
 		},
+		{
+			Name:      "mysql-config-data",
+			MountPath: "/var/lib/mysql-config-data",
+			ReadOnly:  true,
+		},
 	}
+
+	if instance.Spec.TLS != nil {
+		caVolumeMounts := instance.Spec.TLS.CreateVolumeMounts()
+		volumeMounts = append(volumeMounts, caVolumeMounts...)
+	}
+
+	return volumeMounts
 }
