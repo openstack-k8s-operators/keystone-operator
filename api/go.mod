@@ -10,7 +10,10 @@ require (
 	sigs.k8s.io/controller-runtime v0.14.6
 )
 
-require golang.org/x/tools v0.13.0 // indirect
+require (
+	go.uber.org/zap v1.26.0 // indirect
+	golang.org/x/tools v0.13.0 // indirect
+)
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
