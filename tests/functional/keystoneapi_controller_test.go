@@ -515,7 +515,7 @@ var _ = Describe("Keystone controller", func() {
 		})
 
 		It("registers LoadBalancer services keystone endpoints", func() {
-			instance := th.GetKeystoneAPI(keystoneApiName)
+			instance := keystone.GetKeystoneAPI(keystoneApiName)
 			Expect(instance).NotTo(BeNil())
 			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("public", "http://keystone-public."+keystoneApiName.Namespace+".svc:5000"))
 			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("internal", "http://keystone-internal."+keystoneApiName.Namespace+".svc:5000"))
@@ -581,7 +581,7 @@ var _ = Describe("Keystone controller", func() {
 		})
 
 		It("registers endpointURL as public keystone endpoint", func() {
-			instance := th.GetKeystoneAPI(keystoneApiName)
+			instance := keystone.GetKeystoneAPI(keystoneApiName)
 			Expect(instance).NotTo(BeNil())
 			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("public", "http://keystone-openstack.apps-crc.testing"))
 			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("internal", "http://keystone-internal."+keystoneApiName.Namespace+".svc:5000"))
