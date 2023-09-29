@@ -234,8 +234,8 @@ var _ = Describe("Keystone controller", func() {
 				Namespace: namespace,
 			})
 			DeferCleanup(
-				th.DeleteDBService,
-				th.CreateDBService(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
 					namespace,
 					GetKeystoneAPI(keystoneApiName).Spec.DatabaseInstance,
 					corev1.ServiceSpec{
@@ -243,7 +243,7 @@ var _ = Describe("Keystone controller", func() {
 					},
 				),
 			)
-			th.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 		})
 
 		It("should have db ready condition", func() {
@@ -285,8 +285,8 @@ var _ = Describe("Keystone controller", func() {
 				Namespace: namespace,
 			})
 			DeferCleanup(
-				th.DeleteDBService,
-				th.CreateDBService(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
 					namespace,
 					GetKeystoneAPI(keystoneApiName).Spec.DatabaseInstance,
 					corev1.ServiceSpec{
@@ -294,7 +294,7 @@ var _ = Describe("Keystone controller", func() {
 					},
 				),
 			)
-			th.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 			th.SimulateJobSuccess(dbSyncJobName)
 		})
 
@@ -343,8 +343,8 @@ var _ = Describe("Keystone controller", func() {
 				Namespace: namespace,
 			})
 			DeferCleanup(
-				th.DeleteDBService,
-				th.CreateDBService(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
 					namespace,
 					GetKeystoneAPI(keystoneApiName).Spec.DatabaseInstance,
 					corev1.ServiceSpec{
@@ -352,7 +352,7 @@ var _ = Describe("Keystone controller", func() {
 					},
 				),
 			)
-			th.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 			th.SimulateJobSuccess(dbSyncJobName)
 			th.SimulateJobSuccess(bootstrapJobName)
 		})
@@ -402,8 +402,8 @@ var _ = Describe("Keystone controller", func() {
 				Namespace: namespace,
 			})
 			DeferCleanup(
-				th.DeleteDBService,
-				th.CreateDBService(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
 					namespace,
 					GetKeystoneAPI(keystoneApiName).Spec.DatabaseInstance,
 					corev1.ServiceSpec{
@@ -411,7 +411,7 @@ var _ = Describe("Keystone controller", func() {
 					},
 				),
 			)
-			th.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 			th.SimulateJobSuccess(dbSyncJobName)
 			th.SimulateJobSuccess(bootstrapJobName)
 			th.SimulateDeploymentReplicaReady(deploymentName)
@@ -499,8 +499,8 @@ var _ = Describe("Keystone controller", func() {
 				Namespace: namespace,
 			})
 			DeferCleanup(
-				th.DeleteDBService,
-				th.CreateDBService(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
 					namespace,
 					GetKeystoneAPI(keystoneApiName).Spec.DatabaseInstance,
 					corev1.ServiceSpec{
@@ -508,7 +508,7 @@ var _ = Describe("Keystone controller", func() {
 					},
 				),
 			)
-			th.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 			th.SimulateJobSuccess(dbSyncJobName)
 			th.SimulateJobSuccess(bootstrapJobName)
 			th.SimulateDeploymentReplicaReady(deploymentName)
@@ -565,8 +565,8 @@ var _ = Describe("Keystone controller", func() {
 				Namespace: namespace,
 			})
 			DeferCleanup(
-				th.DeleteDBService,
-				th.CreateDBService(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
 					namespace,
 					GetKeystoneAPI(keystoneApiName).Spec.DatabaseInstance,
 					corev1.ServiceSpec{
@@ -574,7 +574,7 @@ var _ = Describe("Keystone controller", func() {
 					},
 				),
 			)
-			th.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 			th.SimulateJobSuccess(dbSyncJobName)
 			th.SimulateJobSuccess(bootstrapJobName)
 			th.SimulateDeploymentReplicaReady(deploymentName)
