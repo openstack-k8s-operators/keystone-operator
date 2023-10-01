@@ -29,6 +29,7 @@ require (
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/tools v0.13.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	sigs.k8s.io/gateway-api v0.6.0 // indirect
 )
 
@@ -77,7 +78,6 @@ require (
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiextensions-apiserver v0.26.9 // indirect; indirect // indirect
 	k8s.io/component-base v0.26.9 // indirect; indirect // indirect
 	k8s.io/klog/v2 v2.100.1 // indirect
