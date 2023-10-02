@@ -39,7 +39,6 @@ import (
 	oko_secret "github.com/openstack-k8s-operators/lib-common/modules/common/secret"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
 	util "github.com/openstack-k8s-operators/lib-common/modules/common/util"
-	database "github.com/openstack-k8s-operators/lib-common/modules/database"
 	mariadbv1 "github.com/openstack-k8s-operators/mariadb-operator/api/v1beta1"
 
 	"gopkg.in/yaml.v2"
@@ -300,7 +299,7 @@ func (r *KeystoneAPIReconciler) reconcileDelete(ctx context.Context, instance *k
 	}
 
 	// remove db finalizer before the keystone one
-	db, err := database.GetDatabaseByName(ctx, helper, instance.Name)
+	db, err := mariadbv1.GetDatabaseByName(ctx, helper, instance.Name)
 	if err != nil && !k8s_errors.IsNotFound(err) {
 		return ctrl.Result{}, err
 	}
@@ -353,7 +352,7 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	//
 	// create service DB instance
 	//
-	db := database.NewDatabase(
+	db := mariadbv1.NewDatabase(
 		instance.Name,
 		instance.Spec.DatabaseUser,
 		instance.Spec.Secret,
