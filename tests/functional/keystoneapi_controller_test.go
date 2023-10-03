@@ -166,8 +166,8 @@ var _ = Describe("Keystone controller", func() {
 			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetDefaultKeystoneAPISpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
-			DeferCleanup(th.DeleteMemcached, th.CreateMemcached(namespace, "memcached", memcachedSpec))
-			th.SimulateMemcachedReady(types.NamespacedName{
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(types.NamespacedName{
 				Name:      "memcached",
 				Namespace: namespace,
 			})
@@ -228,8 +228,8 @@ var _ = Describe("Keystone controller", func() {
 			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetDefaultKeystoneAPISpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
-			DeferCleanup(th.DeleteMemcached, th.CreateMemcached(namespace, "memcached", memcachedSpec))
-			th.SimulateMemcachedReady(types.NamespacedName{
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(types.NamespacedName{
 				Name:      "memcached",
 				Namespace: namespace,
 			})
@@ -279,8 +279,8 @@ var _ = Describe("Keystone controller", func() {
 			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetDefaultKeystoneAPISpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
-			DeferCleanup(th.DeleteMemcached, th.CreateMemcached(namespace, "memcached", memcachedSpec))
-			th.SimulateMemcachedReady(types.NamespacedName{
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(types.NamespacedName{
 				Name:      "memcached",
 				Namespace: namespace,
 			})
@@ -337,8 +337,8 @@ var _ = Describe("Keystone controller", func() {
 			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetDefaultKeystoneAPISpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
-			DeferCleanup(th.DeleteMemcached, th.CreateMemcached(namespace, "memcached", memcachedSpec))
-			th.SimulateMemcachedReady(types.NamespacedName{
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(types.NamespacedName{
 				Name:      "memcached",
 				Namespace: namespace,
 			})
@@ -396,8 +396,8 @@ var _ = Describe("Keystone controller", func() {
 			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetDefaultKeystoneAPISpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
-			DeferCleanup(th.DeleteMemcached, th.CreateMemcached(namespace, "memcached", memcachedSpec))
-			th.SimulateMemcachedReady(types.NamespacedName{
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(types.NamespacedName{
 				Name:      "memcached",
 				Namespace: namespace,
 			})
@@ -493,8 +493,8 @@ var _ = Describe("Keystone controller", func() {
 			DeferCleanup(th.DeleteInstance, keystone)
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
-			DeferCleanup(th.DeleteMemcached, th.CreateMemcached(namespace, "memcached", memcachedSpec))
-			th.SimulateMemcachedReady(types.NamespacedName{
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(types.NamespacedName{
 				Name:      "memcached",
 				Namespace: namespace,
 			})
@@ -559,8 +559,8 @@ var _ = Describe("Keystone controller", func() {
 			DeferCleanup(th.DeleteInstance, keystone)
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
-			DeferCleanup(th.DeleteMemcached, th.CreateMemcached(namespace, "memcached", memcachedSpec))
-			th.SimulateMemcachedReady(types.NamespacedName{
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(types.NamespacedName{
 				Name:      "memcached",
 				Namespace: namespace,
 			})
