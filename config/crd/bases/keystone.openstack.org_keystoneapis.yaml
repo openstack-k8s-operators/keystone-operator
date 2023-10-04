@@ -318,6 +318,11 @@ spec:
                 description: PreserveJobs - do not delete jobs after they finished
                   e.g. to check logs
                 type: boolean
+              rabbitMqClusterName:
+                default: rabbitmq
+                description: RabbitMQ instance name Needed to request a transportURL
+                  that is created and used in Keystone
+                type: string
               region:
                 default: regionOne
                 description: Region - optional region name for the keystone service
@@ -471,6 +476,9 @@ spec:
                 description: ReadyCount of keystone API instances
                 format: int32
                 type: integer
+              transportURLSecret:
+                description: TransportURLSecret - Secret containing RabbitMQ transportURL
+                type: string
             type: object
         type: object
     served: true

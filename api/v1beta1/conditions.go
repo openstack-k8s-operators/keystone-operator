@@ -35,6 +35,9 @@ const (
 
 	// KeystoneServiceOSUserReadyCondition Status=True condition which indicates if the service user got created in the keystone instance is ready/was successful
 	KeystoneServiceOSUserReadyCondition condition.Type = "KeystoneServiceOSUserReady"
+
+	// KeystoneRabbitMQTransportURLReadyCondition -
+	KeystoneRabbitMQTransportURLReadyCondition condition.Type = "KeystoneRabbitMQTransportURLReady"
 )
 
 // Common Messages used by API objects.
@@ -111,4 +114,12 @@ const (
 
 	// KeystoneServiceOSUserReadyErrorMessage
 	KeystoneServiceOSUserReadyErrorMessage = "Keystone Service user error occured %s"
+
+	// RabbitMQTransportURLReadyRunningMessage -
+	KeystoneRabbitMQTransportURLReadyRunningMessage = "KeystoneRabbitMQTransportURL creation in progress"
+	// RabbitMQTransportURLReadyMessage -
+	KeystoneRabbitMQTransportURLReadyMessage = "KeystoneRabbitMQTransportURL successfully created"
+	// RabbitMQTransportURLReadyErrorMessage -
+	KeystoneRabbitMQTransportURLReadyErrorMessage = "KeystoneRabbitMQTransportURL error occured %s"
+
 )
