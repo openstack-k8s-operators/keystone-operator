@@ -32,7 +32,7 @@ import (
 	infra_test "github.com/openstack-k8s-operators/infra-operator/apis/test/helpers"
 	keystone_test "github.com/openstack-k8s-operators/keystone-operator/api/test/helpers"
 	"github.com/openstack-k8s-operators/keystone-operator/controllers"
-	common_test "github.com/openstack-k8s-operators/lib-common/modules/test/helpers"
+	common_test "github.com/openstack-k8s-operators/lib-common/modules/common/test/helpers"
 	mariadb_test "github.com/openstack-k8s-operators/mariadb-operator/api/test/helpers"
 	//+kubebuilder:scaffold:imports
 )

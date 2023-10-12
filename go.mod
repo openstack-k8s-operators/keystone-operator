@@ -5,11 +5,11 @@ go 1.19
 require (
 	github.com/go-logr/logr v1.2.4
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.4.0
-	github.com/onsi/ginkgo/v2 v2.12.1
+	github.com/onsi/ginkgo/v2 v2.13.0
 	github.com/onsi/gomega v1.28.0
 	github.com/openstack-k8s-operators/infra-operator/apis v0.1.1-0.20231001103054-f74a88ed4971
 	github.com/openstack-k8s-operators/keystone-operator/api v0.1.1-0.20230920085319-92ae0260bbf3
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.1.1-0.20231001084618-12369665b166
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.3.1-0.20231011150636-e8a0540a3c32
 	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.1.1-0.20231001084618-12369665b166
 	github.com/openstack-k8s-operators/lib-common/modules/test v0.1.2-0.20231001084618-12369665b166
 	github.com/openstack-k8s-operators/mariadb-operator/api v0.3.0
@@ -21,14 +21,12 @@ require (
 )
 
 require (
-	github.com/cert-manager/cert-manager v1.11.5 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
 	github.com/openshift/api v3.9.0+incompatible // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/tools v0.13.0 // indirect
-	sigs.k8s.io/gateway-api v0.6.0 // indirect
 )
 
 require (
@@ -92,7 +90,3 @@ replace github.com/openstack-k8s-operators/keystone-operator/api => ./api
 // mschuppert: map to latest commit from release-4.13 tag
 // must consistent within modules and service operators
 replace github.com/openshift/api => github.com/openshift/api v0.0.0-20230414143018-3367bc7e6ac7 //allow-merging
-
-// needed to to cert-manager v1.11.4 see https://github.com/cert-manager/cert-manager/blob/v1.11.4/go.mod#L263C1-L264C104
-// remove this once we bump to cert-manager v1.12.x
-replace github.com/Venafi/vcert/v4 => github.com/jetstack/vcert/v4 v4.9.6-0.20230519122548-219f317ae107 //allow-merging
