@@ -129,10 +129,12 @@ build: generate fmt vet ## Build manager binary.
 	go build -o bin/manager main.go
 
 .PHONY: run
+run: export METRICS_PORT?=8080
+run: export HEALTH_PORT?=8081
 run: export ENABLE_WEBHOOKS?=false
 run: manifests generate fmt vet ## Run a controller from your host.
 	/bin/bash hack/clean_local_webhook.sh
-	go run ./main.go
+	go run ./main.go -metrics-bind-address ":$(METRICS_PORT)" -health-probe-bind-address ":$(HEALTH_PORT)"
 
 .PHONY: docker-build
 docker-build: test ## Build docker image with the manager.
@@ -336,6 +338,8 @@ operator-lint: gowork ## Runs operator-lint
 # $oc delete -n openstack mutatingwebhookconfiguration/mkeystoneapi.kb.io
 SKIP_CERT ?=false
 .PHONY: run-with-webhook
+run-with-webhook: export METRICS_PORT?=8080
+run-with-webhook: export HEALTH_PORT?=8081
 run-with-webhook: manifests generate fmt vet ## Run a controller from your host.
 	/bin/bash hack/configure_local_webhook.sh
-	go run ./main.go
+	go run ./main.go -metrics-bind-address ":$(METRICS_PORT)" -health-probe-bind-address ":$(HEALTH_PORT)"
