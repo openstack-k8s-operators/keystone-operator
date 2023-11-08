@@ -51,6 +51,18 @@ func CronJob(
 	parallelism := int32(1)
 	completions := int32(1)
 
+	// create Volume and VolumeMounts
+	volumes := getVolumes(instance.Name)
+	volumeMounts := getVolumeMounts()
+	initVolumeMounts := getInitVolumeMounts()
+
+	// add CA cert if defined
+	if instance.Spec.TLS.CaBundleSecretName != "" {
+		volumes = append(getVolumes(instance.Name), instance.Spec.TLS.CreateVolume())
+		volumeMounts = append(getVolumeMounts(), instance.Spec.TLS.CreateVolumeMounts(nil)...)
+		initVolumeMounts = append(getInitVolumeMounts(), instance.Spec.TLS.CreateVolumeMounts(nil)...)
+	}
+
 	cronjob := &batchv1.CronJob{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ServiceName + "-cron",
@@ -79,13 +91,13 @@ func CronJob(
 									},
 									Args:         args,
 									Env:          env.MergeEnvs([]corev1.EnvVar{}, envVars),
-									VolumeMounts: getVolumeMounts(),
+									VolumeMounts: volumeMounts,
 									SecurityContext: &corev1.SecurityContext{
 										RunAsUser: &runAsUser,
 									},
 								},
 							},
-							Volumes:            getVolumes(instance.Name),
+							Volumes:            volumes,
 							RestartPolicy:      corev1.RestartPolicyNever,
 							ServiceAccountName: instance.RbacResourceName(),
 						},
@@ -106,7 +118,7 @@ func CronJob(
 		OSPSecret:            instance.Spec.Secret,
 		DBPasswordSelector:   instance.Spec.PasswordSelectors.Database,
 		UserPasswordSelector: instance.Spec.PasswordSelectors.Admin,
-		VolumeMounts:         getInitVolumeMounts(),
+		VolumeMounts:         initVolumeMounts,
 	}
 	cronjob.Spec.JobTemplate.Spec.Template.Spec.InitContainers = initContainer(initContainerDetails)
 

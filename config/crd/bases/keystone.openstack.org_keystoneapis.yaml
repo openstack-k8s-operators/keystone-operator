@@ -386,6 +386,36 @@ spec:
                 description: Secret containing OpenStack password information for
                   keystone KeystoneDatabasePassword, AdminPassword
                 type: string
+              tls:
+                description: TLS - Parameters related to the TLS
+                properties:
+                  api:
+                    description: API tls type which encapsulates for API services
+                    properties:
+                      internal:
+                        description: Internal GenericService - holds the secret for
+                          the internal endpoint
+                        properties:
+                          secretName:
+                            description: SecretName - holding the cert, key for the
+                              service
+                            type: string
+                        type: object
+                      public:
+                        description: Public GenericService - holds the secret for
+                          the public endpoint
+                        properties:
+                          secretName:
+                            description: SecretName - holding the cert, key for the
+                              service
+                            type: string
+                        type: object
+                    type: object
+                  caBundleSecretName:
+                    description: CaBundleSecretName - holding the CA certs in a pre-created
+                      bundle file
+                    type: string
+                type: object
               trustFlushArgs:
                 default: ""
                 description: TrustFlushArgs - Arguments added to keystone-manage trust_flush
@@ -404,6 +434,7 @@ spec:
             - containerImage
             - databaseInstance
             - memcachedInstance
+            - rabbitMqClusterName
             - secret
             type: object
           status:

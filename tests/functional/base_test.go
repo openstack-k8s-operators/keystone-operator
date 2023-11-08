@@ -37,6 +37,25 @@ func GetDefaultKeystoneAPISpec() map[string]interface{} {
 	}
 }
 
+func GetTLSKeystoneAPISpec() map[string]interface{} {
+	return map[string]interface{}{
+		"databaseInstance": "openstack",
+		"replicas":         1,
+		"secret":           SecretName,
+		"tls": map[string]interface{}{
+			"api": map[string]interface{}{
+				"internal": map[string]interface{}{
+					"secretName": InternalCertSecretName,
+				},
+				"public": map[string]interface{}{
+					"secretName": PublicCertSecretName,
+				},
+			},
+			"caBundleSecretName": CABundleSecretName,
+		},
+	}
+}
+
 func CreateKeystoneAPI(name types.NamespacedName, spec map[string]interface{}) client.Object {
 
 	raw := map[string]interface{}{

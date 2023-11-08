@@ -35,9 +35,13 @@ import (
 var _ = Describe("Keystone controller", func() {
 
 	var keystoneApiName types.NamespacedName
+	var keystoneApiConfigDataName types.NamespacedName
 	var dbSyncJobName types.NamespacedName
 	var bootstrapJobName types.NamespacedName
 	var deploymentName types.NamespacedName
+	var caBundleSecretName types.NamespacedName
+	var internalCertSecretName types.NamespacedName
+	var publicCertSecretName types.NamespacedName
 	var memcachedSpec memcachedv1.MemcachedSpec
 
 	BeforeEach(func() {
@@ -56,6 +60,22 @@ var _ = Describe("Keystone controller", func() {
 		}
 		deploymentName = types.NamespacedName{
 			Name:      "keystone",
+			Namespace: namespace,
+		}
+		keystoneApiConfigDataName = types.NamespacedName{
+			Name:      "keystone-config-data",
+			Namespace: namespace,
+		}
+		caBundleSecretName = types.NamespacedName{
+			Name:      CABundleSecretName,
+			Namespace: namespace,
+		}
+		internalCertSecretName = types.NamespacedName{
+			Name:      InternalCertSecretName,
+			Namespace: namespace,
+		}
+		publicCertSecretName = types.NamespacedName{
+			Name:      PublicCertSecretName,
 			Namespace: namespace,
 		}
 		memcachedSpec = memcachedv1.MemcachedSpec{
@@ -694,6 +714,236 @@ var _ = Describe("Keystone controller", func() {
 			Expect(instance).NotTo(BeNil())
 			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("public", "http://keystone-openstack.apps-crc.testing"))
 			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("internal", "http://keystone-internal."+keystoneApiName.Namespace+".svc:5000"))
+
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionTrue,
+			)
+		})
+	})
+
+	When("A KeystoneAPI is created with TLS", func() {
+		BeforeEach(func() {
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetTLSKeystoneAPISpec()))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
+				Namespace: namespace,
+			})
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneApiName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+		})
+
+		It("reports that the CA secret is missing", func() {
+			th.ExpectConditionWithDetails(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.TLSInputReadyCondition,
+				corev1.ConditionFalse,
+				condition.ErrorReason,
+				fmt.Sprintf("TLSInput error occured in TLS sources Secret %s/combined-ca-bundle not found", namespace),
+			)
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionFalse,
+			)
+		})
+
+		It("reports that the internal cert secret is missing", func() {
+			DeferCleanup(k8sClient.Delete, ctx, th.CreateCABundleSecret(caBundleSecretName))
+			th.ExpectConditionWithDetails(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.TLSInputReadyCondition,
+				corev1.ConditionFalse,
+				condition.ErrorReason,
+				fmt.Sprintf("TLSInput error occured in TLS sources Secret %s/internal-tls-certs not found", namespace),
+			)
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionFalse,
+			)
+		})
+
+		It("reports that the public cert secret is missing", func() {
+			DeferCleanup(k8sClient.Delete, ctx, th.CreateCABundleSecret(caBundleSecretName))
+			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(internalCertSecretName))
+			th.ExpectConditionWithDetails(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.TLSInputReadyCondition,
+				corev1.ConditionFalse,
+				condition.ErrorReason,
+				fmt.Sprintf("TLSInput error occured in TLS sources Secret %s/public-tls-certs not found", namespace),
+			)
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionFalse,
+			)
+		})
+
+		It("it creates dbsync job with CA certs mounted", func() {
+			DeferCleanup(k8sClient.Delete, ctx, th.CreateCABundleSecret(caBundleSecretName))
+			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(internalCertSecretName))
+			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(publicCertSecretName))
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+
+			j := th.GetJob(dbSyncJobName)
+			th.AssertVolumeExists(caBundleSecretName.Name, j.Spec.Template.Spec.Volumes)
+			th.AssertVolumeMountExists(caBundleSecretName.Name, "tls-ca-bundle.pem", j.Spec.Template.Spec.Containers[0].VolumeMounts)
+		})
+
+		It("it creates bootstrap job with CA certs mounted", func() {
+			DeferCleanup(k8sClient.Delete, ctx, th.CreateCABundleSecret(caBundleSecretName))
+			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(internalCertSecretName))
+			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(publicCertSecretName))
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+
+			th.SimulateJobSuccess(dbSyncJobName)
+
+			j := th.GetJob(bootstrapJobName)
+			th.AssertVolumeExists(caBundleSecretName.Name, j.Spec.Template.Spec.Volumes)
+			th.AssertVolumeMountExists(caBundleSecretName.Name, "tls-ca-bundle.pem", j.Spec.Template.Spec.Containers[0].VolumeMounts)
+		})
+
+		It("it creates deployment with CA and service certs mounted", func() {
+			DeferCleanup(k8sClient.Delete, ctx, th.CreateCABundleSecret(caBundleSecretName))
+			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(internalCertSecretName))
+			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(publicCertSecretName))
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+
+			d := th.GetDeployment(deploymentName)
+
+			container := d.Spec.Template.Spec.Containers[0]
+
+			// CA bundle
+			th.AssertVolumeExists(caBundleSecretName.Name, d.Spec.Template.Spec.Volumes)
+			th.AssertVolumeMountExists(caBundleSecretName.Name, "tls-ca-bundle.pem", container.VolumeMounts)
+
+			// service certs
+			th.AssertVolumeExists(internalCertSecretName.Name, d.Spec.Template.Spec.Volumes)
+			th.AssertVolumeExists(publicCertSecretName.Name, d.Spec.Template.Spec.Volumes)
+			th.AssertVolumeMountExists(publicCertSecretName.Name, "tls.key", container.VolumeMounts)
+			th.AssertVolumeMountExists(publicCertSecretName.Name, "tls.crt", container.VolumeMounts)
+			th.AssertVolumeMountExists(internalCertSecretName.Name, "tls.key", container.VolumeMounts)
+			th.AssertVolumeMountExists(internalCertSecretName.Name, "tls.crt", container.VolumeMounts)
+
+			Expect(container.ReadinessProbe.HTTPGet.Scheme).To(Equal(corev1.URISchemeHTTPS))
+			Expect(container.LivenessProbe.HTTPGet.Scheme).To(Equal(corev1.URISchemeHTTPS))
+
+			configDataMap := th.GetConfigMap(keystoneApiConfigDataName)
+			Expect(configDataMap).ShouldNot(BeNil())
+			Expect(configDataMap.Data).Should(HaveKey("httpd.conf"))
+			Expect(configDataMap.Data).Should(HaveKey("ssl.conf"))
+			configData := string(configDataMap.Data["httpd.conf"])
+			Expect(configData).Should(ContainSubstring("SSLEngine on"))
+			Expect(configData).Should(ContainSubstring("SSLCertificateFile      \"/etc/pki/tls/certs/internal.crt\""))
+			Expect(configData).Should(ContainSubstring("SSLCertificateKeyFile   \"/etc/pki/tls/private/internal.key\""))
+			Expect(configData).Should(ContainSubstring("SSLCertificateFile      \"/etc/pki/tls/certs/public.crt\""))
+			Expect(configData).Should(ContainSubstring("SSLCertificateKeyFile   \"/etc/pki/tls/private/public.key\""))
+		})
+
+		It("registers endpointURL as public keystone endpoint", func() {
+			DeferCleanup(k8sClient.Delete, ctx, th.CreateCABundleSecret(caBundleSecretName))
+			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(internalCertSecretName))
+			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(publicCertSecretName))
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+			th.SimulateDeploymentReplicaReady(deploymentName)
+
+			instance := keystone.GetKeystoneAPI(keystoneApiName)
+			Expect(instance).NotTo(BeNil())
+			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("public", "https://keystone-public."+keystoneApiName.Namespace+".svc:5000"))
+			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("internal", "https://keystone-internal."+keystoneApiName.Namespace+".svc:5000"))
+
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionTrue,
+			)
+		})
+	})
+
+	When("A KeystoneAPI is created with TLS and service override endpointURL set", func() {
+		BeforeEach(func() {
+			spec := GetTLSKeystoneAPISpec()
+			serviceOverride := map[string]interface{}{}
+			serviceOverride["public"] = map[string]interface{}{
+				"endpointURL": "https://keystone-openstack.apps-crc.testing",
+			}
+
+			spec["override"] = map[string]interface{}{
+				"service": serviceOverride,
+			}
+
+			DeferCleanup(k8sClient.Delete, ctx, th.CreateCABundleSecret(caBundleSecretName))
+			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(internalCertSecretName))
+			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(publicCertSecretName))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, spec))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
+				Namespace: namespace,
+			})
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneApiName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+			th.SimulateDeploymentReplicaReady(deploymentName)
+		})
+
+		It("registers endpointURL as public keystone endpoint", func() {
+			instance := keystone.GetKeystoneAPI(keystoneApiName)
+			Expect(instance).NotTo(BeNil())
+			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("public", "https://keystone-openstack.apps-crc.testing"))
+			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("internal", "https://keystone-internal."+keystoneApiName.Namespace+".svc:5000"))
 
 			th.ExpectCondition(
 				keystoneApiName,

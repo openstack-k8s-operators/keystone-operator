@@ -20,6 +20,7 @@ import (
 
 	common "github.com/openstack-k8s-operators/lib-common/modules/common"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/env"
+
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,6 +50,18 @@ func DbSyncJob(
 	envVars["KOLLA_CONFIG_STRATEGY"] = env.SetValue("COPY_ALWAYS")
 	envVars["KOLLA_BOOTSTRAP"] = env.SetValue("true")
 
+	// create Volume and VolumeMounts
+	volumes := getVolumes(instance.Name)
+	volumeMounts := getVolumeMounts()
+	initVolumeMounts := getInitVolumeMounts()
+
+	// add CA cert if defined
+	if instance.Spec.TLS.CaBundleSecretName != "" {
+		volumes = append(getVolumes(instance.Name), instance.Spec.TLS.CreateVolume())
+		volumeMounts = append(getVolumeMounts(), instance.Spec.TLS.CreateVolumeMounts(nil)...)
+		initVolumeMounts = append(getInitVolumeMounts(), instance.Spec.TLS.CreateVolumeMounts(nil)...)
+	}
+
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ServiceName + "-db-sync",
@@ -75,15 +88,15 @@ func DbSyncJob(
 								RunAsUser: &runAsUser,
 							},
 							Env:          env.MergeEnvs([]corev1.EnvVar{}, envVars),
-							VolumeMounts: getVolumeMounts(),
+							VolumeMounts: volumeMounts,
 						},
 					},
+					Volumes: volumes,
 				},
 			},
 		},
 	}
 
-	job.Spec.Template.Spec.Volumes = getVolumes(ServiceName)
 	initContainerDetails := APIDetails{
 		ContainerImage:       instance.Spec.ContainerImage,
 		DatabaseHost:         instance.Status.DatabaseHostname,
@@ -92,7 +105,7 @@ func DbSyncJob(
 		OSPSecret:            instance.Spec.Secret,
 		DBPasswordSelector:   instance.Spec.PasswordSelectors.Database,
 		UserPasswordSelector: instance.Spec.PasswordSelectors.Admin,
-		VolumeMounts:         getInitVolumeMounts(),
+		VolumeMounts:         initVolumeMounts,
 	}
 	job.Spec.Template.Spec.InitContainers = initContainer(initContainerDetails)
 
