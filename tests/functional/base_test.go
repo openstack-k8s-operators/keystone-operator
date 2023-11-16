@@ -17,6 +17,7 @@ limitations under the License.
 package functional_test
 
 import (
+	"fmt"
 	. "github.com/onsi/gomega"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -79,4 +80,15 @@ func GetCronJob(name types.NamespacedName) *batchv1.CronJob {
 		g.Expect(k8sClient.Get(ctx, name, instance)).Should(Succeed())
 	}, timeout, interval).Should(Succeed())
 	return instance
+}
+
+func CreateKeystoneMessageBusSecret(namespace string, name string) *corev1.Secret {
+	s := th.CreateSecret(
+		types.NamespacedName{Namespace: namespace, Name: name},
+		map[string][]byte{
+			"transport_url": []byte(fmt.Sprintf("rabbit://%s/fake", name)),
+		},
+	)
+	logger.Info("Secret created", "name", name)
+	return s
 }
