@@ -176,6 +176,20 @@ func (th *TestHelper) GetKeystoneAPI(name types.NamespacedName) *keystonev1.Keys
 	return instance
 }
 
+// SimulateKeystoneAPIReady simulates the readiness of a KeystoneAPI
+// resource by setting the Ready condition of the KeystoneAPI to true
+//
+// Example usage:
+// th.SimulateKeystoneAPIReady(keystoneAPIName)
+func (th *TestHelper) SimulateKeystoneAPIReady(name types.NamespacedName) {
+	gomega.Eventually(func(g gomega.Gomega) {
+		service := th.GetKeystoneAPI(name)
+		service.Status.Conditions.MarkTrue(condition.ReadyCondition, "Ready")
+		g.Expect(th.K8sClient.Status().Update(th.Ctx, service)).To(gomega.Succeed())
+	}, th.Timeout, th.Interval).Should(gomega.Succeed())
+	th.Logger.Info("Simulated GetKeystoneAPI ready", "on", name)
+}
+
 // GetKeystoneService function retrieves and returns the KeystoneService resource
 //
 // Example usage:
