@@ -59,7 +59,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // GetClient -
@@ -216,7 +215,7 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 func (r *KeystoneAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	logger := mgr.GetLogger()
 
-	memcachedFn := func(o client.Object) []reconcile.Request {
+	memcachedFn := func(ctx context.Context, o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 
 		// get all KeystoneAPI CRs
@@ -257,7 +256,7 @@ func (r *KeystoneAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.ServiceAccount{}).
 		Owns(&rbacv1.Role{}).
 		Owns(&rbacv1.RoleBinding{}).
-		Watches(&source.Kind{Type: &memcachedv1.Memcached{}},
+		Watches(&memcachedv1.Memcached{},
 			handler.EnqueueRequestsFromMapFunc(memcachedFn)).
 		Complete(r)
 }
@@ -291,7 +290,6 @@ func (r *KeystoneAPIReconciler) reconcileDelete(ctx context.Context, instance *k
 	if !k8s_errors.IsNotFound(err) && memcached != nil {
 		if controllerutil.RemoveFinalizer(memcached, helper.GetFinalizer()) {
 			err := r.Update(ctx, memcached)
-
 			if err != nil {
 				return ctrl.Result{}, err
 			}
@@ -452,7 +450,7 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	//
 	// create service/s
 	//
-	var keystoneEndpoints = map[service.Endpoint]endpoint.Data{
+	keystoneEndpoints := map[service.Endpoint]endpoint.Data{
 		service.EndpointPublic: {
 			Port: keystone.KeystonePublicPort,
 		},
@@ -687,7 +685,6 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	// Add finalizer to Memcached to prevent it from being deleted now that we're using it
 	if controllerutil.AddFinalizer(memcached, helper.GetFinalizer()) {
 		err := r.Update(ctx, memcached)
-
 		if err != nil {
 			instance.Status.Conditions.Set(condition.FalseCondition(
 				condition.MemcachedReadyCondition,
@@ -981,7 +978,8 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 func (r *KeystoneAPIReconciler) reconcileCloudConfig(
 	ctx context.Context,
 	h *helper.Helper,
-	instance *keystonev1.KeystoneAPI) error {
+	instance *keystonev1.KeystoneAPI,
+) error {
 	// clouds.yaml
 	var openStackConfig keystone.OpenStackConfig
 	templateParameters := make(map[string]interface{})
@@ -1097,7 +1095,6 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 			},
 		}
 		err := oko_secret.EnsureSecrets(ctx, helper, instance, tmpl, envVars)
-
 		if err != nil {
 			return err
 		}
