@@ -168,6 +168,60 @@ var _ = Describe("Keystone controller", func() {
 		})
 	})
 
+	When("TransportURL is available", func() {
+		BeforeEach(func() {
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetDefaultKeystoneAPISpec()))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
+				Namespace: namespace,
+			})
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+		})
+
+		It("should have TransportURL ready, but not Memcached ready", func() {
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionFalse,
+			)
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				keystonev1.KeystoneRabbitMQTransportURLReadyCondition,
+				corev1.ConditionTrue,
+			)
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.MemcachedReadyCondition,
+				corev1.ConditionFalse,
+			)
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.ServiceConfigReadyCondition,
+				corev1.ConditionUnknown,
+			)
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.DBReadyCondition,
+				corev1.ConditionUnknown,
+			)
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.DBSyncReadyCondition,
+				corev1.ConditionUnknown,
+			)
+		})
+	})
+
 	When("Memcached is available", func() {
 		BeforeEach(func() {
 			DeferCleanup(
@@ -192,6 +246,12 @@ var _ = Describe("Keystone controller", func() {
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.ReadyCondition,
 				corev1.ConditionFalse,
+			)
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				keystonev1.KeystoneRabbitMQTransportURLReadyCondition,
+				corev1.ConditionTrue,
 			)
 			th.ExpectCondition(
 				keystoneApiName,

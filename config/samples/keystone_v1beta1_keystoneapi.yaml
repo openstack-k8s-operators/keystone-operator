@@ -3,7 +3,6 @@ kind: KeystoneAPI
 metadata:
   name: keystone
 spec:
-  containerImage: quay.io/podified-antelope-centos9/openstack-keystone:current-podified
   adminProject: admin
   adminUser: admin
   customServiceConfig: |
