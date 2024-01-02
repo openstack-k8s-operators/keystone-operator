@@ -22,6 +22,7 @@ import (
 	"time"
 
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
+	rabbitmqv1 "github.com/openstack-k8s-operators/infra-operator/apis/rabbitmq/v1beta1"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	keystone "github.com/openstack-k8s-operators/keystone-operator/pkg/keystone"
 	"github.com/openstack-k8s-operators/lib-common/modules/common"
@@ -36,6 +37,7 @@ import (
 	labels "github.com/openstack-k8s-operators/lib-common/modules/common/labels"
 	nad "github.com/openstack-k8s-operators/lib-common/modules/common/networkattachment"
 	common_rbac "github.com/openstack-k8s-operators/lib-common/modules/common/rbac"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/secret"
 	oko_secret "github.com/openstack-k8s-operators/lib-common/modules/common/secret"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
 	util "github.com/openstack-k8s-operators/lib-common/modules/common/util"
@@ -103,6 +105,7 @@ type KeystoneAPIReconciler struct {
 // +kubebuilder:rbac:groups=memcached.openstack.org,resources=memcacheds,verbs=get;list;watch;update
 // +kubebuilder:rbac:groups=memcached.openstack.org,resources=memcacheds/finalizers,verbs=update
 // +kubebuilder:rbac:groups=k8s.cni.cncf.io,resources=network-attachment-definitions,verbs=get;list;watch
+// +kubebuilder:rbac:groups=rabbitmq.openstack.org,resources=transporturls,verbs=get;list;watch;create;update;patch;delete
 
 // service account, role, rolebinding
 // +kubebuilder:rbac:groups="",resources=serviceaccounts,verbs=get;list;watch;create;update
@@ -632,6 +635,10 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	l := GetLog(ctx)
 	l.Info("Reconciling Service")
 
+	serviceLabels := map[string]string{
+		common.AppSelector: keystone.ServiceName,
+	}
+
 	// ConfigMap
 	configMapVars := make(map[string]env.Setter)
 
@@ -661,6 +668,39 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	instance.Status.Conditions.MarkTrue(condition.InputReadyCondition, condition.InputReadyMessage)
 
 	// run check OpenStack secret - end
+
+	//
+	// create RabbitMQ transportURL CR and get the actual URL from the associated secret that is created
+	//
+	transportURL, op, err := r.transportURLCreateOrUpdate(ctx, instance, serviceLabels)
+
+	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			keystonev1.KeystoneRabbitMQTransportURLReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			keystonev1.KeystoneRabbitMQTransportURLReadyErrorMessage,
+			err.Error()))
+		return ctrl.Result{}, err
+	}
+	if op != controllerutil.OperationResultNone {
+		l.Info(fmt.Sprintf("TransportURL %s successfully reconciled - operation: %s", transportURL.Name, string(op)))
+	}
+
+	instance.Status.TransportURLSecret = transportURL.Status.SecretName
+
+	if instance.Status.TransportURLSecret == "" {
+		l.Info(fmt.Sprintf("Waiting for TransportURL %s secret to be created", transportURL.Name))
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			keystonev1.KeystoneRabbitMQTransportURLReadyCondition,
+			condition.RequestedReason,
+			condition.SeverityInfo,
+			keystonev1.KeystoneRabbitMQTransportURLReadyRunningMessage))
+		return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, nil
+	}
+	l.Info(fmt.Sprintf("TransportURL secret name %s", transportURL.Status.SecretName))
+	instance.Status.Conditions.MarkTrue(keystonev1.KeystoneRabbitMQTransportURLReadyCondition, keystonev1.KeystoneRabbitMQTransportURLReadyMessage)
+	// run check rabbitmq - end
 
 	//
 	// Check for required memcached used for caching
@@ -768,10 +808,6 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	//
 	// TODO check when/if Init, Update, or Upgrade should/could be skipped
 	//
-
-	serviceLabels := map[string]string{
-		common.AppSelector: keystone.ServiceName,
-	}
 
 	// networks to attach to
 	for _, netAtt := range instance.Spec.NetworkAttachments {
@@ -921,6 +957,27 @@ func (r *KeystoneAPIReconciler) reconcileNormal(ctx context.Context, instance *k
 	return ctrl.Result{}, nil
 }
 
+func (r *KeystoneAPIReconciler) transportURLCreateOrUpdate(
+	ctx context.Context,
+	instance *keystonev1.KeystoneAPI,
+	serviceLabels map[string]string,
+) (*rabbitmqv1.TransportURL, controllerutil.OperationResult, error) {
+	transportURL := &rabbitmqv1.TransportURL{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-keystone-transport", instance.Name),
+			Namespace: instance.Namespace,
+			Labels:    serviceLabels,
+		},
+	}
+	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, transportURL, func() error {
+		transportURL.Spec.RabbitmqClusterName = instance.Spec.RabbitMqClusterName
+		err := controllerutil.SetControllerReference(instance, transportURL, r.Scheme)
+		return err
+	})
+
+	return transportURL, op, err
+}
+
 // generateServiceConfigMaps - create create configmaps which hold scripts and service configuration
 // TODO add DefaultConfigOverwrite
 func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
@@ -948,8 +1005,14 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		customData[key] = data
 	}
 
+	transportURLSecret, _, err := secret.GetSecret(ctx, h, instance.Status.TransportURLSecret, instance.Namespace)
+	if err != nil {
+		return err
+	}
+
 	templateParameters := map[string]interface{}{
 		"memcachedServers": strings.Join(mc.Status.ServerList, ","),
+		"TransportURL":     string(transportURLSecret.Data["transport_url"]),
 	}
 
 	cms := []util.Template{

@@ -28,6 +28,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
+	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 )
 
@@ -149,8 +150,14 @@ var _ = Describe("Keystone controller", func() {
 			th.ExpectCondition(
 				keystoneApiName,
 				ConditionGetterFunc(KeystoneConditionGetter),
-				condition.MemcachedReadyCondition,
+				keystonev1.KeystoneRabbitMQTransportURLReadyCondition,
 				corev1.ConditionFalse,
+			)
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.MemcachedReadyCondition,
+				corev1.ConditionUnknown,
 			)
 			th.ExpectCondition(
 				keystoneApiName,
@@ -161,11 +168,71 @@ var _ = Describe("Keystone controller", func() {
 		})
 	})
 
-	When("Memcached is available", func() {
+	When("TransportURL is available", func() {
 		BeforeEach(func() {
 			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetDefaultKeystoneAPISpec()))
 			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
+				Namespace: namespace,
+			})
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+		})
+
+		It("should have TransportURL ready, but not Memcached ready", func() {
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionFalse,
+			)
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				keystonev1.KeystoneRabbitMQTransportURLReadyCondition,
+				corev1.ConditionTrue,
+			)
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.MemcachedReadyCondition,
+				corev1.ConditionFalse,
+			)
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.ServiceConfigReadyCondition,
+				corev1.ConditionUnknown,
+			)
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.DBReadyCondition,
+				corev1.ConditionUnknown,
+			)
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.DBSyncReadyCondition,
+				corev1.ConditionUnknown,
+			)
+		})
+	})
+
+	When("Memcached is available", func() {
+		BeforeEach(func() {
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetDefaultKeystoneAPISpec()))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
+				Namespace: namespace,
+			})
 			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
 			infra.SimulateMemcachedReady(types.NamespacedName{
 				Name:      "memcached",
@@ -179,6 +246,12 @@ var _ = Describe("Keystone controller", func() {
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.ReadyCondition,
 				corev1.ConditionFalse,
+			)
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				keystonev1.KeystoneRabbitMQTransportURLReadyCondition,
+				corev1.ConditionTrue,
 			)
 			th.ExpectCondition(
 				keystoneApiName,
@@ -225,9 +298,15 @@ var _ = Describe("Keystone controller", func() {
 
 	When("DB is created", func() {
 		BeforeEach(func() {
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
 			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetDefaultKeystoneAPISpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
+				Namespace: namespace,
+			})
 			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
 			infra.SimulateMemcachedReady(types.NamespacedName{
 				Name:      "memcached",
@@ -276,9 +355,15 @@ var _ = Describe("Keystone controller", func() {
 
 	When("DB sync is completed", func() {
 		BeforeEach(func() {
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
 			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetDefaultKeystoneAPISpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
+				Namespace: namespace,
+			})
 			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
 			infra.SimulateMemcachedReady(types.NamespacedName{
 				Name:      "memcached",
@@ -334,9 +419,15 @@ var _ = Describe("Keystone controller", func() {
 
 	When("Bootstrap is completed", func() {
 		BeforeEach(func() {
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
 			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetDefaultKeystoneAPISpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
+				Namespace: namespace,
+			})
 			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
 			infra.SimulateMemcachedReady(types.NamespacedName{
 				Name:      "memcached",
@@ -393,9 +484,15 @@ var _ = Describe("Keystone controller", func() {
 
 	When("Deployment is completed", func() {
 		BeforeEach(func() {
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
 			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetDefaultKeystoneAPISpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
+				Namespace: namespace,
+			})
 			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
 			infra.SimulateMemcachedReady(types.NamespacedName{
 				Name:      "memcached",
@@ -489,10 +586,16 @@ var _ = Describe("Keystone controller", func() {
 				"service": serviceOverride,
 			}
 
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
 			keystone := CreateKeystoneAPI(keystoneApiName, spec)
 			DeferCleanup(th.DeleteInstance, keystone)
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
+				Namespace: namespace,
+			})
 			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
 			infra.SimulateMemcachedReady(types.NamespacedName{
 				Name:      "memcached",
@@ -555,10 +658,16 @@ var _ = Describe("Keystone controller", func() {
 				"service": serviceOverride,
 			}
 
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
 			keystone := CreateKeystoneAPI(keystoneApiName, spec)
 			DeferCleanup(th.DeleteInstance, keystone)
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
+				Namespace: namespace,
+			})
 			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
 			infra.SimulateMemcachedReady(types.NamespacedName{
 				Name:      "memcached",
