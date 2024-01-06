@@ -11,7 +11,7 @@ require (
 	github.com/openstack-k8s-operators/lib-common/modules/test v0.1.2-0.20231001084618-12369665b166
 	k8s.io/api v0.26.12
 	k8s.io/apimachinery v0.26.12
-	sigs.k8s.io/controller-runtime v0.14.6
+	sigs.k8s.io/controller-runtime v0.14.7
 )
 
 require (
