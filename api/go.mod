@@ -71,9 +71,6 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-// Bump golang.org/x/net to avoid Rapid Reset CVE
-replace golang.org/x/net => golang.org/x/net v0.18.0 //allow-merging
-
 // mschuppert: map to latest commit from release-4.13 tag
 // must consistent within modules and service operators
 replace github.com/openshift/api => github.com/openshift/api v0.0.0-20230414143018-3367bc7e6ac7 //allow-merging
