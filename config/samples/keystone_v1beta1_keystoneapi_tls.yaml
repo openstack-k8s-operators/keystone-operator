@@ -1,0 +1,29 @@
+apiVersion: keystone.openstack.org/v1beta1
+kind: KeystoneAPI
+metadata:
+  name: keystone
+spec:
+  adminProject: admin
+  adminUser: admin
+  customServiceConfig: |
+    [DEFAULT]
+    debug = true
+  databaseInstance: openstack
+  databaseUser: keystone
+  preserveJobs: false
+  region: regionOne
+  secret: osp-secret
+  resources:
+    requests:
+      memory: "500Mi"
+      cpu: "1.0"
+  tls:
+    api:
+      # secret holding tls.crt and tls.key for the APIs internal k8s service
+      internal:
+        secretName: cert-keystone-internal-svc
+      # secret holding tls.crt and tls.key for the APIs public k8s service
+      public:
+        secretName: cert-keystone-public-svc
+    # secret holding the tls-ca-bundle.pem to be used as a deploymend env CA bundle
+    caBundleSecretName: combined-ca-bundle
