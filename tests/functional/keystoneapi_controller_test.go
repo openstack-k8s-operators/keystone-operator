@@ -892,6 +892,32 @@ var _ = Describe("Keystone controller", func() {
 				corev1.ConditionTrue,
 			)
 		})
+
+		It("reconfigures the keystone pod when CA changes", func() {
+			DeferCleanup(k8sClient.Delete, ctx, th.CreateCABundleSecret(caBundleSecretName))
+			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(internalCertSecretName))
+			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(publicCertSecretName))
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+
+			// Grab the current config hash
+			originalHash := GetEnvVarValue(
+				th.GetDeployment(deploymentName).Spec.Template.Spec.Containers[0].Env, "CONFIG_HASH", "")
+			Expect(originalHash).NotTo(BeEmpty())
+
+			// Change the content of the CA secret
+			th.UpdateSecret(caBundleSecretName, "tls-ca-bundle.pem", []byte("DifferentCAData"))
+
+			// Assert that the deployment is updated
+			Eventually(func(g Gomega) {
+				newHash := GetEnvVarValue(
+					th.GetDeployment(deploymentName).Spec.Template.Spec.Containers[0].Env, "CONFIG_HASH", "")
+				g.Expect(newHash).NotTo(BeEmpty())
+				g.Expect(newHash).NotTo(Equal(originalHash))
+			}, timeout, interval).Should(Succeed())
+		})
 	})
 
 	When("A KeystoneAPI is created with TLS and service override endpointURL set", func() {
