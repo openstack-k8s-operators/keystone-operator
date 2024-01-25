@@ -1,0 +1,65 @@
+#
+# Internal CA created with:
+#
+# apiVersion: cert-manager.io/v1
+# kind: Issuer
+# metadata:
+#   name: rootca-kuttl-internal
+#   namespace: openstack
+# spec:
+#   ca:
+#     secretName: rootca-kuttl-internal
+#
+# apiVersion: cert-manager.io/v1
+# kind: Certificate
+# metadata:
+#   name: rootca-kuttl-internal
+#   namespace: openstack
+# spec:
+#   commonName: rootca-kuttl-internal
+#   duration: 87600h0m0s
+#   isCA: true
+#   issuerRef:
+#     name: selfsigned-issuer
+#   privateKey:
+#     algorithm: ECDSA
+#     size: 256
+#   secretName: rootca-kuttl-internal
+#
+# External CA created with:
+#
+# apiVersion: cert-manager.io/v1
+# kind: Issuer
+# metadata:
+#   name: rootca-kuttl-public
+#   namespace: openstack
+# spec:
+#   ca:
+#     secretName: rootca-kuttl-public
+#
+# apiVersion: cert-manager.io/v1
+# kind: Certificate
+# metadata:
+#   name: rootca-kuttl-public
+#   namespace: openstack
+# spec:
+#   commonName: rootca-kuttl-public
+#   duration: 87600h0m0s
+#   isCA: true
+#   issuerRef:
+#     name: selfsigned-issuer
+#   privateKey:
+#     algorithm: ECDSA
+#     size: 256
+#   secretName: rootca-kuttl-public
+#
+# Then extracted both CAs and created added them as the bundle:
+apiVersion: v1
+data:
+  tls-ca-bundle.pem: IyByb290Y2EtaW50ZXJuYWwKLS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJmekNDQVNhZ0F3SUJBZ0lRUWxlcTNZcDBtU2kwVDNiTm03Q29UVEFLQmdncWhrak9QUVFEQWpBZ01SNHcKSEFZRFZRUURFeFZ5YjI5MFkyRXRhM1YwZEd3dGFXNTBaWEp1WVd3d0hoY05NalF3TVRFMU1URTBOelUwV2hjTgpNelF3TVRFeU1URTBOelUwV2pBZ01SNHdIQVlEVlFRREV4VnliMjkwWTJFdGEzVjBkR3d0YVc1MFpYSnVZV3d3CldUQVRCZ2NxaGtqT1BRSUJCZ2dxaGtqT1BRTUJCd05DQUFTRk9rNHJPUldVUGhoTjUrK09EN1I2MW5Gb1lBY0QKenpvUS91SW93NktjeGhwRWNQTDFxb3ZZUGxUYUJabEh3c2FpNE50VHA4aDA1RHVRSGZKOE9JNXFvMEl3UURBTwpCZ05WSFE4QkFmOEVCQU1DQXFRd0R3WURWUjBUQVFIL0JBVXdBd0VCL3pBZEJnTlZIUTRFRmdRVXE3TGtFSk1TCm1MOVpKWjBSOUluKzZkclhycEl3Q2dZSUtvWkl6ajBFQXdJRFJ3QXdSQUlnVlN1K00ydnZ3QlF3eTJHMVlhdkkKQld2RGtSNlRla0I5U0VqdzJIblRSMWtDSUZSNFNkWGFPQkFGWjVHa2RLWCtSY2IzaDFIZm52eFJEVW96bTl2agphenp3Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0KIyByb290Y2EtcHVibGljCi0tLS0tQkVHSU4gQ0VSVElGSUNBVEUtLS0tLQpNSUlCZXpDQ0FTS2dBd0lCQWdJUU5IREdZc0JzNzk4aWJERDdxL28ybGpBS0JnZ3Foa2pPUFFRREFqQWVNUnd3CkdnWURWUVFERXhOeWIyOTBZMkV0YTNWMGRHd3RjSFZpYkdsak1CNFhEVEkwTURFeE5URXdNVFV6TmxvWERUTTAKTURFeE1qRXdNVFV6Tmxvd0hqRWNNQm9HQTFVRUF4TVRjbTl2ZEdOaExXdDFkSFJzTFhCMVlteHBZekJaTUJNRwpCeXFHU000OUFnRUdDQ3FHU000OUF3RUhBMElBQkQ3OGF2WHFocmhDNXc4czlXa2Q0SXBiZUV1MDNDUitYWFVkCmtEek9SeXhhOXdjY0lkRGl2YkdKakpGWlRUY1ZtYmpxMUJNWXNqcjEyVUlFNUVUM1ZscWpRakJBTUE0R0ExVWQKRHdFQi93UUVBd0lDcERBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUIwR0ExVWREZ1FXQkJUS0ppeldVSjllVUtpMQpkczBscjZjNnNEN0VCREFLQmdncWhrak9QUVFEQWdOSEFEQkVBaUJJWndZcTYxQnFNSmFCNlVjRm9Sc3hlY3dICjV6L3pNT2RyT3llMG1OaThKZ0lnUUxCNHdES3JwZjl0WDJsb00rMHVUb3BBRFNZSW5yY2ZWdTRGQnVZVTNJZz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+kind: Secret
+metadata:
+  labels:
+    combined-ca-bundle: ""
+  name: combined-ca-bundle
+type: Opaque

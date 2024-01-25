@@ -1,0 +1,168 @@
+#
+# Check for:
+#
+# - 1 KeystoneAPI CR
+# - Deployment with tls volumes
+
+apiVersion: keystone.openstack.org/v1beta1
+kind: KeystoneAPI
+metadata:
+  name: keystone
+spec:
+  tls:
+    api:
+      internal:
+        secretName: cert-keystone-internal-svc
+      public:
+        secretName: cert-keystone-public-svc
+    caBundleSecretName: combined-ca-bundle
+status:
+  databaseHostname: openstack
+  readyCount: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keystone
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        service: keystone
+    spec:
+      containers:
+      - args:
+        - -c
+        - /usr/local/bin/kolla_set_configs && /usr/local/bin/kolla_start
+        volumeMounts:
+        - mountPath: /usr/local/bin/container-scripts
+          name: scripts
+          readOnly: true
+        - mountPath: /var/lib/config-data/merged
+          name: config-data-merged
+        - mountPath: /var/lib/kolla/config_files/config.json
+          name: config-data-merged
+          readOnly: true
+          subPath: keystone-api-config.json
+        - mountPath: /var/lib/fernet-keys
+          name: fernet-keys
+          readOnly: true
+        - mountPath: /var/lib/credential-keys
+          name: credential-keys
+          readOnly: true
+        - mountPath: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+          name: combined-ca-bundle
+          readOnly: true
+          subPath: tls-ca-bundle.pem
+        - mountPath: /var/lib/config-data/tls/certs/internal.crt
+          name: internal-tls-certs
+          readOnly: true
+          subPath: tls.crt
+        - mountPath: /var/lib/config-data/tls/private/internal.key
+          name: internal-tls-certs
+          readOnly: true
+          subPath: tls.key
+        - mountPath: /var/lib/config-data/tls/certs/public.crt
+          name: public-tls-certs
+          readOnly: true
+          subPath: tls.crt
+        - mountPath: /var/lib/config-data/tls/private/public.key
+          name: public-tls-certs
+          readOnly: true
+          subPath: tls.key
+      initContainers:
+      - args:
+        - -c
+        - /usr/local/bin/container-scripts/init.sh
+        volumeMounts:
+        - mountPath: /usr/local/bin/container-scripts
+          name: scripts
+          readOnly: true
+        - mountPath: /var/lib/config-data/default
+          name: config-data
+          readOnly: true
+        - mountPath: /var/lib/config-data/merged
+          name: config-data-merged
+        - mountPath: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+          name: combined-ca-bundle
+          readOnly: true
+          subPath: tls-ca-bundle.pem
+        - mountPath: /var/lib/config-data/tls/certs/internal.crt
+          name: internal-tls-certs
+          readOnly: true
+          subPath: tls.crt
+        - mountPath: /var/lib/config-data/tls/private/internal.key
+          name: internal-tls-certs
+          readOnly: true
+          subPath: tls.key
+        - mountPath: /var/lib/config-data/tls/certs/public.crt
+          name: public-tls-certs
+          readOnly: true
+          subPath: tls.crt
+        - mountPath: /var/lib/config-data/tls/private/public.key
+          name: public-tls-certs
+          readOnly: true
+          subPath: tls.key
+      volumes:
+      - configMap:
+          defaultMode: 493
+          name: keystone-scripts
+        name: scripts
+      - configMap:
+          defaultMode: 416
+          name: keystone-config-data
+        name: config-data
+      - emptyDir: {}
+        name: config-data-merged
+      - name: fernet-keys
+        secret:
+          defaultMode: 420
+          items:
+          - key: FernetKeys0
+            path: "0"
+          - key: FernetKeys1
+            path: "1"
+          secretName: keystone
+      - name: credential-keys
+        secret:
+          defaultMode: 420
+          items:
+          - key: CredentialKeys0
+            path: "0"
+          - key: CredentialKeys1
+            path: "1"
+          secretName: keystone
+      - name: combined-ca-bundle
+        secret:
+          defaultMode: 292
+          secretName: combined-ca-bundle
+      - name: internal-tls-certs
+        secret:
+          defaultMode: 256
+          secretName: cert-keystone-internal-svc
+      - name: public-tls-certs
+        secret:
+          defaultMode: 256
+          secretName: cert-keystone-public-svc
+---
+# the actual addresses of the apiEndpoints are platform specific, so we can't rely on
+# kuttl asserts to check them. This short script gathers the addresses and checks that
+# the three endpoints are defined and their addresses follow the default pattern
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+commands:
+  - script: |
+      # the actual addresses of the apiEndpoints are platform specific, so we can't rely on
+      # kuttl asserts to check them. This short script gathers the addresses and checks that
+      # the three endpoints are defined and their addresses follow the default pattern
+      template='{{.status.apiEndpoints.internal}}{{":"}}{{.status.apiEndpoints.public}}{{"\n"}}'
+      regex="https:\/\/keystone-internal.$NAMESPACE.*:https:\/\/keystone-public.$NAMESPACE.*"
+      apiEndpoints=$(oc get -n $NAMESPACE KeystoneAPI  keystone -o go-template="$template")
+      matches=$(echo "$apiEndpoints" | sed -e "s?$regex??")
+      if [ -z "$matches" ]; then
+        exit 0
+      else
+        echo "Endpoints URLS: $apiEndpoints do not match regex"
+        exit 1
+      fi

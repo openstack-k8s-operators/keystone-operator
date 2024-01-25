@@ -1,0 +1,20 @@
+#
+# Check for:
+#
+# - 2 tls cert secrets
+# - 1 tls ca bundle secrets
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cert-keystone-internal-svc
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cert-keystone-public-svc
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: combined-ca-bundle
