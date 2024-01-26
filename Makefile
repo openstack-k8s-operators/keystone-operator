@@ -139,9 +139,13 @@ run: manifests generate fmt vet ## Run a controller from your host.
 	/bin/bash hack/clean_local_webhook.sh
 	go run ./main.go -metrics-bind-address ":$(METRICS_PORT)" -health-probe-bind-address ":$(HEALTH_PORT)"
 
+# Extra vars which will be passed to the Docker-build
+DOCKER_BUILD_ARGS ?=
+
 .PHONY: docker-build
 docker-build: test ## Build docker image with the manager.
 	podman build -t ${IMG} .
+	podman build -t ${IMG} . ${DOCKER_BUILD_ARGS}
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
