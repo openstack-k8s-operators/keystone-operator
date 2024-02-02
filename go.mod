@@ -12,7 +12,7 @@ require (
 	github.com/openstack-k8s-operators/lib-common/modules/common v0.3.1-0.20240124141114-55d029e4658b
 	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.3.1-0.20240124141114-55d029e4658b
 	github.com/openstack-k8s-operators/lib-common/modules/test v0.3.1-0.20240124141114-55d029e4658b
-	github.com/openstack-k8s-operators/mariadb-operator/api v0.3.0
+	github.com/openstack-k8s-operators/mariadb-operator/api v0.3.1-0.20240124160436-36095347284f
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.26.13
 	k8s.io/apimachinery v0.26.13
