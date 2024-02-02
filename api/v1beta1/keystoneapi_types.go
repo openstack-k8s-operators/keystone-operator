@@ -121,11 +121,6 @@ type KeystoneAPISpec struct {
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	// Debug - enable debug for different deploy stages. If an init container is used, it runs and the
-	// actual action pod gets started with sleep infinity
-	Debug KeystoneDebug `json:"debug,omitempty"`
-
-	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=false
 	// PreserveJobs - do not delete jobs after they finished e.g. to check logs
 	PreserveJobs bool `json:"preserveJobs"`
@@ -185,22 +180,6 @@ type PasswordSelector struct {
 	// +kubebuilder:default="AdminPassword"
 	// Admin - Selector to get the keystone Admin password from the Secret
 	Admin string `json:"admin"`
-}
-
-// KeystoneDebug defines the observed state of KeystoneAPI
-type KeystoneDebug struct {
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=false
-	// DBSync enable debug
-	DBSync bool `json:"dbSync"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=false
-	// ReadyCount enable debug
-	Bootstrap bool `json:"bootstrap"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=false
-	// Service enable debug
-	Service bool `json:"service"`
 }
 
 // KeystoneAPIStatus defines the observed state of KeystoneAPI

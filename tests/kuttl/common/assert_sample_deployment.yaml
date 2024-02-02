@@ -20,10 +20,6 @@ spec:
     debug = true
   databaseInstance: openstack
   databaseUser: keystone
-  debug:
-    bootstrap: false
-    dbSync: false
-    service: false
   memcachedInstance: memcached
   passwordSelectors:
     admin: AdminPassword

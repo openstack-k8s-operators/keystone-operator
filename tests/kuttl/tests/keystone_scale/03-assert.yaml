@@ -19,10 +19,6 @@ spec:
     debug = true
   databaseInstance: openstack
   databaseUser: keystone
-  debug:
-    bootstrap: false
-    dbSync: false
-    service: false
   passwordSelectors:
     admin: AdminPassword
     database: KeystoneDatabasePassword
