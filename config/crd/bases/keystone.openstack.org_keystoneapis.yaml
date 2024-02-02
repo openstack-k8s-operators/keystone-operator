@@ -78,24 +78,6 @@ spec:
                   defaults to keystone TODO: -> implement needs work in mariadb-operator,
                   right now only keystone'
                 type: string
-              debug:
-                description: Debug - enable debug for different deploy stages. If
-                  an init container is used, it runs and the actual action pod gets
-                  started with sleep infinity
-                properties:
-                  bootstrap:
-                    default: false
-                    description: ReadyCount enable debug
-                    type: boolean
-                  dbSync:
-                    default: false
-                    description: DBSync enable debug
-                    type: boolean
-                  service:
-                    default: false
-                    description: Service enable debug
-                    type: boolean
-                type: object
               defaultConfigOverwrite:
                 additionalProperties:
                   type: string
