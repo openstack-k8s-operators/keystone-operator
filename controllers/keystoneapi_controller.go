@@ -463,65 +463,6 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	}
 
 	//
-	// create service DB instance
-	//
-	db := mariadbv1.NewDatabase(
-		instance.Name,
-		instance.Spec.DatabaseUser,
-		instance.Spec.Secret,
-		map[string]string{
-			"dbName": instance.Spec.DatabaseInstance,
-		},
-	)
-	// create or patch the DB
-	ctrlResult, err := db.CreateOrPatchDB(
-		ctx,
-		helper,
-	)
-	if err != nil {
-		instance.Status.Conditions.Set(condition.FalseCondition(
-			condition.DBReadyCondition,
-			condition.ErrorReason,
-			condition.SeverityWarning,
-			condition.DBReadyErrorMessage,
-			err.Error()))
-		return ctrl.Result{}, err
-	}
-	if (ctrlResult != ctrl.Result{}) {
-		instance.Status.Conditions.Set(condition.FalseCondition(
-			condition.DBReadyCondition,
-			condition.RequestedReason,
-			condition.SeverityInfo,
-			condition.DBReadyRunningMessage))
-		return ctrlResult, nil
-	}
-
-	// wait for the DB to be setup
-	ctrlResult, err = db.WaitForDBCreated(ctx, helper)
-	if err != nil {
-		instance.Status.Conditions.Set(condition.FalseCondition(
-			condition.DBReadyCondition,
-			condition.ErrorReason,
-			condition.SeverityWarning,
-			condition.DBReadyErrorMessage,
-			err.Error()))
-		return ctrlResult, err
-	}
-	if (ctrlResult != ctrl.Result{}) {
-		instance.Status.Conditions.Set(condition.FalseCondition(
-			condition.DBReadyCondition,
-			condition.RequestedReason,
-			condition.SeverityInfo,
-			condition.DBReadyRunningMessage))
-		return ctrlResult, nil
-	}
-	// update Status.DatabaseHostname, used to bootstrap/config the service
-	instance.Status.DatabaseHostname = db.GetDatabaseHostname()
-	instance.Status.Conditions.MarkTrue(condition.DBReadyCondition, condition.DBReadyMessage)
-
-	// create service DB - end
-
-	//
 	// run keystone db sync
 	//
 	dbSyncHash := instance.Status.Hash[keystonev1.DbSyncHash]
@@ -533,7 +474,7 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 		5*time.Second,
 		dbSyncHash,
 	)
-	ctrlResult, err = dbSyncjob.DoJob(
+	ctrlResult, err := dbSyncjob.DoJob(
 		ctx,
 		helper,
 	)
@@ -788,6 +729,65 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	instance.Status.Conditions.MarkTrue(condition.InputReadyCondition, condition.InputReadyMessage)
 
 	// run check OpenStack secret - end
+
+	//
+	// create service DB instance
+	//
+	db := mariadbv1.NewDatabase(
+		instance.Name,
+		instance.Spec.DatabaseUser,
+		instance.Spec.Secret,
+		map[string]string{
+			"dbName": instance.Spec.DatabaseInstance,
+		},
+	)
+	// create or patch the DB
+	ctrlResult, err := db.CreateOrPatchDB(
+		ctx,
+		helper,
+	)
+	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.DBReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.DBReadyErrorMessage,
+			err.Error()))
+		return ctrl.Result{}, err
+	}
+	if (ctrlResult != ctrl.Result{}) {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.DBReadyCondition,
+			condition.RequestedReason,
+			condition.SeverityInfo,
+			condition.DBReadyRunningMessage))
+		return ctrlResult, nil
+	}
+
+	// wait for the DB to be setup
+	ctrlResult, err = db.WaitForDBCreated(ctx, helper)
+	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.DBReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.DBReadyErrorMessage,
+			err.Error()))
+		return ctrlResult, err
+	}
+	if (ctrlResult != ctrl.Result{}) {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.DBReadyCondition,
+			condition.RequestedReason,
+			condition.SeverityInfo,
+			condition.DBReadyRunningMessage))
+		return ctrlResult, nil
+	}
+	// update Status.DatabaseHostname, used to bootstrap/config the service
+	instance.Status.DatabaseHostname = db.GetDatabaseHostname()
+	instance.Status.Conditions.MarkTrue(condition.DBReadyCondition, condition.DBReadyMessage)
+
+	// create service DB - end
 
 	//
 	// create RabbitMQ transportURL CR and get the actual URL from the associated secret that is created
@@ -1172,7 +1172,9 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	// custom.conf is going to /etc/<service>/<service>.conf.d
 	// all other files get placed into /etc/<service> to allow overwrite of e.g. policy.json
 	// TODO: make sure custom.conf can not be overwritten
-	customData := map[string]string{common.CustomServiceConfigFileName: instance.Spec.CustomServiceConfig}
+	customData := map[string]string{
+		common.CustomServiceConfigFileName: instance.Spec.CustomServiceConfig,
+	}
 	for key, data := range instance.Spec.DefaultConfigOverwrite {
 		customData[key] = data
 	}
