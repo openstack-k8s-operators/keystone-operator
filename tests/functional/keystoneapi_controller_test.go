@@ -374,13 +374,16 @@ var _ = Describe("Keystone controller", func() {
 			)
 		})
 
-		It("should create a Secret for keystone.conf", func() {
+		It("should create a Secret for keystone.conf and my.cnf", func() {
 			scrt := th.GetSecret(keystoneApiConfigDataName)
 			configData := string(scrt.Data["keystone.conf"])
 			Expect(configData).To(
 				ContainSubstring("memcache_servers=memcached-0.memcached:11211,memcached-1.memcached:11211,memcached-2.memcached:11211"))
 			Expect(configData).To(
-				ContainSubstring(fmt.Sprintf("connection=mysql+pymysql://keystone:12345678@hostname-for-openstack.%s.svc/keystone", namespace)))
+				ContainSubstring(fmt.Sprintf("connection=mysql+pymysql://keystone:12345678@hostname-for-openstack.%s.svc/keystone?read_default_file=/etc/my.cnf", namespace)))
+			configData = string(scrt.Data["my.cnf"])
+			Expect(configData).To(
+				ContainSubstring("[client]\nssl=0"))
 		})
 		It("should create a Secret for fernet keys", func() {
 			th.GetSecret(types.NamespacedName{
@@ -904,13 +907,16 @@ var _ = Describe("Keystone controller", func() {
 			th.AssertVolumeMountExists(caBundleSecretName.Name, "tls-ca-bundle.pem", j.Spec.Template.Spec.Containers[0].VolumeMounts)
 		})
 
-		It("should create a Secret for keystone.conf", func() {
+		It("should create a Secret for keystone.conf and my.cnf", func() {
 			scrt := th.GetSecret(keystoneApiConfigDataName)
 			configData := string(scrt.Data["keystone.conf"])
 			Expect(configData).To(
 				ContainSubstring("memcache_servers=memcached-0.memcached:11211,memcached-1.memcached:11211,memcached-2.memcached:11211"))
 			Expect(configData).To(
-				ContainSubstring(fmt.Sprintf("connection=mysql+pymysql://keystone:12345678@hostname-for-openstack.%s.svc/keystone", namespace)))
+				ContainSubstring(fmt.Sprintf("connection=mysql+pymysql://keystone:12345678@hostname-for-openstack.%s.svc/keystone?read_default_file=/etc/my.cnf", namespace)))
+			configData = string(scrt.Data["my.cnf"])
+			Expect(configData).To(
+				ContainSubstring("[client]\nssl-ca=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem\nssl=1"))
 		})
 
 		It("it creates deployment with CA and service certs mounted", func() {

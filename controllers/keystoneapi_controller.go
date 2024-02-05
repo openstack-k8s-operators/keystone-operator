@@ -733,60 +733,12 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	//
 	// create service DB instance
 	//
-	db := mariadbv1.NewDatabase(
-		instance.Name,
-		instance.Spec.DatabaseUser,
-		instance.Spec.Secret,
-		map[string]string{
-			"dbName": instance.Spec.DatabaseInstance,
-		},
-	)
-	// create or patch the DB
-	ctrlResult, err := db.CreateOrPatchDB(
-		ctx,
-		helper,
-	)
+	db, result, err := r.ensureDB(ctx, helper, instance)
 	if err != nil {
-		instance.Status.Conditions.Set(condition.FalseCondition(
-			condition.DBReadyCondition,
-			condition.ErrorReason,
-			condition.SeverityWarning,
-			condition.DBReadyErrorMessage,
-			err.Error()))
 		return ctrl.Result{}, err
+	} else if (result != ctrl.Result{}) {
+		return result, nil
 	}
-	if (ctrlResult != ctrl.Result{}) {
-		instance.Status.Conditions.Set(condition.FalseCondition(
-			condition.DBReadyCondition,
-			condition.RequestedReason,
-			condition.SeverityInfo,
-			condition.DBReadyRunningMessage))
-		return ctrlResult, nil
-	}
-
-	// wait for the DB to be setup
-	ctrlResult, err = db.WaitForDBCreated(ctx, helper)
-	if err != nil {
-		instance.Status.Conditions.Set(condition.FalseCondition(
-			condition.DBReadyCondition,
-			condition.ErrorReason,
-			condition.SeverityWarning,
-			condition.DBReadyErrorMessage,
-			err.Error()))
-		return ctrlResult, err
-	}
-	if (ctrlResult != ctrl.Result{}) {
-		instance.Status.Conditions.Set(condition.FalseCondition(
-			condition.DBReadyCondition,
-			condition.RequestedReason,
-			condition.SeverityInfo,
-			condition.DBReadyRunningMessage))
-		return ctrlResult, nil
-	}
-	// update Status.DatabaseHostname, used to bootstrap/config the service
-	instance.Status.DatabaseHostname = db.GetDatabaseHostname()
-	instance.Status.Conditions.MarkTrue(condition.DBReadyCondition, condition.DBReadyMessage)
-
 	// create service DB - end
 
 	//
@@ -880,7 +832,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	// - %-config configmap holding minimal keystone config required to get the service up, user can add additional files to be added to the service
 	// - parameters which has passwords gets added from the OpenStack secret via the init container
 	//
-	err = r.generateServiceConfigMaps(ctx, instance, helper, &configMapVars, memcached)
+	err = r.generateServiceConfigMaps(ctx, instance, helper, &configMapVars, memcached, db)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.ServiceConfigReadyCondition,
@@ -1158,6 +1110,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	h *helper.Helper,
 	envVars *map[string]env.Setter,
 	mc *memcachedv1.Memcached,
+	db *mariadbv1.Database,
 ) error {
 	//
 	// create Configmap/Secret required for keystone input
@@ -1168,12 +1121,18 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 
 	cmLabels := labels.GetLabels(instance, labels.GetGroupLabel(keystone.ServiceName), map[string]string{})
 
+	var tlsCfg *tls.Service
+	if instance.Spec.TLS.Ca.CaBundleSecretName != "" {
+		tlsCfg = &tls.Service{}
+	}
+
 	// customData hold any customization for the service.
 	// custom.conf is going to /etc/<service>/<service>.conf.d
 	// all other files get placed into /etc/<service> to allow overwrite of e.g. policy.json
 	// TODO: make sure custom.conf can not be overwritten
 	customData := map[string]string{
 		common.CustomServiceConfigFileName: instance.Spec.CustomServiceConfig,
+		"my.cnf":                           db.GetDatabaseClientConfig(tlsCfg), //(mschuppert) for now just get the default my.cnf
 	}
 	for key, data := range instance.Spec.DefaultConfigOverwrite {
 		customData[key] = data
@@ -1192,7 +1151,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	templateParameters := map[string]interface{}{
 		"memcachedServers": strings.Join(mc.Status.ServerList, ","),
 		"TransportURL":     string(transportURLSecret.Data["transport_url"]),
-		"DatabaseConnection": fmt.Sprintf("mysql+pymysql://%s:%s@%s/%s",
+		"DatabaseConnection": fmt.Sprintf("mysql+pymysql://%s:%s@%s/%s?read_default_file=/etc/my.cnf",
 			instance.Spec.DatabaseUser,
 			string(ospSecret.Data[instance.Spec.PasswordSelectors.Database]),
 			instance.Status.DatabaseHostname,
@@ -1414,4 +1373,71 @@ func (r *KeystoneAPIReconciler) getKeystoneMemcached(
 		return nil, err
 	}
 	return memcached, err
+}
+
+func (r *KeystoneAPIReconciler) ensureDB(
+	ctx context.Context,
+	h *helper.Helper,
+	instance *keystonev1.KeystoneAPI,
+) (*mariadbv1.Database, ctrl.Result, error) {
+	//
+	// create service DB instance
+	//
+	db := mariadbv1.NewDatabase(
+		instance.Name,
+		instance.Spec.DatabaseUser,
+		instance.Spec.Secret,
+		map[string]string{
+			"dbName": instance.Spec.DatabaseInstance,
+		},
+	)
+
+	// create or patch the DB
+	ctrlResult, err := db.CreateOrPatchDBByName(
+		ctx,
+		h,
+		instance.Spec.DatabaseInstance,
+	)
+	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.DBReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.DBReadyErrorMessage,
+			err.Error()))
+		return db, ctrl.Result{}, err
+	}
+	if (ctrlResult != ctrl.Result{}) {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.DBReadyCondition,
+			condition.RequestedReason,
+			condition.SeverityInfo,
+			condition.DBReadyRunningMessage))
+		return db, ctrlResult, nil
+	}
+	// wait for the DB to be setup
+	// (ksambor) should we use WaitForDBCreatedWithTimeout instead?
+	ctrlResult, err = db.WaitForDBCreated(ctx, h)
+	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.DBReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.DBReadyErrorMessage,
+			err.Error()))
+		return db, ctrlResult, err
+	}
+	if (ctrlResult != ctrl.Result{}) {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.DBReadyCondition,
+			condition.RequestedReason,
+			condition.SeverityInfo,
+			condition.DBReadyRunningMessage))
+		return db, ctrlResult, nil
+	}
+
+	// update Status.DatabaseHostname, used to config the service
+	instance.Status.DatabaseHostname = db.GetDatabaseHostname()
+	instance.Status.Conditions.MarkTrue(condition.DBReadyCondition, condition.DBReadyMessage)
+	return db, ctrlResult, nil
 }
