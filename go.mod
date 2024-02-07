@@ -11,7 +11,7 @@ require (
 	github.com/onsi/gomega v1.30.0
 	github.com/openstack-k8s-operators/infra-operator/apis v0.3.1-0.20240125112246-15881e3c5305
 	github.com/openstack-k8s-operators/keystone-operator/api v0.1.1-0.20230920085319-92ae0260bbf3
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.3.1-0.20240124141114-55d029e4658b
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.3.1-0.20240129151020-c9467a8fbbfc
 	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.3.1-0.20240124141114-55d029e4658b
 	github.com/openstack-k8s-operators/lib-common/modules/test v0.3.1-0.20240124141114-55d029e4658b
 	github.com/openstack-k8s-operators/mariadb-operator/api v0.3.1-0.20240208072109-4447f245e487
@@ -89,3 +89,12 @@ replace github.com/openstack-k8s-operators/keystone-operator/api => ./api
 // mschuppert: map to latest commit from release-4.13 tag
 // must consistent within modules and service operators
 replace github.com/openshift/api => github.com/openshift/api v0.0.0-20230414143018-3367bc7e6ac7 //allow-merging
+
+// bshephar:bump-controller-runtime
+replace ( //allow-merging
+	github.com/openstack-k8s-operators/infra-operator/apis => github.com/bshephar/infra-operator/apis v0.0.0-20240203105616-470002c29854
+	github.com/openstack-k8s-operators/lib-common/modules/common => github.com/bshephar/lib-common/modules/common v0.0.0-20240205000728-69fddd97f72e
+	github.com/openstack-k8s-operators/lib-common/modules/openstack => github.com/bshephar/lib-common/modules/openstack v0.0.0-20240205000728-69fddd97f72e
+	github.com/openstack-k8s-operators/lib-common/modules/test => github.com/bshephar/lib-common/modules/test v0.0.0-20240205000728-69fddd97f72e
+	github.com/openstack-k8s-operators/mariadb-operator/api => github.com/bshephar/mariadb-operator/api v0.0.0-20240206224814-4264f1e7465a
+)
