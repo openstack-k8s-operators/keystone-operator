@@ -182,6 +182,7 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		cl := condition.CreateList(
 			condition.UnknownCondition(condition.DBReadyCondition, condition.InitReason, condition.DBReadyInitMessage),
 			condition.UnknownCondition(condition.DBSyncReadyCondition, condition.InitReason, condition.DBSyncReadyInitMessage),
+			condition.UnknownCondition(condition.RabbitMqTransportURLReadyCondition, condition.InitReason, condition.RabbitMqTransportURLReadyInitMessage),
 			condition.UnknownCondition(condition.MemcachedReadyCondition, condition.InitReason, condition.MemcachedReadyInitMessage),
 			condition.UnknownCondition(condition.ExposeServiceReadyCondition, condition.InitReason, condition.ExposeServiceReadyInitMessage),
 			condition.UnknownCondition(condition.BootstrapReadyCondition, condition.InitReason, condition.BootstrapReadyInitMessage),
@@ -796,10 +797,10 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
-			keystonev1.KeystoneRabbitMQTransportURLReadyCondition,
+			condition.RabbitMqTransportURLReadyCondition,
 			condition.ErrorReason,
 			condition.SeverityWarning,
-			keystonev1.KeystoneRabbitMQTransportURLReadyErrorMessage,
+			condition.RabbitMqTransportURLReadyErrorMessage,
 			err.Error()))
 		return ctrl.Result{}, err
 	}
@@ -812,14 +813,14 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	if instance.Status.TransportURLSecret == "" {
 		l.Info(fmt.Sprintf("Waiting for TransportURL %s secret to be created", transportURL.Name))
 		instance.Status.Conditions.Set(condition.FalseCondition(
-			keystonev1.KeystoneRabbitMQTransportURLReadyCondition,
+			condition.RabbitMqTransportURLReadyCondition,
 			condition.RequestedReason,
 			condition.SeverityInfo,
-			keystonev1.KeystoneRabbitMQTransportURLReadyRunningMessage))
+			condition.RabbitMqTransportURLReadyRunningMessage))
 		return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, nil
 	}
 	l.Info(fmt.Sprintf("TransportURL secret name %s", transportURL.Status.SecretName))
-	instance.Status.Conditions.MarkTrue(keystonev1.KeystoneRabbitMQTransportURLReadyCondition, keystonev1.KeystoneRabbitMQTransportURLReadyMessage)
+	instance.Status.Conditions.MarkTrue(condition.RabbitMqTransportURLReadyCondition, condition.RabbitMqTransportURLReadyMessage)
 	// run check rabbitmq - end
 
 	//
