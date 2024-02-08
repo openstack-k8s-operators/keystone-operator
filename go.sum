@@ -242,8 +242,8 @@ github.com/openstack-k8s-operators/lib-common/modules/openstack v0.3.1-0.2024012
 github.com/openstack-k8s-operators/lib-common/modules/openstack v0.3.1-0.20240124141114-55d029e4658b/go.mod h1:GammFyM5i2OY0lBEAcyEi9Gk46jXFIlD+z+JqBikfoY=
 github.com/openstack-k8s-operators/lib-common/modules/test v0.3.1-0.20240124141114-55d029e4658b h1:Jr6BWxwT6zCNC6TPxrKzO99te7v6phhmMRGVC9LD+nM=
 github.com/openstack-k8s-operators/lib-common/modules/test v0.3.1-0.20240124141114-55d029e4658b/go.mod h1:ni4mvKeubWsTjKmcToJ+hIo7pJipM9hwiUv8qhm1R6Y=
-github.com/openstack-k8s-operators/mariadb-operator/api v0.3.1-0.20240124160436-36095347284f h1:01HrDX32rjFdvbSOMfz0fBCfxK6Kqthv0BgvimWL7Vc=
-github.com/openstack-k8s-operators/mariadb-operator/api v0.3.1-0.20240124160436-36095347284f/go.mod h1:gAIo5SMvTTgUomxGC51T3PHIyremhe8xUvz2xpbuCsI=
+github.com/openstack-k8s-operators/mariadb-operator/api v0.3.1-0.20240208072109-4447f245e487 h1:CyrE+x+AuXjURsiqj+fxOSEbn73hjOvh9g6ZXD4eU9k=
+github.com/openstack-k8s-operators/mariadb-operator/api v0.3.1-0.20240208072109-4447f245e487/go.mod h1:D4sr4UipU4qjyrcO2mjW8YlSm48AdkY69dloASUbNYE=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=

@@ -33,7 +33,7 @@ spec:
       memory: 500Mi
   secret: osp-secret
 status:
-  databaseHostname: openstack
+  databaseHostname: openstack.keystone-kuttl-tests.svc
   readyCount: 1
 ---
 apiVersion: apps/v1
@@ -109,7 +109,7 @@ spec:
               key: AdminPassword
               name: osp-secret
         - name: DatabaseHost
-          value: openstack
+          value: openstack.keystone-kuttl-tests.svc
         - name: DatabaseName
           value: keystone
         - name: DatabaseUser

@@ -17,7 +17,7 @@ spec:
         secretName: cert-keystone-public-svc
     caBundleSecretName: combined-ca-bundle
 status:
-  databaseHostname: openstack
+  databaseHostname: openstack.keystone-kuttl-tests.svc
   readyCount: 1
 ---
 apiVersion: apps/v1
