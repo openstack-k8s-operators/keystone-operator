@@ -1188,9 +1188,20 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		return err
 	}
 
+	ospSecret, _, err := secret.GetSecret(ctx, h, instance.Spec.Secret, instance.Namespace)
+	if err != nil {
+		return err
+	}
+
 	templateParameters := map[string]interface{}{
 		"memcachedServers": strings.Join(mc.Status.ServerList, ","),
 		"TransportURL":     string(transportURLSecret.Data["transport_url"]),
+		"DatabaseConnection": fmt.Sprintf("mysql+pymysql://%s:%s@%s/%s",
+			instance.Spec.DatabaseUser,
+			string(ospSecret.Data[instance.Spec.PasswordSelectors.Database]),
+			instance.Status.DatabaseHostname,
+			keystone.DatabaseName,
+		),
 	}
 
 	// create httpd  vhost template parameters
@@ -1208,17 +1219,16 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	}
 	templateParameters["VHosts"] = httpdVhostConfig
 
-	cms := []util.Template{
-		// ScriptsConfigMap
+	tmpl := []util.Template{
+		// Scripts
 		{
-			Name:               fmt.Sprintf("%s-scripts", instance.Name),
-			Namespace:          instance.Namespace,
-			Type:               util.TemplateTypeScripts,
-			InstanceType:       instance.Kind,
-			AdditionalTemplate: map[string]string{"common.sh": "/common/common.sh"},
-			Labels:             cmLabels,
+			Name:         fmt.Sprintf("%s-scripts", instance.Name),
+			Namespace:    instance.Namespace,
+			Type:         util.TemplateTypeScripts,
+			InstanceType: instance.Kind,
+			Labels:       cmLabels,
 		},
-		// ConfigMap
+		// Configs
 		{
 			Name:          fmt.Sprintf("%s-config-data", instance.Name),
 			Namespace:     instance.Namespace,
@@ -1229,7 +1239,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			Labels:        cmLabels,
 		},
 	}
-	return configmap.EnsureConfigMaps(ctx, h, instance, cms, envVars)
+	return secret.EnsureSecrets(ctx, h, instance, tmpl, envVars)
 }
 
 // reconcileConfigMap -  creates clouds.yaml

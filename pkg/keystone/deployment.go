@@ -87,13 +87,11 @@ func Deployment(
 	// create Volume and VolumeMounts
 	volumes := getVolumes(instance.Name)
 	volumeMounts := getVolumeMounts()
-	initVolumeMounts := getInitVolumeMounts()
 
 	// add CA cert if defined
 	if instance.Spec.TLS.CaBundleSecretName != "" {
 		volumes = append(volumes, instance.Spec.TLS.CreateVolume())
 		volumeMounts = append(volumeMounts, instance.Spec.TLS.CreateVolumeMounts(nil)...)
-		initVolumeMounts = append(initVolumeMounts, instance.Spec.TLS.CreateVolumeMounts(nil)...)
 	}
 
 	for _, endpt := range []service.Endpoint{service.EndpointInternal, service.EndpointPublic} {
@@ -112,7 +110,6 @@ func Deployment(
 			}
 			volumes = append(volumes, svc.CreateVolume(endpt.String()))
 			volumeMounts = append(volumeMounts, svc.CreateVolumeMounts(endpt.String())...)
-			initVolumeMounts = append(initVolumeMounts, svc.CreateVolumeMounts(endpt.String())...)
 		}
 	}
 
@@ -169,18 +166,6 @@ func Deployment(
 	if instance.Spec.NodeSelector != nil && len(instance.Spec.NodeSelector) > 0 {
 		deployment.Spec.Template.Spec.NodeSelector = instance.Spec.NodeSelector
 	}
-
-	initContainerDetails := APIDetails{
-		ContainerImage:       instance.Spec.ContainerImage,
-		DatabaseHost:         instance.Status.DatabaseHostname,
-		DatabaseUser:         instance.Spec.DatabaseUser,
-		DatabaseName:         DatabaseName,
-		OSPSecret:            instance.Spec.Secret,
-		DBPasswordSelector:   instance.Spec.PasswordSelectors.Database,
-		UserPasswordSelector: instance.Spec.PasswordSelectors.Admin,
-		VolumeMounts:         initVolumeMounts,
-	}
-	deployment.Spec.Template.Spec.InitContainers = initContainer(initContainerDetails)
 
 	return deployment, nil
 }
