@@ -341,6 +341,8 @@ var _ = Describe("Keystone controller", func() {
 					},
 				),
 			)
+
+			mariadb.SimulateMariaDBAccountCompleted(keystoneApiName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 		})
 
@@ -398,6 +400,7 @@ var _ = Describe("Keystone controller", func() {
 					},
 				),
 			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneApiName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 			th.SimulateJobSuccess(dbSyncJobName)
 		})
@@ -462,6 +465,7 @@ var _ = Describe("Keystone controller", func() {
 					},
 				),
 			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneApiName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 			th.SimulateJobSuccess(dbSyncJobName)
 			th.SimulateJobSuccess(bootstrapJobName)
@@ -527,6 +531,7 @@ var _ = Describe("Keystone controller", func() {
 					},
 				),
 			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneApiName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 			th.SimulateJobSuccess(dbSyncJobName)
 			th.SimulateJobSuccess(bootstrapJobName)
@@ -576,6 +581,56 @@ var _ = Describe("Keystone controller", func() {
 				Namespace: keystoneApiName.Namespace,
 				Name:      "openstack-config-secret",
 			})
+		})
+	})
+
+	When("Deployment is completed", func() {
+		BeforeEach(func() {
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetDefaultKeystoneAPISpec()))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
+				Namespace: namespace,
+			})
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneApiName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+			th.SimulateDeploymentReplicaReady(deploymentName)
+		})
+
+		It("removes the finalizers when deleted", func() {
+			keystone := GetKeystoneAPI(keystoneApiName)
+			Expect(keystone.Finalizers).To(ContainElement("KeystoneAPI"))
+			db := mariadb.GetMariaDBDatabase(keystoneApiName)
+			Expect(db.Finalizers).To(ContainElement("KeystoneAPI"))
+			dbAcc := mariadb.GetMariaDBAccount(keystoneApiName)
+			Expect(dbAcc.Finalizers).To(ContainElement("KeystoneAPI"))
+
+			th.DeleteInstance(GetKeystoneAPI(keystoneApiName))
+
+			db = mariadb.GetMariaDBDatabase(keystoneApiName)
+			Expect(db.Finalizers).NotTo(ContainElement("KeystoneAPI"))
+			dbAcc = mariadb.GetMariaDBAccount(keystoneApiName)
+			Expect(dbAcc.Finalizers).NotTo(ContainElement("KeystoneAPI"))
 		})
 	})
 
@@ -630,6 +685,7 @@ var _ = Describe("Keystone controller", func() {
 					},
 				),
 			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneApiName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 			th.SimulateJobSuccess(dbSyncJobName)
 			th.SimulateJobSuccess(bootstrapJobName)
@@ -702,6 +758,7 @@ var _ = Describe("Keystone controller", func() {
 					},
 				),
 			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneApiName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 			th.SimulateJobSuccess(dbSyncJobName)
 			th.SimulateJobSuccess(bootstrapJobName)
@@ -809,6 +866,7 @@ var _ = Describe("Keystone controller", func() {
 			DeferCleanup(k8sClient.Delete, ctx, th.CreateCABundleSecret(caBundleSecretName))
 			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(internalCertSecretName))
 			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(publicCertSecretName))
+			mariadb.SimulateMariaDBAccountCompleted(keystoneApiName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 
 			j := th.GetJob(dbSyncJobName)
@@ -820,6 +878,7 @@ var _ = Describe("Keystone controller", func() {
 			DeferCleanup(k8sClient.Delete, ctx, th.CreateCABundleSecret(caBundleSecretName))
 			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(internalCertSecretName))
 			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(publicCertSecretName))
+			mariadb.SimulateMariaDBAccountCompleted(keystoneApiName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 
 			th.SimulateJobSuccess(dbSyncJobName)
@@ -833,6 +892,7 @@ var _ = Describe("Keystone controller", func() {
 			DeferCleanup(k8sClient.Delete, ctx, th.CreateCABundleSecret(caBundleSecretName))
 			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(internalCertSecretName))
 			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(publicCertSecretName))
+			mariadb.SimulateMariaDBAccountCompleted(keystoneApiName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 
 			th.SimulateJobSuccess(dbSyncJobName)
@@ -873,6 +933,7 @@ var _ = Describe("Keystone controller", func() {
 			DeferCleanup(k8sClient.Delete, ctx, th.CreateCABundleSecret(caBundleSecretName))
 			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(internalCertSecretName))
 			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(publicCertSecretName))
+			mariadb.SimulateMariaDBAccountCompleted(keystoneApiName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 
 			th.SimulateJobSuccess(dbSyncJobName)
@@ -896,6 +957,7 @@ var _ = Describe("Keystone controller", func() {
 			DeferCleanup(k8sClient.Delete, ctx, th.CreateCABundleSecret(caBundleSecretName))
 			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(internalCertSecretName))
 			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(publicCertSecretName))
+			mariadb.SimulateMariaDBAccountCompleted(keystoneApiName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 
 			th.SimulateJobSuccess(dbSyncJobName)
@@ -958,6 +1020,7 @@ var _ = Describe("Keystone controller", func() {
 					},
 				),
 			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneApiName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 			th.SimulateJobSuccess(dbSyncJobName)
 			th.SimulateJobSuccess(bootstrapJobName)
