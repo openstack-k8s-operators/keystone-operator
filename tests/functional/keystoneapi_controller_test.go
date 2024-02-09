@@ -298,13 +298,15 @@ var _ = Describe("Keystone controller", func() {
 			)
 		})
 
-		It("should create a ConfigMap for keystone.conf", func() {
-			cm := th.GetConfigMap(types.NamespacedName{
+		It("should create a Secret for keystone.conf", func() {
+			cm := th.GetSecret(types.NamespacedName{
 				Namespace: keystoneApiName.Namespace,
 				Name:      fmt.Sprintf("%s-%s", keystoneApiName.Name, "config-data"),
 			})
 			Expect(cm.Data["keystone.conf"]).Should(
 				ContainSubstring("memcache_servers=memcached-0.memcached:11211,memcached-1.memcached:11211,memcached-2.memcached:11211"))
+			Expect(cm.Data["keystone.conf"]).Should(
+				ContainSubstring("connection=mysql+pymysql://keystone:12345678@/keystone"))
 		})
 		It("should create a Secret for fernet keys", func() {
 			th.GetSecret(types.NamespacedName{
@@ -917,11 +919,11 @@ var _ = Describe("Keystone controller", func() {
 			Expect(container.ReadinessProbe.HTTPGet.Scheme).To(Equal(corev1.URISchemeHTTPS))
 			Expect(container.LivenessProbe.HTTPGet.Scheme).To(Equal(corev1.URISchemeHTTPS))
 
-			configDataMap := th.GetConfigMap(keystoneApiConfigDataName)
-			Expect(configDataMap).ShouldNot(BeNil())
-			Expect(configDataMap.Data).Should(HaveKey("httpd.conf"))
-			Expect(configDataMap.Data).Should(HaveKey("ssl.conf"))
-			configData := string(configDataMap.Data["httpd.conf"])
+			scrt := th.GetSecret(keystoneApiConfigDataName)
+			Expect(scrt).ShouldNot(BeNil())
+			Expect(scrt.Data).Should(HaveKey("httpd.conf"))
+			Expect(scrt.Data).Should(HaveKey("ssl.conf"))
+			configData := string(scrt.Data["httpd.conf"])
 			Expect(configData).Should(ContainSubstring("SSLEngine on"))
 			Expect(configData).Should(ContainSubstring("SSLCertificateFile      \"/etc/pki/tls/certs/internal.crt\""))
 			Expect(configData).Should(ContainSubstring("SSLCertificateKeyFile   \"/etc/pki/tls/private/internal.key\""))

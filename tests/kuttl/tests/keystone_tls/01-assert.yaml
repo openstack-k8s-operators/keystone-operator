@@ -39,10 +39,10 @@ spec:
         - mountPath: /usr/local/bin/container-scripts
           name: scripts
           readOnly: true
-        - mountPath: /var/lib/config-data/merged
-          name: config-data-merged
+        - mountPath: /var/lib/config-data/default
+          name: config-data
         - mountPath: /var/lib/kolla/config_files/config.json
-          name: config-data-merged
+          name: config-data
           readOnly: true
           subPath: keystone-api-config.json
         - mountPath: /var/lib/fernet-keys
@@ -71,50 +71,15 @@ spec:
           name: public-tls-certs
           readOnly: true
           subPath: tls.key
-      initContainers:
-      - args:
-        - -c
-        - /usr/local/bin/container-scripts/init.sh
-        volumeMounts:
-        - mountPath: /usr/local/bin/container-scripts
-          name: scripts
-          readOnly: true
-        - mountPath: /var/lib/config-data/default
-          name: config-data
-          readOnly: true
-        - mountPath: /var/lib/config-data/merged
-          name: config-data-merged
-        - mountPath: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
-          name: combined-ca-bundle
-          readOnly: true
-          subPath: tls-ca-bundle.pem
-        - mountPath: /var/lib/config-data/tls/certs/internal.crt
-          name: internal-tls-certs
-          readOnly: true
-          subPath: tls.crt
-        - mountPath: /var/lib/config-data/tls/private/internal.key
-          name: internal-tls-certs
-          readOnly: true
-          subPath: tls.key
-        - mountPath: /var/lib/config-data/tls/certs/public.crt
-          name: public-tls-certs
-          readOnly: true
-          subPath: tls.crt
-        - mountPath: /var/lib/config-data/tls/private/public.key
-          name: public-tls-certs
-          readOnly: true
-          subPath: tls.key
       volumes:
-      - configMap:
+      - name: scripts
+        secret:
           defaultMode: 493
-          name: keystone-scripts
-        name: scripts
-      - configMap:
+          secretName: keystone-scripts
+      - name: config-data
+        secret:
           defaultMode: 416
-          name: keystone-config-data
-        name: config-data
-      - emptyDir: {}
-        name: config-data-merged
+          secretName: keystone-config-data
       - name: fernet-keys
         secret:
           defaultMode: 420

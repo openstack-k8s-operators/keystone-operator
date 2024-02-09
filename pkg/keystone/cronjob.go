@@ -48,13 +48,11 @@ func CronJob(
 	// create Volume and VolumeMounts
 	volumes := getVolumes(instance.Name)
 	volumeMounts := getVolumeMounts()
-	initVolumeMounts := getInitVolumeMounts()
 
 	// add CA cert if defined
 	if instance.Spec.TLS.CaBundleSecretName != "" {
 		volumes = append(getVolumes(instance.Name), instance.Spec.TLS.CreateVolume())
 		volumeMounts = append(getVolumeMounts(), instance.Spec.TLS.CreateVolumeMounts(nil)...)
-		initVolumeMounts = append(getInitVolumeMounts(), instance.Spec.TLS.CreateVolumeMounts(nil)...)
 	}
 
 	cronjob := &batchv1.CronJob{
@@ -103,18 +101,6 @@ func CronJob(
 	if instance.Spec.NodeSelector != nil && len(instance.Spec.NodeSelector) > 0 {
 		cronjob.Spec.JobTemplate.Spec.Template.Spec.NodeSelector = instance.Spec.NodeSelector
 	}
-
-	initContainerDetails := APIDetails{
-		ContainerImage:       instance.Spec.ContainerImage,
-		DatabaseHost:         instance.Status.DatabaseHostname,
-		DatabaseUser:         instance.Spec.DatabaseUser,
-		DatabaseName:         DatabaseName,
-		OSPSecret:            instance.Spec.Secret,
-		DBPasswordSelector:   instance.Spec.PasswordSelectors.Database,
-		UserPasswordSelector: instance.Spec.PasswordSelectors.Admin,
-		VolumeMounts:         initVolumeMounts,
-	}
-	cronjob.Spec.JobTemplate.Spec.Template.Spec.InitContainers = initContainer(initContainerDetails)
 
 	return cronjob
 }
