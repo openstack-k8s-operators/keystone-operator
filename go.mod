@@ -7,12 +7,12 @@ require (
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.4.0
 	github.com/onsi/ginkgo/v2 v2.14.0
 	github.com/onsi/gomega v1.30.0
-	github.com/openstack-k8s-operators/infra-operator/apis v0.3.1-0.20240125112246-15881e3c5305
+	github.com/openstack-k8s-operators/infra-operator/apis v0.3.1-0.20240205163532-e4efedde5776
 	github.com/openstack-k8s-operators/keystone-operator/api v0.1.1-0.20230920085319-92ae0260bbf3
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.3.1-0.20240124141114-55d029e4658b
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.3.1-0.20240124141114-55d029e4658b
-	github.com/openstack-k8s-operators/lib-common/modules/test v0.3.1-0.20240124141114-55d029e4658b
-	github.com/openstack-k8s-operators/mariadb-operator/api v0.3.1-0.20240208072109-4447f245e487
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.3.1-0.20240209144956-bbf3c6e54d4d
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.3.1-0.20240209144956-bbf3c6e54d4d
+	github.com/openstack-k8s-operators/lib-common/modules/test v0.3.1-0.20240209144956-bbf3c6e54d4d
+	github.com/openstack-k8s-operators/mariadb-operator/api v0.3.1-0.20240209135008-a0b2ebc8795c
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.26.13
 	k8s.io/apimachinery v0.26.13
@@ -40,7 +40,7 @@ require (
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
 	github.com/google/uuid v1.6.0
-	github.com/gophercloud/gophercloud v1.8.0 // indirect
+	github.com/gophercloud/gophercloud v1.9.0 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
