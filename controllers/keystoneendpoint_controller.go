@@ -157,6 +157,15 @@ func (r *KeystoneEndpointReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, err
 	}
 
+	// If both the endpoint and the KeystoneAPI is deleted then we can skip
+	// the cleanup of the endpoint in the DB as the DB is going away as well.
+	// Moreover if KeystoneAPI is being deleted then we cannot talk to the
+	// keystone REST API any more. This happens for example during namespace
+	// deletion.
+	if !instance.DeletionTimestamp.IsZero() && !keystoneAPI.DeletionTimestamp.IsZero() {
+		return r.reconcileDeleteFinalizersOnly(ctx, instance, helper, keystoneAPI)
+	}
+
 	// If this KeystoneEndpoint CR is being deleted and it has not registered any actual
 	// endpoints on the OpenStack side, just redirect execution to the "reconcileDelete()"
 	// logic to avoid potentially hanging on waiting for the KeystoneAPI to be ready
@@ -297,6 +306,43 @@ func (r *KeystoneEndpointReconciler) reconcileDelete(
 	}
 
 	// Endpoints are deleted so remove the finalizer.
+	controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
+	l.Info("Reconciled Endpoint delete successfully")
+
+	return ctrl.Result{}, nil
+}
+
+func (r *KeystoneEndpointReconciler) reconcileDeleteFinalizersOnly(
+	ctx context.Context,
+	instance *keystonev1.KeystoneEndpoint,
+	helper *helper.Helper,
+	keystoneAPI *keystonev1.KeystoneAPI,
+) (ctrl.Result, error) {
+	l := GetLog(ctx)
+	l.Info("Reconciling Endpoint delete while KeystoneAPI is being deleted")
+
+	ksSvc, err := keystonev1.GetKeystoneServiceWithName(ctx, helper, instance.Spec.ServiceName, instance.Namespace)
+	if err == nil {
+		// Remove the finalizer for this endpoint from the Service
+		if controllerutil.RemoveFinalizer(ksSvc, fmt.Sprintf("%s-%s", helper.GetFinalizer(), instance.Name)) {
+			err := r.Update(ctx, ksSvc)
+
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	} else if !k8s_errors.IsNotFound(err) {
+		return ctrl.Result{}, err
+	}
+
+	if controllerutil.RemoveFinalizer(keystoneAPI, fmt.Sprintf("%s-%s", helper.GetFinalizer(), instance.Name)) {
+		err := r.Update(ctx, keystoneAPI)
+
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
 	l.Info("Reconciled Endpoint delete successfully")
 
