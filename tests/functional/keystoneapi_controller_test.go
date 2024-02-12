@@ -23,17 +23,20 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/openstack-k8s-operators/lib-common/modules/common/test/helpers"
+	mariadbv1 "github.com/openstack-k8s-operators/mariadb-operator/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
+	mariadb_test "github.com/openstack-k8s-operators/mariadb-operator/api/test/helpers"
 )
 
 var _ = Describe("Keystone controller", func() {
 
 	var keystoneApiName types.NamespacedName
+	var keystoneAccountName types.NamespacedName
 	var keystoneApiConfigDataName types.NamespacedName
 	var dbSyncJobName types.NamespacedName
 	var bootstrapJobName types.NamespacedName
@@ -47,6 +50,10 @@ var _ = Describe("Keystone controller", func() {
 
 		keystoneApiName = types.NamespacedName{
 			Name:      "keystone",
+			Namespace: namespace,
+		}
+		keystoneAccountName = types.NamespacedName{
+			Name:      AccountName,
 			Namespace: namespace,
 		}
 		dbSyncJobName = types.NamespacedName{
@@ -93,7 +100,7 @@ var _ = Describe("Keystone controller", func() {
 		It("should have the Spec fields defaulted", func() {
 			Keystone := GetKeystoneAPI(keystoneApiName)
 			Expect(Keystone.Spec.DatabaseInstance).Should(Equal("openstack"))
-			Expect(Keystone.Spec.DatabaseUser).Should(Equal("keystone"))
+			Expect(Keystone.Spec.DatabaseAccount).Should(Equal(keystoneAccountName.Name))
 			Expect(*(Keystone.Spec.Replicas)).Should(Equal(int32(1)))
 		})
 
@@ -208,7 +215,7 @@ var _ = Describe("Keystone controller", func() {
 				),
 			)
 
-			mariadb.SimulateMariaDBAccountCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 		})
 
@@ -257,7 +264,7 @@ var _ = Describe("Keystone controller", func() {
 					},
 				),
 			)
-			mariadb.SimulateMariaDBAccountCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
 				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
@@ -323,7 +330,7 @@ var _ = Describe("Keystone controller", func() {
 					},
 				),
 			)
-			mariadb.SimulateMariaDBAccountCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
 				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
@@ -379,8 +386,12 @@ var _ = Describe("Keystone controller", func() {
 			configData := string(scrt.Data["keystone.conf"])
 			Expect(configData).To(
 				ContainSubstring("memcache_servers=memcached-0.memcached:11211,memcached-1.memcached:11211,memcached-2.memcached:11211"))
+			mariadbAccount := mariadb.GetMariaDBAccount(keystoneAccountName)
+			mariadbSecret := th.GetSecret(types.NamespacedName{Name: mariadbAccount.Spec.Secret, Namespace: keystoneApiName.Namespace})
+
 			Expect(configData).To(
-				ContainSubstring(fmt.Sprintf("connection=mysql+pymysql://keystone:12345678@hostname-for-openstack.%s.svc/keystone?read_default_file=/etc/my.cnf", namespace)))
+				ContainSubstring(fmt.Sprintf("connection=mysql+pymysql://%s:%s@hostname-for-openstack.%s.svc/keystone?read_default_file=/etc/my.cnf",
+					mariadbAccount.Spec.UserName, mariadbSecret.Data[mariadbv1.DatabasePasswordSelector], namespace)))
 			configData = string(scrt.Data["my.cnf"])
 			Expect(configData).To(
 				ContainSubstring("[client]\nssl=0"))
@@ -412,7 +423,7 @@ var _ = Describe("Keystone controller", func() {
 					},
 				),
 			)
-			mariadb.SimulateMariaDBAccountCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
 				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
@@ -477,7 +488,7 @@ var _ = Describe("Keystone controller", func() {
 					},
 				),
 			)
-			mariadb.SimulateMariaDBAccountCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
 				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
@@ -543,7 +554,7 @@ var _ = Describe("Keystone controller", func() {
 					},
 				),
 			)
-			mariadb.SimulateMariaDBAccountCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
 				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
@@ -622,7 +633,7 @@ var _ = Describe("Keystone controller", func() {
 					},
 				),
 			)
-			mariadb.SimulateMariaDBAccountCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
 				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
@@ -642,14 +653,14 @@ var _ = Describe("Keystone controller", func() {
 			Expect(keystone.Finalizers).To(ContainElement("KeystoneAPI"))
 			db := mariadb.GetMariaDBDatabase(keystoneApiName)
 			Expect(db.Finalizers).To(ContainElement("KeystoneAPI"))
-			dbAcc := mariadb.GetMariaDBAccount(keystoneApiName)
+			dbAcc := mariadb.GetMariaDBAccount(keystoneAccountName)
 			Expect(dbAcc.Finalizers).To(ContainElement("KeystoneAPI"))
 
 			th.DeleteInstance(GetKeystoneAPI(keystoneApiName))
 
 			db = mariadb.GetMariaDBDatabase(keystoneApiName)
 			Expect(db.Finalizers).NotTo(ContainElement("KeystoneAPI"))
-			dbAcc = mariadb.GetMariaDBAccount(keystoneApiName)
+			dbAcc = mariadb.GetMariaDBAccount(keystoneAccountName)
 			Expect(dbAcc.Finalizers).NotTo(ContainElement("KeystoneAPI"))
 		})
 	})
@@ -697,7 +708,7 @@ var _ = Describe("Keystone controller", func() {
 					},
 				),
 			)
-			mariadb.SimulateMariaDBAccountCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
 				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
@@ -770,7 +781,7 @@ var _ = Describe("Keystone controller", func() {
 					},
 				),
 			)
-			mariadb.SimulateMariaDBAccountCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
 				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
@@ -819,7 +830,7 @@ var _ = Describe("Keystone controller", func() {
 					},
 				),
 			)
-			mariadb.SimulateMariaDBAccountCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
 			mariadb.SimulateMariaDBTLSDatabaseCompleted(keystoneApiName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
 				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
@@ -912,11 +923,18 @@ var _ = Describe("Keystone controller", func() {
 			configData := string(scrt.Data["keystone.conf"])
 			Expect(configData).To(
 				ContainSubstring("memcache_servers=memcached-0.memcached:11211,memcached-1.memcached:11211,memcached-2.memcached:11211"))
+
+			mariadbAccount := mariadb.GetMariaDBAccount(keystoneAccountName)
+			mariadbSecret := th.GetSecret(types.NamespacedName{Name: mariadbAccount.Spec.Secret, Namespace: keystoneApiName.Namespace})
+
 			Expect(configData).To(
-				ContainSubstring(fmt.Sprintf("connection=mysql+pymysql://keystone:12345678@hostname-for-openstack.%s.svc/keystone?read_default_file=/etc/my.cnf", namespace)))
+				ContainSubstring(fmt.Sprintf("connection=mysql+pymysql://%s:%s@hostname-for-openstack.%s.svc/keystone?read_default_file=/etc/my.cnf",
+					mariadbAccount.Spec.UserName, mariadbSecret.Data[mariadbv1.DatabasePasswordSelector], namespace)))
+
 			configData = string(scrt.Data["my.cnf"])
 			Expect(configData).To(
 				ContainSubstring("[client]\nssl-ca=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem\nssl=1"))
+
 		})
 
 		It("it creates deployment with CA and service certs mounted", func() {
@@ -1037,7 +1055,7 @@ var _ = Describe("Keystone controller", func() {
 					},
 				),
 			)
-			mariadb.SimulateMariaDBAccountCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
 				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
@@ -1066,4 +1084,104 @@ var _ = Describe("Keystone controller", func() {
 			)
 		})
 	})
+
+	// Run MariaDBAccount suite tests.  these are pre-packaged ginkgo tests
+	// that exercise standard account create / update patterns that should be
+	// common to all controllers that ensure MariaDBAccount CRs.
+	mariadbSuite := &mariadb_test.MariaDBTestHarness{
+		PopulateHarness: func(harness *mariadb_test.MariaDBTestHarness) {
+			harness.Setup(
+				"Keystone",
+				keystoneApiName.Namespace,
+				keystoneApiName.Name,
+				"KeystoneAPI",
+				mariadb,
+				timeout,
+				interval,
+			)
+		},
+		// Generate a fully running Keystone service given an accountName
+		// needs to make it all the way to the end where the mariadb finalizers
+		// are removed from unused accounts since that's part of what we are testing
+		SetupCR: func(accountName types.NamespacedName) {
+
+			spec := GetDefaultKeystoneAPISpec()
+			spec["databaseAccount"] = accountName.Name
+
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, spec))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneApiName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+
+			mariadb.SimulateMariaDBAccountCompleted(accountName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
+				Namespace: namespace,
+			})
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+			th.SimulateDeploymentReplicaReady(deploymentName)
+
+			th.ExpectCondition(
+				keystoneApiName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.DeploymentReadyCondition,
+				corev1.ConditionTrue,
+			)
+
+		},
+		// Change the account name in the service to a new name
+		UpdateAccount: func(newAccountName types.NamespacedName) {
+
+			Eventually(func(g Gomega) {
+				keystoneapi := GetKeystoneAPI(keystoneApiName)
+				keystoneapi.Spec.DatabaseAccount = newAccountName.Name
+				g.Expect(th.K8sClient.Update(ctx, keystoneapi)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+		},
+		// delete the keystone instance to exercise finalizer removal
+		DeleteCR: func() {
+			th.DeleteInstance(GetKeystoneAPI(keystoneApiName))
+		},
+	}
+
+	mariadbSuite.RunBasicSuite()
+
+	mariadbSuite.RunURLAssertSuite(func(accountName types.NamespacedName, username string, password string) {
+		Eventually(func(g Gomega) {
+			scrt := th.GetSecret(keystoneApiConfigDataName)
+			configData := string(scrt.Data["keystone.conf"])
+
+			g.Expect(configData).To(
+				ContainSubstring(fmt.Sprintf("connection=mysql+pymysql://%s:%s@hostname-for-openstack.%s.svc/keystone?read_default_file=/etc/my.cnf",
+					username, password, namespace)))
+		}, timeout, interval).Should(Succeed())
+
+	})
+
+	mariadbSuite.RunConfigHashSuite(func() string {
+		deployment := th.GetDeployment(deploymentName)
+		return GetEnvVarValue(deployment.Spec.Template.Spec.Containers[0].Env, "CONFIG_HASH", "")
+	})
+
 })

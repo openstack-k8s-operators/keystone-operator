@@ -9,7 +9,7 @@ spec:
     [DEFAULT]
     debug = true
   databaseInstance: openstack
-  databaseUser: keystone
+  databaseAccount: keystone
   preserveJobs: false
   region: regionOne
   secret: osp-secret

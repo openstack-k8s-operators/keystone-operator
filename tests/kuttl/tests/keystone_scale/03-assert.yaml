@@ -18,10 +18,9 @@ spec:
     [DEFAULT]
     debug = true
   databaseInstance: openstack
-  databaseUser: keystone
+  databaseAccount: keystone
   passwordSelectors:
     admin: AdminPassword
-    database: KeystoneDatabasePassword
   preserveJobs: false
   region: regionOne
   replicas: 0

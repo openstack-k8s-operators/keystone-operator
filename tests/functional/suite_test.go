@@ -63,6 +63,8 @@ const (
 
 	SecretName = "test-osp-secret"
 
+	AccountName = "test-keystone-account"
+
 	PublicCertSecretName = "public-tls-certs"
 
 	InternalCertSecretName = "internal-tls-certs"

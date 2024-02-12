@@ -18,6 +18,7 @@ package functional_test
 
 import (
 	"fmt"
+
 	. "github.com/onsi/gomega"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -34,6 +35,7 @@ func GetDefaultKeystoneAPISpec() map[string]interface{} {
 		"databaseInstance": "openstack",
 		"replicas":         1,
 		"secret":           SecretName,
+		"databaseAccount":  AccountName,
 	}
 }
 
@@ -42,6 +44,7 @@ func GetTLSKeystoneAPISpec() map[string]interface{} {
 		"databaseInstance": "openstack",
 		"replicas":         1,
 		"secret":           SecretName,
+		"databaseAccount":  AccountName,
 		"tls": map[string]interface{}{
 			"api": map[string]interface{}{
 				"internal": map[string]interface{}{
@@ -82,8 +85,7 @@ func CreateKeystoneAPISecret(namespace string, name string) *corev1.Secret {
 	return th.CreateSecret(
 		types.NamespacedName{Namespace: namespace, Name: name},
 		map[string][]byte{
-			"AdminPassword":            []byte("12345678"),
-			"KeystoneDatabasePassword": []byte("12345678"),
+			"AdminPassword": []byte("12345678"),
 		},
 	)
 }

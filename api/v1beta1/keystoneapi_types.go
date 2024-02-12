@@ -65,9 +65,8 @@ type KeystoneAPISpecCore struct {
 
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=keystone
-	// DatabaseUser - optional username used for keystone DB, defaults to keystone
-	// TODO: -> implement needs work in mariadb-operator, right now only keystone
-	DatabaseUser string `json:"databaseUser"`
+	// DatabaseAccount - name of MariaDBAccount which will be used to connect.
+	DatabaseAccount string `json:"databaseAccount"`
 
 	// +kubebuilder:validation:Required
 	// +kubebuilder:default=memcached
@@ -97,7 +96,7 @@ type KeystoneAPISpecCore struct {
 	Replicas *int32 `json:"replicas"`
 
 	// +kubebuilder:validation:Required
-	// Secret containing OpenStack password information for keystone KeystoneDatabasePassword, AdminPassword
+	// Secret containing OpenStack password information for keystone AdminPassword
 	Secret string `json:"secret"`
 
 	// +kubebuilder:validation:Optional
@@ -121,7 +120,7 @@ type KeystoneAPISpecCore struct {
 	TrustFlushSuspend bool `json:"trustFlushSuspend"`
 
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default={database: KeystoneDatabasePassword, admin: AdminPassword}
+	// +kubebuilder:default={admin: AdminPassword}
 	// PasswordSelectors - Selectors to identify the DB and AdminUser password from the Secret
 	PasswordSelectors PasswordSelector `json:"passwordSelectors"`
 
@@ -180,11 +179,6 @@ type APIOverrideSpec struct {
 
 // PasswordSelector to identify the DB and AdminUser password from the Secret
 type PasswordSelector struct {
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default="KeystoneDatabasePassword"
-	// Database - Selector to get the keystone Database user password from the Secret
-	// TODO: not used, need change in mariadb-operator
-	Database string `json:"database"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default="AdminPassword"
 	// Admin - Selector to get the keystone Admin password from the Secret

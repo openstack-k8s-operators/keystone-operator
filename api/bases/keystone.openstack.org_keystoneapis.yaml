@@ -66,16 +66,15 @@ spec:
                   added to to /etc/<service>/<service>.conf.d directory as custom.conf
                   file.
                 type: string
+              databaseAccount:
+                default: keystone
+                description: DatabaseAccount - name of MariaDBAccount which will be
+                  used to connect.
+                type: string
               databaseInstance:
                 description: MariaDB instance name Right now required by the maridb-operator
                   to get the credentials from the instance to create the DB Might
                   not be required in future
-                type: string
-              databaseUser:
-                default: keystone
-                description: 'DatabaseUser - optional username used for keystone DB,
-                  defaults to keystone TODO: -> implement needs work in mariadb-operator,
-                  right now only keystone'
                 type: string
               defaultConfigOverwrite:
                 additionalProperties:
@@ -283,7 +282,6 @@ spec:
               passwordSelectors:
                 default:
                   admin: AdminPassword
-                  database: KeystoneDatabasePassword
                 description: PasswordSelectors - Selectors to identify the DB and
                   AdminUser password from the Secret
                 properties:
@@ -291,12 +289,6 @@ spec:
                     default: AdminPassword
                     description: Admin - Selector to get the keystone Admin password
                       from the Secret
-                    type: string
-                  database:
-                    default: KeystoneDatabasePassword
-                    description: 'Database - Selector to get the keystone Database
-                      user password from the Secret TODO: not used, need change in
-                      mariadb-operator'
                     type: string
                 type: object
               preserveJobs:
@@ -371,7 +363,7 @@ spec:
                 type: object
               secret:
                 description: Secret containing OpenStack password information for
-                  keystone KeystoneDatabasePassword, AdminPassword
+                  keystone AdminPassword
                 type: string
               tls:
                 description: TLS - Parameters related to the TLS
