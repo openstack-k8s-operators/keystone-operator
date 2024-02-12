@@ -8,6 +8,7 @@ metadata:
     operatorframework.io/suggested-namespace: openstack
     operators.openshift.io/infrastructure-features: '["disconnected"]'
     operators.operatorframework.io/operator-type: non-standalone
+    features.operators.openshift.io/fips-compliant: "true"
   name: keystone-operator.v0.0.0
   namespace: placeholder
 spec:
