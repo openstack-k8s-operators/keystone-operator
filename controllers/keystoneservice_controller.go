@@ -170,6 +170,15 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
+	// If both the service and the KeystoneAPI is deleted then we can skip
+	// the cleanup of the service in the DB as the DB is going away as well.
+	// Moreover if KeystoneAPI is being deleted then we cannot talk to the
+	// keystone REST API any more. This happens for example during namespace
+	// deletion.
+	if !instance.DeletionTimestamp.IsZero() && !keystoneAPI.DeletionTimestamp.IsZero() {
+		return r.reconcileDeleteFinalizersOnly(ctx, instance, helper, keystoneAPI)
+	}
+
 	// If this KeystoneService CR is being deleted and it has not registered any actual
 	// service on the OpenStack side, just redirect execution to the "reconcileDelete()"
 	// logic to avoid potentially hanging on waiting for the KeystoneAPI to be ready
@@ -295,6 +304,29 @@ func (r *KeystoneServiceReconciler) reconcileDelete(
 	}
 
 	// Service is deleted so remove the finalizer.
+	controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
+	l.Info("Reconciled Service delete successfully")
+
+	return ctrl.Result{}, nil
+}
+
+func (r *KeystoneServiceReconciler) reconcileDeleteFinalizersOnly(
+	ctx context.Context,
+	instance *keystonev1.KeystoneService,
+	helper *helper.Helper,
+	keystoneAPI *keystonev1.KeystoneAPI,
+) (ctrl.Result, error) {
+	l := GetLog(ctx)
+	l.Info("Reconciling Service delete while KeystoneAPI is being deleted")
+
+	if controllerutil.RemoveFinalizer(keystoneAPI, fmt.Sprintf("%s-%s", helper.GetFinalizer(), instance.Name)) {
+		err := r.Update(ctx, keystoneAPI)
+
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
 	l.Info("Reconciled Service delete successfully")
 
