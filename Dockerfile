@@ -1,4 +1,4 @@
-ARG GOLANG_BUILDER=registry.access.redhat.com/ubi9/go-toolset:1.19
+ARG GOLANG_BUILDER=registry.access.redhat.com/ubi9/go-toolset:1.20
 ARG OPERATOR_BASE_IMAGE=registry.access.redhat.com/ubi9/ubi-minimal:latest
 
 # Build the manager binary
