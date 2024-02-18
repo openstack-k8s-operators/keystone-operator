@@ -110,10 +110,12 @@ func (th *TestHelper) CreateKeystoneAPIWithFixture(
 			Namespace: namespace,
 		},
 		Spec: keystonev1.KeystoneAPISpec{
-			Secret:    n + "-secret",
-			AdminUser: "admin",
-			PasswordSelectors: keystonev1.PasswordSelector{
-				Admin: "admin-password",
+			KeystoneAPISpecCore: keystonev1.KeystoneAPISpecCore{
+				Secret:    n + "-secret",
+				AdminUser: "admin",
+				PasswordSelectors: keystonev1.PasswordSelector{
+					Admin: "admin-password",
+				},
 			},
 		},
 	}
