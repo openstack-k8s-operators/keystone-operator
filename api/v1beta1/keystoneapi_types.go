@@ -97,6 +97,11 @@ type KeystoneAPISpec struct {
 	Secret string `json:"secret"`
 
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=true
+	// EnableSecureRBAC - Enable Consistent and Secure RBAC policies
+	EnableSecureRBAC bool `json:"enableSecureRBAC"`
+
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=""
 	// TrustFlushArgs - Arguments added to keystone-manage trust_flush command
 	TrustFlushArgs string `json:"trustFlushArgs"`
