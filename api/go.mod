@@ -13,7 +13,7 @@ require (
 	golang.org/x/exp v0.0.0-20240213143201-ec583247a57a
 	k8s.io/api v0.28.3
 	k8s.io/apimachinery v0.28.3
-	sigs.k8s.io/controller-runtime v0.16.4
+	sigs.k8s.io/controller-runtime v0.16.5
 )
 
 require (
