@@ -52,6 +52,12 @@
             "dest": "/etc/keystone/",
             "owner": "keystone:keystone",
             "perm": "0700"
+        },
+        {
+            "source": "/var/lib/config-data/default/my.cnf",
+            "dest": "/etc/my.cnf",
+            "owner": "keystone",
+            "perm": "0644"
         }
     ]
 }
