@@ -18,7 +18,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
@@ -112,6 +111,7 @@ type KeystoneAPIReconciler struct {
 // +kubebuilder:rbac:groups=memcached.openstack.org,resources=memcacheds/finalizers,verbs=update
 // +kubebuilder:rbac:groups=k8s.cni.cncf.io,resources=network-attachment-definitions,verbs=get;list;watch
 // +kubebuilder:rbac:groups=rabbitmq.openstack.org,resources=transporturls,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=memcached.openstack.org,resources=servicetransport,verbs=get;list;watch;create;update;patch;delete
 
 // service account, role, rolebinding
 // +kubebuilder:rbac:groups="",resources=serviceaccounts,verbs=get;list;watch;create;update
@@ -865,6 +865,30 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 			condition.MemcachedReadyWaitingMessage))
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, fmt.Errorf("memcached %s is not ready", memcached.Name)
 	}
+
+	svcTransport, err, _ := r.ensureMemcacheTransport(ctx, helper, instance)
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			instance.Status.Conditions.Set(condition.FalseCondition(
+				condition.MemcachedReadyCondition,
+				condition.RequestedReason,
+				condition.SeverityInfo,
+				condition.MemcachedReadyWaitingMessage))
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, fmt.Errorf("memcached transport %s not found", instance.Spec.MemcachedInstance)
+		}
+		// TODO fix error message
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.MemcachedReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.MemcachedReadyErrorMessage,
+			err.Error()))
+		return ctrl.Result{}, err
+	}
+	if svcTransport == nil {
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, fmt.Errorf("memcached transport %s not ready", instance.Spec.MemcachedInstance)
+	}
+
 	// Mark the Memcached Service as Ready if we get to this point with no errors
 	instance.Status.Conditions.MarkTrue(
 		condition.MemcachedReadyCondition, condition.MemcachedReadyMessage)
@@ -880,7 +904,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	// - %-config configmap holding minimal keystone config required to get the service up, user can add additional files to be added to the service
 	// - parameters which has passwords gets added from the OpenStack secret via the init container
 	//
-	err = r.generateServiceConfigMaps(ctx, instance, helper, &configMapVars, memcached)
+	err = r.generateServiceConfigMaps(ctx, instance, helper, &configMapVars, svcTransport)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.ServiceConfigReadyCondition,
@@ -1157,7 +1181,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	instance *keystonev1.KeystoneAPI,
 	h *helper.Helper,
 	envVars *map[string]env.Setter,
-	mc *memcachedv1.Memcached,
+	svcTransport *memcachedv1.ServiceTransport,
 ) error {
 	//
 	// create Configmap/Secret required for keystone input
@@ -1190,8 +1214,9 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	}
 
 	templateParameters := map[string]interface{}{
-		"memcachedServers": strings.Join(mc.Status.ServerList, ","),
-		"TransportURL":     string(transportURLSecret.Data["transport_url"]),
+		// TODO remove
+		// "memcachedServers": strings.Join(mc.Status.ServerList, ","),
+		"TransportURL": string(transportURLSecret.Data["transport_url"]),
 		"DatabaseConnection": fmt.Sprintf("mysql+pymysql://%s:%s@%s/%s",
 			instance.Spec.DatabaseUser,
 			string(ospSecret.Data[instance.Spec.PasswordSelectors.Database]),
@@ -1199,6 +1224,17 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			keystone.DatabaseName,
 		),
 		"enableSecureRBAC": instance.Spec.EnableSecureRBAC,
+	}
+
+	if svcTransport != nil {
+		memcachedTransportSecret, _, err := secret.GetSecret(ctx, h, svcTransport.Status.SecretName, instance.Namespace)
+		if err != nil {
+			return err
+		}
+		//TODO remove hardcoded name
+		cacheCfg := string(memcachedTransportSecret.Data["config_cache"])
+		templateParameters["osloConfigMemcached"] = cacheCfg
+		customData["memcached.conf"] = cacheCfg
 	}
 
 	// create httpd  vhost template parameters
@@ -1415,4 +1451,69 @@ func (r *KeystoneAPIReconciler) getKeystoneMemcached(
 		return nil, err
 	}
 	return memcached, err
+}
+
+func (r *KeystoneAPIReconciler) ensureMemcacheTransport(
+	ctx context.Context,
+	h *helper.Helper,
+	instance *keystonev1.KeystoneAPI,
+) (*memcachedv1.ServiceTransport, error, string) {
+	transportName := "transport-" + instance.Spec.MemcachedInstance
+	svcTransport := &memcachedv1.ServiceTransport{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      transportName,
+			Namespace: instance.Namespace,
+		},
+	}
+
+	client := h.GetClient()
+	op, err := controllerutil.CreateOrPatch(ctx, client, svcTransport, func() error {
+		svcTransport.Spec.ServiceName = instance.Spec.MemcachedInstance
+		// TODO
+		// err := controllerutil.SetControllerReference(instance, transportURL, r.Scheme)
+		// return err
+		return nil
+	})
+
+	if err != nil && !k8s_errors.IsNotFound(err) {
+		return nil, util.WrapErrorForObject(
+			fmt.Sprintf("Error create or update ServiceTransport object %s", transportName),
+			svcTransport,
+			err,
+		), memcachedv1.ServiceTransportReadyErrorMessage
+	}
+	if op != controllerutil.OperationResultNone {
+		h.GetLogger().Info(fmt.Sprintf("ServiceTransport object %s created or patched", transportName))
+	}
+
+	err = client.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: transportName}, svcTransport)
+	if err != nil && !k8s_errors.IsNotFound(err) {
+		return nil, util.WrapErrorForObject(
+			fmt.Sprintf("Error reading ServiceTransport object %s", transportName),
+			svcTransport,
+			err,
+		), memcachedv1.ServiceTransportReadyErrorMessage
+	}
+
+	if k8s_errors.IsNotFound(err) || !svcTransport.IsReady() || svcTransport.Status.SecretName == "" {
+		return nil, nil, memcachedv1.ServiceTransportInProgressMessage
+	}
+
+	secretName := types.NamespacedName{Namespace: instance.Namespace, Name: svcTransport.Status.SecretName}
+	secret := &corev1.Secret{}
+	err = h.GetClient().Get(ctx, secretName, secret)
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			return nil, nil, memcachedv1.ServiceTransportInProgressMessage
+		}
+		return nil, err, memcachedv1.ServiceTransportReadyErrorMessage
+	}
+
+	// osloData, ok := secret.Data["oslotransport_url"]
+	// if !ok {
+	// 	return nil, fmt.Errorf(
+	// 		"the ServiceTransport secret %s does not have 'transport_url' field", svcTransport.Status.SecretName)
+	// }
+
+	return svcTransport, nil, memcachedv1.ServiceTransportReadyMessage
 }

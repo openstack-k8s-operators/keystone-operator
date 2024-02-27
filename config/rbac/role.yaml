@@ -231,6 +231,18 @@ rules:
   verbs:
   - update
 - apiGroups:
+  - memcached.openstack.org
+  resources:
+  - servicetransport
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - rabbitmq.openstack.org
   resources:
   - transporturls
