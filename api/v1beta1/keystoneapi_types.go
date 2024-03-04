@@ -47,8 +47,16 @@ const (
 	KeystoneAPIContainerImage = "quay.io/podified-antelope-centos9/openstack-keystone:current-podified"
 )
 
-// KeystoneAPISpec defines the desired state of KeystoneAPI
 type KeystoneAPISpec struct {
+	KeystoneAPISpecCore `json:",inline"`
+
+	// +kubebuilder:validation:Required
+	// Keystone Container Image URL (will be set to environmental default if empty)
+	ContainerImage string `json:"containerImage"`
+}
+
+// KeystoneAPISpec defines the desired state of KeystoneAPI
+type KeystoneAPISpecCore struct {
 	// +kubebuilder:validation:Required
 	// MariaDB instance name
 	// Right now required by the maridb-operator to get the credentials from the instance to create the DB
@@ -80,10 +88,6 @@ type KeystoneAPISpec struct {
 	// +kubebuilder:default=admin
 	// AdminUser - admin user name
 	AdminUser string `json:"adminUser"`
-
-	// +kubebuilder:validation:Required
-	// Keystone Container Image URL (will be set to environmental default if empty)
-	ContainerImage string `json:"containerImage"`
 
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=1

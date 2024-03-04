@@ -46,7 +46,6 @@ spec:
           metadata:
             type: object
           spec:
-            description: KeystoneAPISpec defines the desired state of KeystoneAPI
             properties:
               adminProject:
                 default: admin

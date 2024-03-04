@@ -61,14 +61,22 @@ var _ webhook.Defaulter = &KeystoneAPI{}
 func (r *KeystoneAPI) Default() {
 	keystoneapilog.Info("default", "name", r.Name)
 
+	if r.Spec.ContainerImage == "" {
+		r.Spec.ContainerImage = keystoneAPIDefaults.ContainerImageURL
+	}
 	r.Spec.Default()
 }
 
 // Default - set defaults for this KeystoneAPI spec
 func (spec *KeystoneAPISpec) Default() {
-	if spec.ContainerImage == "" {
-		spec.ContainerImage = keystoneAPIDefaults.ContainerImageURL
-	}
+	// no defaults to set yet
+	spec.KeystoneAPISpecCore.Default()
+}
+
+// Default - set defaults for this KeystoneAPI core spec
+// NOTE: only this version is used by OpenStackOperators webhook
+func (spec *KeystoneAPISpecCore) Default() {
+	// no defaults to set yet
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
