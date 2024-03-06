@@ -18,7 +18,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
@@ -396,7 +395,7 @@ func (r *KeystoneAPIReconciler) reconcileDelete(ctx context.Context, instance *k
 	}
 
 	// Remove our finalizer from Memcached
-	memcached, err := r.getKeystoneMemcached(ctx, helper, instance)
+	memcached, err := memcachedv1.GetMemcachedByName(ctx, helper, instance.Spec.MemcachedInstance, instance.Namespace)
 	if err != nil && !k8s_errors.IsNotFound(err) {
 		return ctrl.Result{}, err
 	}
@@ -776,7 +775,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	//
 	// Check for required memcached used for caching
 	//
-	memcached, err := r.getKeystoneMemcached(ctx, helper, instance)
+	memcached, err := memcachedv1.GetMemcachedByName(ctx, helper, instance.Spec.MemcachedInstance, instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			instance.Status.Conditions.Set(condition.FalseCondition(
@@ -1155,7 +1154,8 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	dbSecret := db.GetSecret()
 
 	templateParameters := map[string]interface{}{
-		"memcachedServers": strings.Join(mc.Status.ServerList, ","),
+		"memcachedServers": mc.GetMemcachedServerListString(),
+		"memcachedTLS":     mc.GetMemcachedTLSSupport(),
 		"TransportURL":     string(transportURLSecret.Data["transport_url"]),
 		"DatabaseConnection": fmt.Sprintf("mysql+pymysql://%s:%s@%s/%s?read_default_file=/etc/my.cnf",
 			databaseAccount.Spec.UserName,
@@ -1360,26 +1360,6 @@ func (r *KeystoneAPIReconciler) createHashOfInputHashes(
 		GetLog(ctx).Info(fmt.Sprintf("Input maps hash %s - %s", common.InputHashName, hash))
 	}
 	return hash, changed, nil
-}
-
-// getKeystoneMemcached - gets the Memcached instance used for keystone cache backend
-func (r *KeystoneAPIReconciler) getKeystoneMemcached(
-	ctx context.Context,
-	h *helper.Helper,
-	instance *keystonev1.KeystoneAPI,
-) (*memcachedv1.Memcached, error) {
-	memcached := &memcachedv1.Memcached{}
-	err := h.GetClient().Get(
-		ctx,
-		types.NamespacedName{
-			Name:      instance.Spec.MemcachedInstance,
-			Namespace: instance.Namespace,
-		},
-		memcached)
-	if err != nil {
-		return nil, err
-	}
-	return memcached, err
 }
 
 func (r *KeystoneAPIReconciler) ensureDB(
