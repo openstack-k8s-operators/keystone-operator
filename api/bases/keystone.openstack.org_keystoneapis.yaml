@@ -282,8 +282,8 @@ spec:
               passwordSelectors:
                 default:
                   admin: AdminPassword
-                description: PasswordSelectors - Selectors to identify the DB and
-                  AdminUser password from the Secret
+                description: PasswordSelectors - Selectors to identify the AdminUser
+                  password from the Secret
                 properties:
                   admin:
                     default: AdminPassword

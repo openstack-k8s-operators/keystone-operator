@@ -20,7 +20,10 @@ const (
 	ServiceName = "keystone"
 	// DatabaseName -
 	DatabaseName = "keystone"
-
+	// DatabaseCRName -
+	DatabaseCRName = "keystone"
+	// DatabaseUsernamePrefix -
+	DatabaseUsernamePrefix = "keystone"
 	// KeystonePublicPort -
 	KeystonePublicPort int32 = 5000
 	// KeystoneInternalPort -

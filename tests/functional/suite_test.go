@@ -29,15 +29,15 @@ import (
 
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	rabbitmqv1 "github.com/openstack-k8s-operators/infra-operator/apis/rabbitmq/v1beta1"
-	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
-	test "github.com/openstack-k8s-operators/lib-common/modules/test"
-	mariadbv1 "github.com/openstack-k8s-operators/mariadb-operator/api/v1beta1"
-
 	infra_test "github.com/openstack-k8s-operators/infra-operator/apis/test/helpers"
 	keystone_test "github.com/openstack-k8s-operators/keystone-operator/api/test/helpers"
+	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/keystone-operator/controllers"
+	keystone_base "github.com/openstack-k8s-operators/keystone-operator/pkg/keystone"
 	common_test "github.com/openstack-k8s-operators/lib-common/modules/common/test/helpers"
+	test "github.com/openstack-k8s-operators/lib-common/modules/test"
 	mariadb_test "github.com/openstack-k8s-operators/mariadb-operator/api/test/helpers"
+	mariadbv1 "github.com/openstack-k8s-operators/mariadb-operator/api/v1beta1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -64,6 +64,8 @@ const (
 	SecretName = "test-osp-secret"
 
 	AccountName = "test-keystone-account"
+
+	DatabaseCRName = keystone_base.DatabaseCRName
 
 	PublicCertSecretName = "public-tls-certs"
 

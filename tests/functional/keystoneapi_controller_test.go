@@ -37,6 +37,7 @@ var _ = Describe("Keystone controller", func() {
 
 	var keystoneApiName types.NamespacedName
 	var keystoneAccountName types.NamespacedName
+	var keystoneDatabaseName types.NamespacedName
 	var keystoneApiConfigDataName types.NamespacedName
 	var dbSyncJobName types.NamespacedName
 	var bootstrapJobName types.NamespacedName
@@ -54,6 +55,10 @@ var _ = Describe("Keystone controller", func() {
 		}
 		keystoneAccountName = types.NamespacedName{
 			Name:      AccountName,
+			Namespace: namespace,
+		}
+		keystoneDatabaseName = types.NamespacedName{
+			Name:      DatabaseCRName,
 			Namespace: namespace,
 		}
 		dbSyncJobName = types.NamespacedName{
@@ -216,7 +221,7 @@ var _ = Describe("Keystone controller", func() {
 			)
 
 			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
-			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
 		})
 
 		It("should have db ready condition", func() {
@@ -265,7 +270,7 @@ var _ = Describe("Keystone controller", func() {
 				),
 			)
 			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
-			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
 				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
 				Namespace: namespace,
@@ -331,7 +336,7 @@ var _ = Describe("Keystone controller", func() {
 				),
 			)
 			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
-			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
 				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
 				Namespace: namespace,
@@ -424,7 +429,7 @@ var _ = Describe("Keystone controller", func() {
 				),
 			)
 			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
-			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
 				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
 				Namespace: namespace,
@@ -489,7 +494,7 @@ var _ = Describe("Keystone controller", func() {
 				),
 			)
 			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
-			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
 				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
 				Namespace: namespace,
@@ -555,7 +560,7 @@ var _ = Describe("Keystone controller", func() {
 				),
 			)
 			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
-			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
 				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
 				Namespace: namespace,
@@ -634,7 +639,7 @@ var _ = Describe("Keystone controller", func() {
 				),
 			)
 			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
-			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
 				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
 				Namespace: namespace,
@@ -709,7 +714,7 @@ var _ = Describe("Keystone controller", func() {
 				),
 			)
 			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
-			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
 				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
 				Namespace: namespace,
@@ -782,7 +787,7 @@ var _ = Describe("Keystone controller", func() {
 				),
 			)
 			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
-			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
 				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
 				Namespace: namespace,
@@ -1056,7 +1061,7 @@ var _ = Describe("Keystone controller", func() {
 				),
 			)
 			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
-			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
 				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
 				Namespace: namespace,
@@ -1127,7 +1132,7 @@ var _ = Describe("Keystone controller", func() {
 			)
 
 			mariadb.SimulateMariaDBAccountCompleted(accountName)
-			mariadb.SimulateMariaDBDatabaseCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
 
 			infra.SimulateTransportURLReady(types.NamespacedName{
 				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),

@@ -121,7 +121,7 @@ type KeystoneAPISpecCore struct {
 
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default={admin: AdminPassword}
-	// PasswordSelectors - Selectors to identify the DB and AdminUser password from the Secret
+	// PasswordSelectors - Selectors to identify the AdminUser password from the Secret
 	PasswordSelectors PasswordSelector `json:"passwordSelectors"`
 
 	// +kubebuilder:validation:Optional

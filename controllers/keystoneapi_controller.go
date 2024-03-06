@@ -411,7 +411,7 @@ func (r *KeystoneAPIReconciler) reconcileDelete(ctx context.Context, instance *k
 	}
 
 	// remove db finalizer before the keystone one
-	db, err := mariadbv1.GetDatabaseByNameAndAccount(ctx, helper, instance.Name, instance.Spec.DatabaseAccount, instance.Namespace)
+	db, err := mariadbv1.GetDatabaseByNameAndAccount(ctx, helper, keystone.DatabaseCRName, instance.Spec.DatabaseAccount, instance.Namespace)
 	if err != nil && !k8s_errors.IsNotFound(err) {
 		return ctrl.Result{}, err
 	}
@@ -1048,7 +1048,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	}
 	// create Deployment - end
 
-	if instance.Status.ReadyCount > 0 {
+	if instance.Status.ReadyCount == *instance.Spec.Replicas {
 		// remove finalizers from unused MariaDBAccount records
 		err = mariadbv1.DeleteUnusedMariaDBAccountFinalizers(ctx, helper, keystone.DatabaseName, instance.Spec.DatabaseAccount, instance.Namespace)
 		if err != nil {
@@ -1396,7 +1396,7 @@ func (r *KeystoneAPIReconciler) ensureDB(
 	// yet associated with any MariaDBDatabase.
 	_, _, err := mariadbv1.EnsureMariaDBAccount(
 		ctx, h, instance.Spec.DatabaseAccount,
-		instance.Namespace, false, "keystone",
+		instance.Namespace, false, keystone.DatabaseUsernamePrefix,
 	)
 
 	if err != nil {
@@ -1418,8 +1418,8 @@ func (r *KeystoneAPIReconciler) ensureDB(
 	//
 	db := mariadbv1.NewDatabaseForAccount(
 		instance.Spec.DatabaseInstance, // mariadb/galera service to target
-		instance.Name,                  // name used in CREATE DATABASE in mariadb
-		instance.Name,                  // CR name for MariaDBDatabase
+		keystone.DatabaseName,          // name used in CREATE DATABASE in mariadb
+		keystone.DatabaseCRName,        // CR name for MariaDBDatabase
 		instance.Spec.DatabaseAccount,  // CR name for MariaDBAccount
 		instance.Namespace,             // namespace
 	)
