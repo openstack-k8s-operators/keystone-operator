@@ -19,11 +19,10 @@ spec:
     [DEFAULT]
     debug = true
   databaseInstance: openstack
-  databaseUser: keystone
+  databaseAccount: keystone
   memcachedInstance: memcached
   passwordSelectors:
     admin: AdminPassword
-    database: KeystoneDatabasePassword
   preserveJobs: false
   region: regionOne
   replicas: 1
