@@ -90,7 +90,9 @@ var _ = Describe("Keystone controller", func() {
 			Namespace: namespace,
 		}
 		memcachedSpec = memcachedv1.MemcachedSpec{
-			Replicas: ptr.To(int32(3)),
+			MemcachedSpecCore: memcachedv1.MemcachedSpecCore{
+				Replicas: ptr.To(int32(3)),
+			},
 		}
 
 		err := os.Setenv("OPERATOR_TEMPLATES", "../../templates")

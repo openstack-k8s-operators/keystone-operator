@@ -8,7 +8,7 @@ require (
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.4.0
 	github.com/onsi/ginkgo/v2 v2.15.0
 	github.com/onsi/gomega v1.31.1
-	github.com/openstack-k8s-operators/infra-operator/apis v0.3.1-0.20240219072823-a587b364203f
+	github.com/openstack-k8s-operators/infra-operator/apis v0.3.1-0.20240308113717-eaf5876d69c3
 	github.com/openstack-k8s-operators/keystone-operator/api v0.3.1-0.20240213125925-e40975f3db7e
 	github.com/openstack-k8s-operators/lib-common/modules/common v0.3.1-0.20240216173409-86913e6d5885
 	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.3.1-0.20240216173409-86913e6d5885
@@ -16,11 +16,11 @@ require (
 	github.com/openstack-k8s-operators/mariadb-operator/api v0.3.1-0.20240303091826-438dde8600d3
 	go.uber.org/zap v1.26.0
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/api v0.28.3
-	k8s.io/apimachinery v0.28.3
-	k8s.io/client-go v0.28.3
+	k8s.io/api v0.28.7
+	k8s.io/apimachinery v0.28.7
+	k8s.io/client-go v0.28.7
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
-	sigs.k8s.io/controller-runtime v0.16.4
+	sigs.k8s.io/controller-runtime v0.16.5
 )
 
 require (
@@ -72,8 +72,8 @@ require (
 	google.golang.org/protobuf v1.32.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	k8s.io/apiextensions-apiserver v0.28.3 // indirect
-	k8s.io/component-base v0.28.3 // indirect
+	k8s.io/apiextensions-apiserver v0.28.7 // indirect
+	k8s.io/component-base v0.28.7 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
