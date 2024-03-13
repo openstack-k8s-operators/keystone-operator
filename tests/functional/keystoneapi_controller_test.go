@@ -392,7 +392,8 @@ var _ = Describe("Keystone controller", func() {
 			scrt := th.GetSecret(keystoneApiConfigDataName)
 			configData := string(scrt.Data["keystone.conf"])
 			Expect(configData).To(
-				ContainSubstring("memcache_servers=memcached-0.memcached:11211,memcached-1.memcached:11211,memcached-2.memcached:11211"))
+				ContainSubstring(fmt.Sprintf("memcache_servers=memcached-0.memcached.%s.svc:11211,memcached-1.memcached.%s.svc:11211,memcached-2.memcached.%s.svc:11211",
+					keystoneApiName.Namespace, keystoneApiName.Namespace, keystoneApiName.Namespace)))
 			mariadbAccount := mariadb.GetMariaDBAccount(keystoneAccountName)
 			mariadbSecret := th.GetSecret(types.NamespacedName{Name: mariadbAccount.Spec.Secret, Namespace: keystoneApiName.Namespace})
 
@@ -929,7 +930,8 @@ var _ = Describe("Keystone controller", func() {
 			scrt := th.GetSecret(keystoneApiConfigDataName)
 			configData := string(scrt.Data["keystone.conf"])
 			Expect(configData).To(
-				ContainSubstring("memcache_servers=memcached-0.memcached:11211,memcached-1.memcached:11211,memcached-2.memcached:11211"))
+				ContainSubstring(fmt.Sprintf("memcache_servers=memcached-0.memcached.%s.svc:11211,memcached-1.memcached.%s.svc:11211,memcached-2.memcached.%s.svc:11211",
+					keystoneApiName.Namespace, keystoneApiName.Namespace, keystoneApiName.Namespace)))
 
 			mariadbAccount := mariadb.GetMariaDBAccount(keystoneAccountName)
 			mariadbSecret := th.GetSecret(types.NamespacedName{Name: mariadbAccount.Spec.Secret, Namespace: keystoneApiName.Namespace})
