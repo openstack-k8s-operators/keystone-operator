@@ -5,10 +5,10 @@ metadata:
     alm-examples: '[]'
     capabilities: Basic Install
     features.operators.openshift.io/disconnected: "true"
+    features.operators.openshift.io/fips-compliant: "true"
     operatorframework.io/suggested-namespace: openstack
     operators.openshift.io/infrastructure-features: '["disconnected"]'
     operators.operatorframework.io/operator-type: non-standalone
-    features.operators.openshift.io/fips-compliant: "true"
   name: keystone-operator.v0.0.0
   namespace: placeholder
 spec:
@@ -19,6 +19,10 @@ spec:
       displayName: Keystone API
       kind: KeystoneAPI
       name: keystoneapis.keystone.openstack.org
+      specDescriptors:
+      - description: TLS - Parameters related to the TLS
+        displayName: TLS
+        path: tls
       version: v1beta1
     - description: KeystoneEndpoint is the Schema for the keystoneendpoints API
       displayName: Keystone Endpoint
