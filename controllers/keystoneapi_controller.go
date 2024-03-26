@@ -1163,7 +1163,8 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			instance.Status.DatabaseHostname,
 			keystone.DatabaseName,
 		),
-		"enableSecureRBAC": instance.Spec.EnableSecureRBAC,
+		"EnforceScope":       instance.Spec.SecureRBACEnforceScope,
+		"EnforceNewDefaults": instance.Spec.SecureRBACEnforceNewDefaults,
 	}
 
 	// create httpd  vhost template parameters
