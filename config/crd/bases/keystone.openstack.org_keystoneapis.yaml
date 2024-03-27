@@ -483,6 +483,12 @@ spec:
                   type: array
                 description: NetworkAttachments status of the deployment pods
                 type: object
+              observedGeneration:
+                description: ObservedGeneration - the most recent generation observed
+                  for this service. If the observed generation is less than the spec
+                  generation, then the controller has not processed the latest changes.
+                format: int64
+                type: integer
               readyCount:
                 description: ReadyCount of keystone API instances
                 format: int32

@@ -1092,6 +1092,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	}
 
 	l.Info("Reconciled Service successfully")
+	instance.Status.ObservedGeneration = instance.Generation
 	return ctrl.Result{}, nil
 }
 

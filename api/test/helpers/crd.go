@@ -186,6 +186,7 @@ func (th *TestHelper) GetKeystoneAPI(name types.NamespacedName) *keystonev1.Keys
 func (th *TestHelper) SimulateKeystoneAPIReady(name types.NamespacedName) {
 	gomega.Eventually(func(g gomega.Gomega) {
 		service := th.GetKeystoneAPI(name)
+		service.Status.ObservedGeneration = service.Generation
 		service.Status.Conditions.MarkTrue(condition.ReadyCondition, "Ready")
 		g.Expect(th.K8sClient.Status().Update(th.Ctx, service)).To(gomega.Succeed())
 	}, th.Timeout, th.Interval).Should(gomega.Succeed())
