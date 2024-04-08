@@ -86,8 +86,6 @@ github.com/openstack-k8s-operators/lib-common/modules/openstack v0.3.1-0.2024021
 github.com/openstack-k8s-operators/lib-common/modules/openstack v0.3.1-0.20240216173409-86913e6d5885/go.mod h1:8QsCFttAm+X6A8I8EQThGjNjeMAYt2hK7ivbvnR3434=
 github.com/openstack-k8s-operators/lib-common/modules/test v0.3.1-0.20240216173409-86913e6d5885 h1:ioJ2MO3vAcBkLM+0UBu5IuKW/DPXcyiNSOLq0Xvn+Nw=
 github.com/openstack-k8s-operators/lib-common/modules/test v0.3.1-0.20240216173409-86913e6d5885/go.mod h1:82nzS+DbBe1tzaMvNHH8FctmZzQ14ZAJysFGsMJiivo=
-github.com/openstack-k8s-operators/mariadb-operator/api v0.3.1-0.20240313124955-f152bee56715 h1:p/27BiJbPCel9U12Q3ym4N7brVK5CMqx1plLO6j/fcU=
-github.com/openstack-k8s-operators/mariadb-operator/api v0.3.1-0.20240313124955-f152bee56715/go.mod h1:f9IIyWeoskWoeWaDFF3qmAJ2Kqyovfi0Ar/QUfk3qag=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
@@ -110,6 +108,8 @@ github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcU
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
+github.com/zzzeek/mariadb-operator/api v0.3.1-0.20240409154704-bb2f841dc5c0 h1:9S/3x+3ed+pOOO6hJFeR6blFcIkFwiCHLabE6hmXB4M=
+github.com/zzzeek/mariadb-operator/api v0.3.1-0.20240409154704-bb2f841dc5c0/go.mod h1:f9IIyWeoskWoeWaDFF3qmAJ2Kqyovfi0Ar/QUfk3qag=
 go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=
 go.uber.org/multierr v1.11.0 h1:blXXJkSxSSfBVBlC76pxqeO+LN3aDfLQo+309xJstO0=
 go.uber.org/multierr v1.11.0/go.mod h1:20+QtiLqy0Nd6FdQB9TLXag12DsQkrbs3htMFfDN80Y=
