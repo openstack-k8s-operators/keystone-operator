@@ -188,19 +188,6 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return r.reconcileDelete(ctx, instance, helper, nil, keystoneAPI)
 	}
 
-	//
-	// Add a finalizer to the KeystoneAPI for this service instance, as we do not want
-	// the KeystoneAPI to disappear before this service in the case where this service
-	// is deleted
-	//
-	if controllerutil.AddFinalizer(keystoneAPI, fmt.Sprintf("%s-%s", helper.GetFinalizer(), instance.Name)) {
-		err := r.Update(ctx, keystoneAPI)
-
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-	}
-
 	if !keystoneAPI.IsReady() {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			keystonev1.KeystoneAPIReadyCondition,
@@ -245,7 +232,7 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	// Handle non-deleted clusters
-	return r.reconcileNormal(ctx, instance, helper, os)
+	return r.reconcileNormal(ctx, instance, helper, os, keystoneAPI)
 
 }
 
@@ -287,6 +274,11 @@ func (r *KeystoneServiceReconciler) reconcileDelete(
 			return ctrl.Result{}, err
 		}
 
+		// Clear the service ID so that any potential requeues after this reconcile
+		// will know that there is no need to worry about cleaning up the OpenStack
+		// side of things anymore (deferred PatchInstance call will persist this to
+		// etcd)
+		instance.Status.ServiceID = ""
 	} else {
 		l.Info("Not deleting service as there is no stores service ID", "KeystoneService", instance.Spec.ServiceName)
 	}
@@ -338,9 +330,24 @@ func (r *KeystoneServiceReconciler) reconcileNormal(
 	instance *keystonev1.KeystoneService,
 	helper *helper.Helper,
 	os *openstack.OpenStack,
+	keystoneAPI *keystonev1.KeystoneAPI,
 ) (ctrl.Result, error) {
 	l := GetLog(ctx)
 	l.Info("Reconciling Service")
+
+	//
+	// Add a finalizer to the KeystoneAPI for this service instance, as we do not want the
+	// KeystoneAPI to disappear before this service in the case where this service is deleted
+	// (so that we can properly remove the service and user from the Keystone database on the
+	// OpenStack side)
+	//
+	if controllerutil.AddFinalizer(keystoneAPI, fmt.Sprintf("%s-%s", helper.GetFinalizer(), instance.Name)) {
+		err := r.Update(ctx, keystoneAPI)
+
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
 
 	//
 	// Create new service if ServiceID is not already set

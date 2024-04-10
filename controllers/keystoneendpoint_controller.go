@@ -175,19 +175,6 @@ func (r *KeystoneEndpointReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return r.reconcileDelete(ctx, instance, helper, nil, keystoneAPI)
 	}
 
-	//
-	// Add a finalizer to the KeystoneAPI for this endpoint instance, as we do not want
-	// the KeystoneAPI to disappear before this endpoint in the case where this endpoint
-	// is deleted
-	//
-	if controllerutil.AddFinalizer(keystoneAPI, fmt.Sprintf("%s-%s", helper.GetFinalizer(), instance.Name)) {
-		err := r.Update(ctx, keystoneAPI)
-
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-	}
-
 	if !keystoneAPI.IsReady() {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			keystonev1.KeystoneAPIReadyCondition,
@@ -233,7 +220,7 @@ func (r *KeystoneEndpointReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	// Handle non-deleted clusters
-	return r.reconcileNormal(ctx, instance, helper, os)
+	return r.reconcileNormal(ctx, instance, helper, os, keystoneAPI)
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -278,6 +265,9 @@ func (r *KeystoneEndpointReconciler) reconcileDelete(
 			}
 		}
 	}
+
+	// Remove endpoints from status
+	instance.Status.EndpointIDs = map[string]string{}
 
 	ksSvc, err := keystonev1.GetKeystoneServiceWithName(ctx, helper, instance.Spec.ServiceName, instance.Namespace)
 	if err == nil {
@@ -354,6 +344,7 @@ func (r *KeystoneEndpointReconciler) reconcileNormal(
 	instance *keystonev1.KeystoneEndpoint,
 	helper *helper.Helper,
 	os *openstack.OpenStack,
+	keystoneAPI *keystonev1.KeystoneAPI,
 ) (ctrl.Result, error) {
 	l := GetLog(ctx)
 	l.Info("Reconciling Endpoint normal")
@@ -384,6 +375,20 @@ func (r *KeystoneEndpointReconciler) reconcileNormal(
 	}
 
 	instance.Status.ServiceID = ksSvc.Status.ServiceID
+
+	//
+	// Add a finalizer to the KeystoneAPI for this endpoint instance, as we do not want the
+	// KeystoneAPI to disappear before this endpoint in the case where this endpoint is deleted
+	// (so that we can properly remove the endpoint from the Keystone database on the OpenStack
+	// side)
+	//
+	if controllerutil.AddFinalizer(keystoneAPI, fmt.Sprintf("%s-%s", helper.GetFinalizer(), instance.Name)) {
+		err := r.Update(ctx, keystoneAPI)
+
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
 
 	//
 	// Add a finalizer to KeystoneService, because KeystoneEndpoint is dependent on
