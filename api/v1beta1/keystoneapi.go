@@ -21,6 +21,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/gophercloud/gophercloud"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/helper"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/secret"
@@ -69,11 +70,33 @@ func GetKeystoneAPI(
 	return &keystoneList.Items[0], nil
 }
 
-// GetAdminServiceClient - get an admin serviceClient for the keystoneAPI instance
+// GetAdminServiceClient - get a system scoped admin serviceClient for the keystoneAPI instance
 func GetAdminServiceClient(
 	ctx context.Context,
 	h *helper.Helper,
 	keystoneAPI *KeystoneAPI,
+) (*openstack.OpenStack, ctrl.Result, error) {
+	os, ctrlResult, err := GetScopedAdminServiceClient(
+		ctx,
+		h,
+		keystoneAPI,
+		&gophercloud.AuthScope{
+			System: true,
+		},
+	)
+	if err != nil {
+		return nil, ctrlResult, err
+	}
+
+	return os, ctrlResult, nil
+}
+
+// GetScopedAdminServiceClient - get a scoped admin serviceClient for the keystoneAPI instance
+func GetScopedAdminServiceClient(
+	ctx context.Context,
+	h *helper.Helper,
+	keystoneAPI *KeystoneAPI,
+	scope *gophercloud.AuthScope,
 ) (*openstack.OpenStack, ctrl.Result, error) {
 	// get public endpoint as authurl from keystone instance
 	authURL, err := keystoneAPI.GetEndpoint(endpoint.EndpointInternal)
@@ -118,6 +141,7 @@ func GetAdminServiceClient(
 			DomainName: "Default",
 			Region:     keystoneAPI.Spec.Region,
 			TLS:        tlsConfig,
+			Scope:      scope,
 		})
 	if err != nil {
 		return nil, ctrl.Result{}, err
