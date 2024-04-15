@@ -209,6 +209,7 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	)
 
 	instance.Status.Conditions.Init(&cl)
+	instance.Status.ObservedGeneration = instance.Generation
 
 	if instance.Status.Hash == nil {
 		instance.Status.Hash = map[string]string{}
@@ -1092,7 +1093,6 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	}
 
 	l.Info("Reconciled Service successfully")
-	instance.Status.ObservedGeneration = instance.Generation
 	return ctrl.Result{}, nil
 }
 
