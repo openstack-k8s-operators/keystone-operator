@@ -190,3 +190,55 @@ func DeleteKeystoneEndpointWithName(
 
 	return nil
 }
+
+// GetKeystoneEndpointList func
+func GetKeystoneEndpointList(
+	ctx context.Context,
+	h *helper.Helper,
+	namespace string,
+) (*KeystoneEndpointList, error) {
+
+	ke := &KeystoneEndpointList{}
+	listOpts := []client.ListOption{
+		client.InNamespace(namespace),
+	}
+
+	if err := h.GetClient().List(ctx, ke, listOpts...); err != nil {
+		err = fmt.Errorf("error listing endpoints for namespace %s: %w", namespace, err)
+		return nil, err
+	}
+
+	return ke, nil
+}
+
+// GetKeystoneEndpointUrls returns all URLs currently registered. Visibility can be admin, public or internal.
+// If it is nil, all URLs are returned
+func GetKeystoneEndpointUrls(
+	ctx context.Context,
+	h *helper.Helper,
+	namespace string,
+	visibility *string,
+) ([]string, error) {
+
+	ke, err := GetKeystoneEndpointList(ctx, h, namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	var endpointurls []string
+
+	if visibility != nil {
+		for _, endpoint := range ke.Items {
+			endpointurls = append(endpointurls, endpoint.Spec.Endpoints[*visibility])
+		}
+	} else {
+		for _, endpoint := range ke.Items {
+			endpointurls = append(endpointurls, endpoint.Spec.Endpoints["internal"])
+			endpointurls = append(endpointurls, endpoint.Spec.Endpoints["public"])
+			endpointurls = append(endpointurls, endpoint.Spec.Endpoints["admin"])
+		}
+	}
+
+
+	return endpointurls, nil
+}
