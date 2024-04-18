@@ -7,9 +7,9 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gophercloud/gophercloud v1.11.0
 	github.com/onsi/gomega v1.32.0
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.3.1-0.20240326081751-56015b1ae3f6
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.3.1-0.20240216173409-86913e6d5885
-	github.com/openstack-k8s-operators/lib-common/modules/test v0.3.1-0.20240216173409-86913e6d5885
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.3.1-0.20240417144545-d24e7a32d33b
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.3.1-0.20240417144545-d24e7a32d33b
+	github.com/openstack-k8s-operators/lib-common/modules/test v0.3.1-0.20240417144545-d24e7a32d33b
 	golang.org/x/exp v0.0.0-20240213143201-ec583247a57a
 	k8s.io/api v0.28.9
 	k8s.io/apimachinery v0.28.9
@@ -48,11 +48,10 @@ require (
 	github.com/prometheus/common v0.46.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	go.uber.org/goleak v1.3.0 // indirect
 	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/oauth2 v0.16.0 // indirect
-	golang.org/x/sys v0.18.0 // indirect
-	golang.org/x/term v0.18.0 // indirect
+	golang.org/x/sys v0.19.0 // indirect
+	golang.org/x/term v0.19.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect

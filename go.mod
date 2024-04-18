@@ -6,14 +6,14 @@ require (
 	github.com/go-logr/logr v1.4.1
 	github.com/google/uuid v1.6.0
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.4.0
-	github.com/onsi/ginkgo/v2 v2.16.0
+	github.com/onsi/ginkgo/v2 v2.17.1
 	github.com/onsi/gomega v1.32.0
-	github.com/openstack-k8s-operators/infra-operator/apis v0.3.1-0.20240312175130-455be042c07f
+	github.com/openstack-k8s-operators/infra-operator/apis v0.3.1-0.20240418073214-93c0cd0009bd
 	github.com/openstack-k8s-operators/keystone-operator/api v0.3.1-0.20240213125925-e40975f3db7e
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.3.1-0.20240326081751-56015b1ae3f6
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.3.1-0.20240216173409-86913e6d5885
-	github.com/openstack-k8s-operators/lib-common/modules/test v0.3.1-0.20240216173409-86913e6d5885
-	github.com/openstack-k8s-operators/mariadb-operator/api v0.3.1-0.20240313124955-f152bee56715
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.3.1-0.20240417144545-d24e7a32d33b
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.3.1-0.20240417144545-d24e7a32d33b
+	github.com/openstack-k8s-operators/lib-common/modules/test v0.3.1-0.20240417144545-d24e7a32d33b
+	github.com/openstack-k8s-operators/mariadb-operator/api v0.3.1-0.20240418060416-9de2d1f1915e
 	go.uber.org/zap v1.27.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.28.9
@@ -62,8 +62,8 @@ require (
 	golang.org/x/mod v0.15.0 // indirect
 	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/oauth2 v0.16.0 // indirect
-	golang.org/x/sys v0.18.0 // indirect
-	golang.org/x/term v0.18.0 // indirect
+	golang.org/x/sys v0.19.0 // indirect
+	golang.org/x/term v0.19.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.18.0 // indirect
