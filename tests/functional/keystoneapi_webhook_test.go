@@ -19,8 +19,8 @@ package functional_test
 import (
 	"os"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	. "github.com/onsi/ginkgo/v2" //revive:disable:dot-imports
+	. "github.com/onsi/gomega"    //revive:disable:dot-imports
 	"k8s.io/apimachinery/pkg/types"
 
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
@@ -28,11 +28,11 @@ import (
 
 var _ = Describe("KeystoneAPI Webhook", func() {
 
-	var keystoneApiName types.NamespacedName
+	var keystoneAPIName types.NamespacedName
 
 	BeforeEach(func() {
 
-		keystoneApiName = types.NamespacedName{
+		keystoneAPIName = types.NamespacedName{
 			Name:      "keystone",
 			Namespace: namespace,
 		}
@@ -43,11 +43,11 @@ var _ = Describe("KeystoneAPI Webhook", func() {
 
 	When("A KeystoneAPI instance is created without container images", func() {
 		BeforeEach(func() {
-			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetDefaultKeystoneAPISpec()))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, GetDefaultKeystoneAPISpec()))
 		})
 
 		It("should have the defaults initialized by webhook", func() {
-			KeystoneAPI := GetKeystoneAPI(keystoneApiName)
+			KeystoneAPI := GetKeystoneAPI(keystoneAPIName)
 			Expect(KeystoneAPI.Spec.ContainerImage).Should(Equal(
 				keystonev1.KeystoneAPIContainerImage,
 			))
@@ -56,13 +56,13 @@ var _ = Describe("KeystoneAPI Webhook", func() {
 
 	When("A KeystoneAPI instance is created with container images", func() {
 		BeforeEach(func() {
-			keystoneApiSpec := GetDefaultKeystoneAPISpec()
-			keystoneApiSpec["containerImage"] = "api-container-image"
-			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, keystoneApiSpec))
+			keystoneAPISpec := GetDefaultKeystoneAPISpec()
+			keystoneAPISpec["containerImage"] = "api-container-image"
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, keystoneAPISpec))
 		})
 
 		It("should use the given values", func() {
-			KeystoneAPI := GetKeystoneAPI(keystoneApiName)
+			KeystoneAPI := GetKeystoneAPI(keystoneAPIName)
 			Expect(KeystoneAPI.Spec.ContainerImage).Should(Equal(
 				"api-container-image",
 			))

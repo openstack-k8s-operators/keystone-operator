@@ -36,7 +36,6 @@ import (
 	labels "github.com/openstack-k8s-operators/lib-common/modules/common/labels"
 	nad "github.com/openstack-k8s-operators/lib-common/modules/common/networkattachment"
 	common_rbac "github.com/openstack-k8s-operators/lib-common/modules/common/rbac"
-	"github.com/openstack-k8s-operators/lib-common/modules/common/secret"
 	oko_secret "github.com/openstack-k8s-operators/lib-common/modules/common/secret"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/tls"
@@ -672,7 +671,7 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	return ctrl.Result{}, nil
 }
 
-func (r *KeystoneAPIReconciler) reconcileUpdate(ctx context.Context, instance *keystonev1.KeystoneAPI, helper *helper.Helper) (ctrl.Result, error) {
+func (r *KeystoneAPIReconciler) reconcileUpdate(ctx context.Context) (ctrl.Result, error) {
 	l := GetLog(ctx)
 	l.Info("Reconciling Service update")
 
@@ -683,7 +682,7 @@ func (r *KeystoneAPIReconciler) reconcileUpdate(ctx context.Context, instance *k
 	return ctrl.Result{}, nil
 }
 
-func (r *KeystoneAPIReconciler) reconcileUpgrade(ctx context.Context, instance *keystonev1.KeystoneAPI, helper *helper.Helper) (ctrl.Result, error) {
+func (r *KeystoneAPIReconciler) reconcileUpgrade(ctx context.Context) (ctrl.Result, error) {
 	l := GetLog(ctx)
 	l.Info("Reconciling Service upgrade")
 
@@ -969,7 +968,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	}
 
 	// Handle service update
-	ctrlResult, err = r.reconcileUpdate(ctx, instance, helper)
+	ctrlResult, err = r.reconcileUpdate(ctx)
 	if err != nil {
 		return ctrlResult, err
 	} else if (ctrlResult != ctrl.Result{}) {
@@ -977,7 +976,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	}
 
 	// Handle service upgrade
-	ctrlResult, err = r.reconcileUpgrade(ctx, instance, helper)
+	ctrlResult, err = r.reconcileUpgrade(ctx)
 	if err != nil {
 		return ctrlResult, err
 	} else if (ctrlResult != ctrl.Result{}) {
@@ -989,7 +988,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	//
 
 	// Define a new Deployment object
-	deplDef, err := keystone.Deployment(ctx, helper, instance, inputHash, serviceLabels, serviceAnnotations)
+	deplDef, err := keystone.Deployment(instance, inputHash, serviceLabels, serviceAnnotations)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.DeploymentReadyCondition,
@@ -1153,7 +1152,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		customData[key] = data
 	}
 
-	transportURLSecret, _, err := secret.GetSecret(ctx, h, instance.Status.TransportURLSecret, instance.Namespace)
+	transportURLSecret, _, err := oko_secret.GetSecret(ctx, h, instance.Status.TransportURLSecret, instance.Namespace)
 	if err != nil {
 		return err
 	}
@@ -1210,7 +1209,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			Labels:        cmLabels,
 		},
 	}
-	return secret.EnsureSecrets(ctx, h, instance, tmpl, envVars)
+	return oko_secret.EnsureSecrets(ctx, h, instance, tmpl, envVars)
 }
 
 // reconcileConfigMap -  creates clouds.yaml
