@@ -911,6 +911,13 @@ var _ = Describe("Keystone controller", func() {
 			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(internalCertSecretName))
 			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(publicCertSecretName))
 
+			th.ExpectCondition(
+				keystoneAPIName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.TLSInputReadyCondition,
+				corev1.ConditionTrue,
+			)
+
 			j := th.GetJob(dbSyncJobName)
 			th.AssertVolumeExists(caBundleSecretName.Name, j.Spec.Template.Spec.Volumes)
 			th.AssertVolumeMountExists(caBundleSecretName.Name, "tls-ca-bundle.pem", j.Spec.Template.Spec.Containers[0].VolumeMounts)
