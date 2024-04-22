@@ -16,13 +16,10 @@ limitations under the License.
 package keystone
 
 import (
-	"context"
-
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/lib-common/modules/common"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/affinity"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/env"
-	"github.com/openstack-k8s-operators/lib-common/modules/common/helper"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/tls"
 
@@ -39,8 +36,6 @@ const (
 
 // Deployment func
 func Deployment(
-	ctx context.Context,
-	helper *helper.Helper,
 	instance *keystonev1.KeystoneAPI,
 	configHash string,
 	labels map[string]string,

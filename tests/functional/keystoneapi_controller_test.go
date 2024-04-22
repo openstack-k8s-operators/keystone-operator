@@ -20,25 +20,27 @@ import (
 	"fmt"
 	"os"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	. "github.com/onsi/ginkgo/v2" //revive:disable:dot-imports
+	. "github.com/onsi/gomega"    //revive:disable:dot-imports
+
+	//revive:disable-next-line:dot-imports
 	. "github.com/openstack-k8s-operators/lib-common/modules/common/test/helpers"
-	mariadbv1 "github.com/openstack-k8s-operators/mariadb-operator/api/v1beta1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	mariadb_test "github.com/openstack-k8s-operators/mariadb-operator/api/test/helpers"
+	mariadbv1 "github.com/openstack-k8s-operators/mariadb-operator/api/v1beta1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 )
 
 var _ = Describe("Keystone controller", func() {
 
-	var keystoneApiName types.NamespacedName
+	var keystoneAPIName types.NamespacedName
 	var keystoneAccountName types.NamespacedName
 	var keystoneDatabaseName types.NamespacedName
-	var keystoneApiConfigDataName types.NamespacedName
+	var keystoneAPIConfigDataName types.NamespacedName
 	var dbSyncJobName types.NamespacedName
 	var bootstrapJobName types.NamespacedName
 	var deploymentName types.NamespacedName
@@ -49,7 +51,7 @@ var _ = Describe("Keystone controller", func() {
 
 	BeforeEach(func() {
 
-		keystoneApiName = types.NamespacedName{
+		keystoneAPIName = types.NamespacedName{
 			Name:      "keystone",
 			Namespace: namespace,
 		}
@@ -73,7 +75,7 @@ var _ = Describe("Keystone controller", func() {
 			Name:      "keystone",
 			Namespace: namespace,
 		}
-		keystoneApiConfigDataName = types.NamespacedName{
+		keystoneAPIConfigDataName = types.NamespacedName{
 			Name:      "keystone-config-data",
 			Namespace: namespace,
 		}
@@ -101,18 +103,18 @@ var _ = Describe("Keystone controller", func() {
 
 	When("A KeystoneAPI instance is created", func() {
 		BeforeEach(func() {
-			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetDefaultKeystoneAPISpec()))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, GetDefaultKeystoneAPISpec()))
 		})
 
 		It("should have the Spec fields defaulted", func() {
-			Keystone := GetKeystoneAPI(keystoneApiName)
+			Keystone := GetKeystoneAPI(keystoneAPIName)
 			Expect(Keystone.Spec.DatabaseInstance).Should(Equal("openstack"))
 			Expect(Keystone.Spec.DatabaseAccount).Should(Equal(keystoneAccountName.Name))
 			Expect(*(Keystone.Spec.Replicas)).Should(Equal(int32(1)))
 		})
 
 		It("should have the Status fields initialized", func() {
-			Keystone := GetKeystoneAPI(keystoneApiName)
+			Keystone := GetKeystoneAPI(keystoneAPIName)
 			Expect(Keystone.Status.Hash).To(BeEmpty())
 			Expect(Keystone.Status.DatabaseHostname).To(Equal(""))
 			Expect(Keystone.Status.ReadyCount).To(Equal(int32(0)))
@@ -120,13 +122,13 @@ var _ = Describe("Keystone controller", func() {
 
 		It("should have input not ready and unknown Conditions initialized", func() {
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.ReadyCondition,
 				corev1.ConditionFalse,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.InputReadyCondition,
 				corev1.ConditionFalse,
@@ -143,7 +145,7 @@ var _ = Describe("Keystone controller", func() {
 				condition.CronJobReadyCondition,
 			} {
 				th.ExpectCondition(
-					keystoneApiName,
+					keystoneAPIName,
 					ConditionGetterFunc(KeystoneConditionGetter),
 					cond,
 					corev1.ConditionUnknown,
@@ -155,51 +157,51 @@ var _ = Describe("Keystone controller", func() {
 			// the reconciler loop adds the finalizer so we have to wait for
 			// it to run
 			Eventually(func() []string {
-				return GetKeystoneAPI(keystoneApiName).Finalizers
+				return GetKeystoneAPI(keystoneAPIName).Finalizers
 			}, timeout, interval).Should(ContainElement("KeystoneAPI"))
 		})
 	})
 
 	When("The proper secret is provided", func() {
 		BeforeEach(func() {
-			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetDefaultKeystoneAPISpec()))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, GetDefaultKeystoneAPISpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
 		})
 
 		It("should have input ready and service config ready", func() {
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.ReadyCondition,
 				corev1.ConditionFalse,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.InputReadyCondition,
 				corev1.ConditionTrue,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.DBReadyCondition,
 				corev1.ConditionFalse,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.RabbitMqTransportURLReadyCondition,
 				corev1.ConditionUnknown,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.MemcachedReadyCondition,
 				corev1.ConditionUnknown,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.ServiceConfigReadyCondition,
 				corev1.ConditionUnknown,
@@ -209,13 +211,13 @@ var _ = Describe("Keystone controller", func() {
 
 	When("DB is created", func() {
 		BeforeEach(func() {
-			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetDefaultKeystoneAPISpec()))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, GetDefaultKeystoneAPISpec()))
 			DeferCleanup(k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
 			DeferCleanup(
 				mariadb.DeleteDBService,
 				mariadb.CreateDBService(
 					namespace,
-					GetKeystoneAPI(keystoneApiName).Spec.DatabaseInstance,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
 					corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Port: 3306}},
 					},
@@ -228,25 +230,25 @@ var _ = Describe("Keystone controller", func() {
 
 		It("should have db ready condition", func() {
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.ReadyCondition,
 				corev1.ConditionFalse,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.DBReadyCondition,
 				corev1.ConditionTrue,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.DBSyncReadyCondition,
 				corev1.ConditionUnknown,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.BootstrapReadyCondition,
 				corev1.ConditionUnknown,
@@ -256,7 +258,7 @@ var _ = Describe("Keystone controller", func() {
 
 	When("TransportURL is available", func() {
 		BeforeEach(func() {
-			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetDefaultKeystoneAPISpec()))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, GetDefaultKeystoneAPISpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
 			DeferCleanup(
@@ -265,7 +267,7 @@ var _ = Describe("Keystone controller", func() {
 				mariadb.DeleteDBService,
 				mariadb.CreateDBService(
 					namespace,
-					GetKeystoneAPI(keystoneApiName).Spec.DatabaseInstance,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
 					corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Port: 3306}},
 					},
@@ -274,7 +276,7 @@ var _ = Describe("Keystone controller", func() {
 			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
-				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
 				Namespace: namespace,
 			})
 			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
@@ -282,37 +284,37 @@ var _ = Describe("Keystone controller", func() {
 
 		It("should have TransportURL ready, but not Memcached ready", func() {
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.ReadyCondition,
 				corev1.ConditionFalse,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.RabbitMqTransportURLReadyCondition,
 				corev1.ConditionTrue,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.MemcachedReadyCondition,
 				corev1.ConditionFalse,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.ServiceConfigReadyCondition,
 				corev1.ConditionUnknown,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.DBReadyCondition,
 				corev1.ConditionTrue,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.DBSyncReadyCondition,
 				corev1.ConditionUnknown,
@@ -324,14 +326,14 @@ var _ = Describe("Keystone controller", func() {
 		BeforeEach(func() {
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
-			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetDefaultKeystoneAPISpec()))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, GetDefaultKeystoneAPISpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
 			DeferCleanup(
 				mariadb.DeleteDBService,
 				mariadb.CreateDBService(
 					namespace,
-					GetKeystoneAPI(keystoneApiName).Spec.DatabaseInstance,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
 					corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Port: 3306}},
 					},
@@ -340,7 +342,7 @@ var _ = Describe("Keystone controller", func() {
 			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
-				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
 				Namespace: namespace,
 			})
 			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
@@ -352,36 +354,36 @@ var _ = Describe("Keystone controller", func() {
 
 		It("should have memcached ready and service config ready", func() {
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.ReadyCondition,
 				corev1.ConditionFalse,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.RabbitMqTransportURLReadyCondition, corev1.ConditionTrue,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.MemcachedReadyCondition,
 				corev1.ConditionTrue,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.ServiceConfigReadyCondition,
 				corev1.ConditionTrue,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.DBReadyCondition,
 				corev1.ConditionTrue,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.DBSyncReadyCondition,
 				corev1.ConditionFalse,
@@ -389,13 +391,13 @@ var _ = Describe("Keystone controller", func() {
 		})
 
 		It("should create a Secret for keystone.conf and my.cnf", func() {
-			scrt := th.GetSecret(keystoneApiConfigDataName)
+			scrt := th.GetSecret(keystoneAPIConfigDataName)
 			configData := string(scrt.Data["keystone.conf"])
 			Expect(configData).To(
 				ContainSubstring(fmt.Sprintf("memcache_servers=memcached-0.memcached.%s.svc:11211,memcached-1.memcached.%s.svc:11211,memcached-2.memcached.%s.svc:11211",
-					keystoneApiName.Namespace, keystoneApiName.Namespace, keystoneApiName.Namespace)))
+					keystoneAPIName.Namespace, keystoneAPIName.Namespace, keystoneAPIName.Namespace)))
 			mariadbAccount := mariadb.GetMariaDBAccount(keystoneAccountName)
-			mariadbSecret := th.GetSecret(types.NamespacedName{Name: mariadbAccount.Spec.Secret, Namespace: keystoneApiName.Namespace})
+			mariadbSecret := th.GetSecret(types.NamespacedName{Name: mariadbAccount.Spec.Secret, Namespace: keystoneAPIName.Namespace})
 
 			Expect(configData).To(
 				ContainSubstring(fmt.Sprintf("connection=mysql+pymysql://%s:%s@hostname-for-openstack.%s.svc/keystone?read_default_file=/etc/my.cnf",
@@ -406,7 +408,7 @@ var _ = Describe("Keystone controller", func() {
 		})
 		It("should create a Secret for fernet keys", func() {
 			th.GetSecret(types.NamespacedName{
-				Name:      keystoneApiName.Name,
+				Name:      keystoneAPIName.Name,
 				Namespace: namespace,
 			})
 		})
@@ -417,7 +419,7 @@ var _ = Describe("Keystone controller", func() {
 		BeforeEach(func() {
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
-			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetDefaultKeystoneAPISpec()))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, GetDefaultKeystoneAPISpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
 			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
@@ -425,7 +427,7 @@ var _ = Describe("Keystone controller", func() {
 				mariadb.DeleteDBService,
 				mariadb.CreateDBService(
 					namespace,
-					GetKeystoneAPI(keystoneApiName).Spec.DatabaseInstance,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
 					corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Port: 3306}},
 					},
@@ -434,7 +436,7 @@ var _ = Describe("Keystone controller", func() {
 			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
-				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
 				Namespace: namespace,
 			})
 			infra.SimulateMemcachedReady(types.NamespacedName{
@@ -446,31 +448,31 @@ var _ = Describe("Keystone controller", func() {
 
 		It("should have db sync ready condition and expose service ready condition", func() {
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.ReadyCondition,
 				corev1.ConditionFalse,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.DBSyncReadyCondition,
 				corev1.ConditionTrue,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.ExposeServiceReadyCondition,
 				corev1.ConditionTrue,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.BootstrapReadyCondition,
 				corev1.ConditionFalse,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.NetworkAttachmentsReadyCondition,
 				corev1.ConditionUnknown,
@@ -482,7 +484,7 @@ var _ = Describe("Keystone controller", func() {
 		BeforeEach(func() {
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
-			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetDefaultKeystoneAPISpec()))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, GetDefaultKeystoneAPISpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
 			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
@@ -490,7 +492,7 @@ var _ = Describe("Keystone controller", func() {
 				mariadb.DeleteDBService,
 				mariadb.CreateDBService(
 					namespace,
-					GetKeystoneAPI(keystoneApiName).Spec.DatabaseInstance,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
 					corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Port: 3306}},
 					},
@@ -499,7 +501,7 @@ var _ = Describe("Keystone controller", func() {
 			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
-				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
 				Namespace: namespace,
 			})
 			infra.SimulateMemcachedReady(types.NamespacedName{
@@ -512,31 +514,31 @@ var _ = Describe("Keystone controller", func() {
 
 		It("should have bootstrap ready condition", func() {
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.ReadyCondition,
 				corev1.ConditionFalse,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.BootstrapReadyCondition,
 				corev1.ConditionTrue,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.NetworkAttachmentsReadyCondition,
 				corev1.ConditionTrue,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.DeploymentReadyCondition,
 				corev1.ConditionFalse,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.CronJobReadyCondition,
 				corev1.ConditionTrue,
@@ -548,7 +550,7 @@ var _ = Describe("Keystone controller", func() {
 		BeforeEach(func() {
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
-			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetDefaultKeystoneAPISpec()))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, GetDefaultKeystoneAPISpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
 			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
@@ -556,7 +558,7 @@ var _ = Describe("Keystone controller", func() {
 				mariadb.DeleteDBService,
 				mariadb.CreateDBService(
 					namespace,
-					GetKeystoneAPI(keystoneApiName).Spec.DatabaseInstance,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
 					corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Port: 3306}},
 					},
@@ -565,7 +567,7 @@ var _ = Describe("Keystone controller", func() {
 			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
-				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
 				Namespace: namespace,
 			})
 			infra.SimulateMemcachedReady(types.NamespacedName{
@@ -579,19 +581,19 @@ var _ = Describe("Keystone controller", func() {
 
 		It("should have deployment ready condition and cronjob ready condition", func() {
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.ReadyCondition,
 				corev1.ConditionTrue,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.DeploymentReadyCondition,
 				corev1.ConditionTrue,
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.CronJobReadyCondition,
 				corev1.ConditionTrue,
@@ -605,19 +607,19 @@ var _ = Describe("Keystone controller", func() {
 
 		It("should create a CronJob for trust flush", func() {
 			cronJob := types.NamespacedName{
-				Namespace: keystoneApiName.Namespace,
-				Name:      fmt.Sprintf("%s-%s", keystoneApiName.Name, "cron"),
+				Namespace: keystoneAPIName.Namespace,
+				Name:      fmt.Sprintf("%s-%s", keystoneAPIName.Name, "cron"),
 			}
 			GetCronJob(cronJob)
 		})
 
 		It("should create a ConfigMap and Secret for client config", func() {
 			th.GetConfigMap(types.NamespacedName{
-				Namespace: keystoneApiName.Namespace,
+				Namespace: keystoneAPIName.Namespace,
 				Name:      "openstack-config",
 			})
 			th.GetSecret(types.NamespacedName{
-				Namespace: keystoneApiName.Namespace,
+				Namespace: keystoneAPIName.Namespace,
 				Name:      "openstack-config-secret",
 			})
 		})
@@ -627,7 +629,7 @@ var _ = Describe("Keystone controller", func() {
 		BeforeEach(func() {
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
-			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetDefaultKeystoneAPISpec()))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, GetDefaultKeystoneAPISpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
 			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
@@ -635,7 +637,7 @@ var _ = Describe("Keystone controller", func() {
 				mariadb.DeleteDBService,
 				mariadb.CreateDBService(
 					namespace,
-					GetKeystoneAPI(keystoneApiName).Spec.DatabaseInstance,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
 					corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Port: 3306}},
 					},
@@ -644,7 +646,7 @@ var _ = Describe("Keystone controller", func() {
 			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
-				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
 				Namespace: namespace,
 			})
 			infra.SimulateMemcachedReady(types.NamespacedName{
@@ -657,16 +659,16 @@ var _ = Describe("Keystone controller", func() {
 		})
 
 		It("removes the finalizers when deleted", func() {
-			keystone := GetKeystoneAPI(keystoneApiName)
+			keystone := GetKeystoneAPI(keystoneAPIName)
 			Expect(keystone.Finalizers).To(ContainElement("KeystoneAPI"))
-			db := mariadb.GetMariaDBDatabase(keystoneApiName)
+			db := mariadb.GetMariaDBDatabase(keystoneAPIName)
 			Expect(db.Finalizers).To(ContainElement("KeystoneAPI"))
 			dbAcc := mariadb.GetMariaDBAccount(keystoneAccountName)
 			Expect(dbAcc.Finalizers).To(ContainElement("KeystoneAPI"))
 
-			th.DeleteInstance(GetKeystoneAPI(keystoneApiName))
+			th.DeleteInstance(GetKeystoneAPI(keystoneAPIName))
 
-			db = mariadb.GetMariaDBDatabase(keystoneApiName)
+			db = mariadb.GetMariaDBDatabase(keystoneAPIName)
 			Expect(db.Finalizers).NotTo(ContainElement("KeystoneAPI"))
 			dbAcc = mariadb.GetMariaDBAccount(keystoneAccountName)
 			Expect(dbAcc.Finalizers).NotTo(ContainElement("KeystoneAPI"))
@@ -701,7 +703,7 @@ var _ = Describe("Keystone controller", func() {
 
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
-			keystone := CreateKeystoneAPI(keystoneApiName, spec)
+			keystone := CreateKeystoneAPI(keystoneAPIName, spec)
 			DeferCleanup(th.DeleteInstance, keystone)
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
@@ -710,7 +712,7 @@ var _ = Describe("Keystone controller", func() {
 				mariadb.DeleteDBService,
 				mariadb.CreateDBService(
 					namespace,
-					GetKeystoneAPI(keystoneApiName).Spec.DatabaseInstance,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
 					corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Port: 3306}},
 					},
@@ -719,7 +721,7 @@ var _ = Describe("Keystone controller", func() {
 			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
-				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
 				Namespace: namespace,
 			})
 			infra.SimulateMemcachedReady(types.NamespacedName{
@@ -732,10 +734,10 @@ var _ = Describe("Keystone controller", func() {
 		})
 
 		It("registers LoadBalancer services keystone endpoints", func() {
-			instance := keystone.GetKeystoneAPI(keystoneApiName)
+			instance := keystone.GetKeystoneAPI(keystoneAPIName)
 			Expect(instance).NotTo(BeNil())
-			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("public", "http://keystone-public."+keystoneApiName.Namespace+".svc:5000"))
-			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("internal", "http://keystone-internal."+keystoneApiName.Namespace+".svc:5000"))
+			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("public", "http://keystone-public."+keystoneAPIName.Namespace+".svc:5000"))
+			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("internal", "http://keystone-internal."+keystoneAPIName.Namespace+".svc:5000"))
 		})
 
 		It("creates LoadBalancer service", func() {
@@ -752,7 +754,7 @@ var _ = Describe("Keystone controller", func() {
 				HaveKeyWithValue("metallb.universe.tf/loadBalancerIPs", "internal-lb-ip-1,internal-lb-ip-2"))
 
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.ReadyCondition,
 				corev1.ConditionTrue,
@@ -774,7 +776,7 @@ var _ = Describe("Keystone controller", func() {
 
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
-			keystone := CreateKeystoneAPI(keystoneApiName, spec)
+			keystone := CreateKeystoneAPI(keystoneAPIName, spec)
 			DeferCleanup(th.DeleteInstance, keystone)
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
@@ -783,7 +785,7 @@ var _ = Describe("Keystone controller", func() {
 				mariadb.DeleteDBService,
 				mariadb.CreateDBService(
 					namespace,
-					GetKeystoneAPI(keystoneApiName).Spec.DatabaseInstance,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
 					corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Port: 3306}},
 					},
@@ -792,7 +794,7 @@ var _ = Describe("Keystone controller", func() {
 			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
-				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
 				Namespace: namespace,
 			})
 			infra.SimulateMemcachedReady(types.NamespacedName{
@@ -805,13 +807,13 @@ var _ = Describe("Keystone controller", func() {
 		})
 
 		It("registers endpointURL as public keystone endpoint", func() {
-			instance := keystone.GetKeystoneAPI(keystoneApiName)
+			instance := keystone.GetKeystoneAPI(keystoneAPIName)
 			Expect(instance).NotTo(BeNil())
 			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("public", "http://keystone-openstack.apps-crc.testing"))
-			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("internal", "http://keystone-internal."+keystoneApiName.Namespace+".svc:5000"))
+			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("internal", "http://keystone-internal."+keystoneAPIName.Namespace+".svc:5000"))
 
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.ReadyCondition,
 				corev1.ConditionTrue,
@@ -821,7 +823,7 @@ var _ = Describe("Keystone controller", func() {
 
 	When("A KeystoneAPI is created with TLS", func() {
 		BeforeEach(func() {
-			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, GetTLSKeystoneAPISpec()))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, GetTLSKeystoneAPISpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
 			DeferCleanup(
@@ -832,16 +834,16 @@ var _ = Describe("Keystone controller", func() {
 				mariadb.DeleteDBService,
 				mariadb.CreateDBService(
 					namespace,
-					GetKeystoneAPI(keystoneApiName).Spec.DatabaseInstance,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
 					corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Port: 3306}},
 					},
 				),
 			)
 			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
-			mariadb.SimulateMariaDBTLSDatabaseCompleted(keystoneApiName)
+			mariadb.SimulateMariaDBTLSDatabaseCompleted(keystoneAPIName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
-				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
 				Namespace: namespace,
 			})
 			infra.SimulateMemcachedReady(types.NamespacedName{
@@ -852,7 +854,7 @@ var _ = Describe("Keystone controller", func() {
 
 		It("reports that the CA secret is missing", func() {
 			th.ExpectConditionWithDetails(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.TLSInputReadyCondition,
 				corev1.ConditionFalse,
@@ -860,7 +862,7 @@ var _ = Describe("Keystone controller", func() {
 				fmt.Sprintf("TLSInput error occured in TLS sources Secret %s/combined-ca-bundle not found", namespace),
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.ReadyCondition,
 				corev1.ConditionFalse,
@@ -870,7 +872,7 @@ var _ = Describe("Keystone controller", func() {
 		It("reports that the internal cert secret is missing", func() {
 			DeferCleanup(k8sClient.Delete, ctx, th.CreateCABundleSecret(caBundleSecretName))
 			th.ExpectConditionWithDetails(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.TLSInputReadyCondition,
 				corev1.ConditionFalse,
@@ -878,7 +880,7 @@ var _ = Describe("Keystone controller", func() {
 				fmt.Sprintf("TLSInput error occured in TLS sources Secret %s/internal-tls-certs not found", namespace),
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.ReadyCondition,
 				corev1.ConditionFalse,
@@ -889,7 +891,7 @@ var _ = Describe("Keystone controller", func() {
 			DeferCleanup(k8sClient.Delete, ctx, th.CreateCABundleSecret(caBundleSecretName))
 			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(internalCertSecretName))
 			th.ExpectConditionWithDetails(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.TLSInputReadyCondition,
 				corev1.ConditionFalse,
@@ -897,7 +899,7 @@ var _ = Describe("Keystone controller", func() {
 				fmt.Sprintf("TLSInput error occured in TLS sources Secret %s/public-tls-certs not found", namespace),
 			)
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.ReadyCondition,
 				corev1.ConditionFalse,
@@ -927,14 +929,14 @@ var _ = Describe("Keystone controller", func() {
 		})
 
 		It("should create a Secret for keystone.conf and my.cnf", func() {
-			scrt := th.GetSecret(keystoneApiConfigDataName)
+			scrt := th.GetSecret(keystoneAPIConfigDataName)
 			configData := string(scrt.Data["keystone.conf"])
 			Expect(configData).To(
 				ContainSubstring(fmt.Sprintf("memcache_servers=memcached-0.memcached.%s.svc:11211,memcached-1.memcached.%s.svc:11211,memcached-2.memcached.%s.svc:11211",
-					keystoneApiName.Namespace, keystoneApiName.Namespace, keystoneApiName.Namespace)))
+					keystoneAPIName.Namespace, keystoneAPIName.Namespace, keystoneAPIName.Namespace)))
 
 			mariadbAccount := mariadb.GetMariaDBAccount(keystoneAccountName)
-			mariadbSecret := th.GetSecret(types.NamespacedName{Name: mariadbAccount.Spec.Secret, Namespace: keystoneApiName.Namespace})
+			mariadbSecret := th.GetSecret(types.NamespacedName{Name: mariadbAccount.Spec.Secret, Namespace: keystoneAPIName.Namespace})
 
 			Expect(configData).To(
 				ContainSubstring(fmt.Sprintf("connection=mysql+pymysql://%s:%s@hostname-for-openstack.%s.svc/keystone?read_default_file=/etc/my.cnf",
@@ -973,7 +975,7 @@ var _ = Describe("Keystone controller", func() {
 			Expect(container.ReadinessProbe.HTTPGet.Scheme).To(Equal(corev1.URISchemeHTTPS))
 			Expect(container.LivenessProbe.HTTPGet.Scheme).To(Equal(corev1.URISchemeHTTPS))
 
-			scrt := th.GetSecret(keystoneApiConfigDataName)
+			scrt := th.GetSecret(keystoneAPIConfigDataName)
 			Expect(scrt).ShouldNot(BeNil())
 			Expect(scrt.Data).Should(HaveKey("httpd.conf"))
 			Expect(scrt.Data).Should(HaveKey("ssl.conf"))
@@ -994,13 +996,13 @@ var _ = Describe("Keystone controller", func() {
 			th.SimulateJobSuccess(bootstrapJobName)
 			th.SimulateDeploymentReplicaReady(deploymentName)
 
-			instance := keystone.GetKeystoneAPI(keystoneApiName)
+			instance := keystone.GetKeystoneAPI(keystoneAPIName)
 			Expect(instance).NotTo(BeNil())
-			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("public", "https://keystone-public."+keystoneApiName.Namespace+".svc:5000"))
-			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("internal", "https://keystone-internal."+keystoneApiName.Namespace+".svc:5000"))
+			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("public", "https://keystone-public."+keystoneAPIName.Namespace+".svc:5000"))
+			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("internal", "https://keystone-internal."+keystoneAPIName.Namespace+".svc:5000"))
 
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.ReadyCondition,
 				corev1.ConditionTrue,
@@ -1048,7 +1050,7 @@ var _ = Describe("Keystone controller", func() {
 			DeferCleanup(k8sClient.Delete, ctx, th.CreateCABundleSecret(caBundleSecretName))
 			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(internalCertSecretName))
 			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(publicCertSecretName))
-			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, spec))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, spec))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
 			DeferCleanup(
@@ -1058,7 +1060,7 @@ var _ = Describe("Keystone controller", func() {
 				mariadb.DeleteDBService,
 				mariadb.CreateDBService(
 					namespace,
-					GetKeystoneAPI(keystoneApiName).Spec.DatabaseInstance,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
 					corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Port: 3306}},
 					},
@@ -1067,7 +1069,7 @@ var _ = Describe("Keystone controller", func() {
 			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
 			infra.SimulateTransportURLReady(types.NamespacedName{
-				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
 				Namespace: namespace,
 			})
 			infra.SimulateMemcachedReady(types.NamespacedName{
@@ -1080,13 +1082,13 @@ var _ = Describe("Keystone controller", func() {
 		})
 
 		It("registers endpointURL as public keystone endpoint", func() {
-			instance := keystone.GetKeystoneAPI(keystoneApiName)
+			instance := keystone.GetKeystoneAPI(keystoneAPIName)
 			Expect(instance).NotTo(BeNil())
 			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("public", "https://keystone-openstack.apps-crc.testing"))
-			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("internal", "https://keystone-internal."+keystoneApiName.Namespace+".svc:5000"))
+			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("internal", "https://keystone-internal."+keystoneAPIName.Namespace+".svc:5000"))
 
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.ReadyCondition,
 				corev1.ConditionTrue,
@@ -1101,8 +1103,8 @@ var _ = Describe("Keystone controller", func() {
 		PopulateHarness: func(harness *mariadb_test.MariaDBTestHarness) {
 			harness.Setup(
 				"Keystone",
-				keystoneApiName.Namespace,
-				keystoneApiName.Name,
+				keystoneAPIName.Namespace,
+				keystoneAPIName.Name,
 				"KeystoneAPI",
 				mariadb,
 				timeout,
@@ -1119,7 +1121,7 @@ var _ = Describe("Keystone controller", func() {
 
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
-			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneApiName, spec))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, spec))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
 			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
@@ -1128,7 +1130,7 @@ var _ = Describe("Keystone controller", func() {
 				mariadb.DeleteDBService,
 				mariadb.CreateDBService(
 					namespace,
-					GetKeystoneAPI(keystoneApiName).Spec.DatabaseInstance,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
 					corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Port: 3306}},
 					},
@@ -1139,7 +1141,7 @@ var _ = Describe("Keystone controller", func() {
 			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
 
 			infra.SimulateTransportURLReady(types.NamespacedName{
-				Name:      fmt.Sprintf("%s-keystone-transport", keystoneApiName.Name),
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
 				Namespace: namespace,
 			})
 			infra.SimulateMemcachedReady(types.NamespacedName{
@@ -1151,7 +1153,7 @@ var _ = Describe("Keystone controller", func() {
 			th.SimulateDeploymentReplicaReady(deploymentName)
 
 			th.ExpectCondition(
-				keystoneApiName,
+				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.DeploymentReadyCondition,
 				corev1.ConditionTrue,
@@ -1162,7 +1164,7 @@ var _ = Describe("Keystone controller", func() {
 		UpdateAccount: func(newAccountName types.NamespacedName) {
 
 			Eventually(func(g Gomega) {
-				keystoneapi := GetKeystoneAPI(keystoneApiName)
+				keystoneapi := GetKeystoneAPI(keystoneAPIName)
 				keystoneapi.Spec.DatabaseAccount = newAccountName.Name
 				g.Expect(th.K8sClient.Update(ctx, keystoneapi)).Should(Succeed())
 			}, timeout, interval).Should(Succeed())
@@ -1170,7 +1172,7 @@ var _ = Describe("Keystone controller", func() {
 		},
 		// delete the keystone instance to exercise finalizer removal
 		DeleteCR: func() {
-			th.DeleteInstance(GetKeystoneAPI(keystoneApiName))
+			th.DeleteInstance(GetKeystoneAPI(keystoneAPIName))
 		},
 	}
 
@@ -1178,7 +1180,7 @@ var _ = Describe("Keystone controller", func() {
 
 	mariadbSuite.RunURLAssertSuite(func(accountName types.NamespacedName, username string, password string) {
 		Eventually(func(g Gomega) {
-			scrt := th.GetSecret(keystoneApiConfigDataName)
+			scrt := th.GetSecret(keystoneAPIConfigDataName)
 			configData := string(scrt.Data["keystone.conf"])
 
 			g.Expect(configData).To(

@@ -19,7 +19,7 @@ package functional_test
 import (
 	"fmt"
 
-	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega" //revive:disable:dot-imports
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"

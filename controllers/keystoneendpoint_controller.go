@@ -408,7 +408,6 @@ func (r *KeystoneEndpointReconciler) reconcileNormal(
 	err = r.reconcileEndpoints(
 		ctx,
 		instance,
-		helper,
 		os)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
@@ -433,7 +432,6 @@ func (r *KeystoneEndpointReconciler) reconcileNormal(
 func (r *KeystoneEndpointReconciler) reconcileEndpoints(
 	ctx context.Context,
 	instance *keystonev1.KeystoneEndpoint,
-	helper *helper.Helper,
 	os *openstack.OpenStack,
 ) error {
 	l := GetLog(ctx)
