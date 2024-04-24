@@ -71,10 +71,10 @@ spec:
             path: /v3
             port: 5000
             scheme: HTTP
-          initialDelaySeconds: 3
-          periodSeconds: 3
+          initialDelaySeconds: 5
+          periodSeconds: 30
           successThreshold: 1
-          timeoutSeconds: 5
+          timeoutSeconds: 30
         name: keystone-api
         readinessProbe:
           failureThreshold: 3
@@ -83,9 +83,9 @@ spec:
             port: 5000
             scheme: HTTP
           initialDelaySeconds: 5
-          periodSeconds: 5
+          periodSeconds: 30
           successThreshold: 1
-          timeoutSeconds: 5
+          timeoutSeconds: 30
         resources:
           requests:
             cpu: "1"
