@@ -17,24 +17,67 @@ limitations under the License.
 package functional_test
 
 import (
+	"fmt"
 	"os"
 
 	. "github.com/onsi/ginkgo/v2" //revive:disable:dot-imports
 	. "github.com/onsi/gomega"    //revive:disable:dot-imports
-	"k8s.io/apimachinery/pkg/types"
 
+	//revive:disable-next-line:dot-imports
+	. "github.com/openstack-k8s-operators/lib-common/modules/common/test/helpers"
+
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
+	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
 )
 
 var _ = Describe("KeystoneAPI Webhook", func() {
 
 	var keystoneAPIName types.NamespacedName
+	var keystoneAccountName types.NamespacedName
+	var keystoneDatabaseName types.NamespacedName
+	var dbSyncJobName types.NamespacedName
+	var bootstrapJobName types.NamespacedName
+	var deploymentName types.NamespacedName
+	var memcachedSpec memcachedv1.MemcachedSpec
 
 	BeforeEach(func() {
 
 		keystoneAPIName = types.NamespacedName{
 			Name:      "keystone",
 			Namespace: namespace,
+		}
+		keystoneAccountName = types.NamespacedName{
+			Name:      AccountName,
+			Namespace: namespace,
+		}
+		keystoneDatabaseName = types.NamespacedName{
+			Name:      DatabaseCRName,
+			Namespace: namespace,
+		}
+		dbSyncJobName = types.NamespacedName{
+			Name:      "keystone-db-sync",
+			Namespace: namespace,
+		}
+		bootstrapJobName = types.NamespacedName{
+			Name:      "keystone-bootstrap",
+			Namespace: namespace,
+		}
+		deploymentName = types.NamespacedName{
+			Name:      "keystone",
+			Namespace: namespace,
+		}
+		memcachedSpec = memcachedv1.MemcachedSpec{
+			MemcachedSpecCore: memcachedv1.MemcachedSpecCore{
+				Replicas: ptr.To(int32(3)),
+			},
 		}
 
 		err := os.Setenv("OPERATOR_TEMPLATES", "../../templates")
@@ -56,9 +99,9 @@ var _ = Describe("KeystoneAPI Webhook", func() {
 
 	When("A KeystoneAPI instance is created with container images", func() {
 		BeforeEach(func() {
-			keystoneAPISpec := GetDefaultKeystoneAPISpec()
-			keystoneAPISpec["containerImage"] = "api-container-image"
-			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, keystoneAPISpec))
+			spec := GetDefaultKeystoneAPISpec()
+			spec["containerImage"] = "api-container-image"
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, spec))
 		})
 
 		It("should use the given values", func() {
@@ -66,6 +109,95 @@ var _ = Describe("KeystoneAPI Webhook", func() {
 			Expect(KeystoneAPI.Spec.ContainerImage).Should(Equal(
 				"api-container-image",
 			))
+		})
+	})
+
+	It("rejects with wrong service override endpoint type", func() {
+		spec := GetDefaultKeystoneAPISpec()
+		spec["override"] = map[string]interface{}{
+			"service": map[string]interface{}{
+				"internal": map[string]interface{}{},
+				"wrooong":  map[string]interface{}{},
+			},
+		}
+
+		raw := map[string]interface{}{
+			"apiVersion": "keystone.openstack.org/v1beta1",
+			"kind":       "KeystoneAPI",
+			"metadata": map[string]interface{}{
+				"name":      keystoneAPIName.Name,
+				"namespace": keystoneAPIName.Namespace,
+			},
+			"spec": spec,
+		}
+
+		unstructuredObj := &unstructured.Unstructured{Object: raw}
+		_, err := controllerutil.CreateOrPatch(
+			th.Ctx, th.K8sClient, unstructuredObj, func() error { return nil })
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(
+			ContainSubstring(
+				"invalid: spec.override.service[wrooong]: " +
+					"Invalid value: \"wrooong\": invalid endpoint type: wrooong"),
+		)
+	})
+
+	When("A KeystoneAPI instance is updated with wrong service override endpoint", func() {
+		BeforeEach(func() {
+			spec := GetDefaultKeystoneAPISpec()
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			keystone := CreateKeystoneAPI(keystoneAPIName, spec)
+			DeferCleanup(th.DeleteInstance, keystone)
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
+				Namespace: namespace,
+			})
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+			th.SimulateDeploymentReplicaReady(deploymentName)
+
+			th.ExpectCondition(
+				keystoneAPIName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionTrue,
+			)
+		})
+
+		It("rejects update with wrong service override endpoint type", func() {
+			KeystoneAPI := GetKeystoneAPI(keystoneAPIName)
+			Expect(KeystoneAPI).NotTo(BeNil())
+			if KeystoneAPI.Spec.Override.Service == nil {
+				KeystoneAPI.Spec.Override.Service = map[service.Endpoint]service.RoutedOverrideSpec{}
+			}
+			KeystoneAPI.Spec.Override.Service["wrooong"] = service.RoutedOverrideSpec{}
+			err := k8sClient.Update(ctx, KeystoneAPI)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(
+				ContainSubstring(
+					"invalid: spec.override.service[wrooong]: " +
+						"Invalid value: \"wrooong\": invalid endpoint type: wrooong"),
+			)
 		})
 	})
 })

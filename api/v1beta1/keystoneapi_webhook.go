@@ -23,7 +23,12 @@ limitations under the License.
 package v1beta1
 
 import (
+	"fmt"
+
+	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -88,16 +93,71 @@ var _ webhook.Validator = &KeystoneAPI{}
 func (r *KeystoneAPI) ValidateCreate() (admission.Warnings, error) {
 	keystoneapilog.Info("validate create", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object creation.
+	allErrs := field.ErrorList{}
+	basePath := field.NewPath("spec")
+
+	if err := r.Spec.ValidateCreate(basePath); err != nil {
+		allErrs = append(allErrs, err...)
+	}
+
+	if len(allErrs) != 0 {
+		return nil, apierrors.NewInvalid(GroupVersion.WithKind("KeystoneAPI").GroupKind(), r.Name, allErrs)
+	}
+
 	return nil, nil
+}
+
+// ValidateCreate - Exported function wrapping non-exported validate functions,
+// this function can be called externally to validate an KeystoneAPI spec.
+func (spec *KeystoneAPISpec) ValidateCreate(basePath *field.Path) field.ErrorList {
+	return spec.KeystoneAPISpecCore.ValidateCreate(basePath)
+}
+
+func (spec *KeystoneAPISpecCore) ValidateCreate(basePath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+
+	// validate the service override key is valid
+	allErrs = append(allErrs, service.ValidateRoutedOverrides(basePath.Child("override").Child("service"), spec.Override.Service)...)
+
+	return allErrs
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *KeystoneAPI) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	keystoneapilog.Info("validate update", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object update.
+	oldKeystoneAPI, ok := old.(*KeystoneAPI)
+	if !ok || oldKeystoneAPI == nil {
+		return nil, apierrors.NewInternalError(fmt.Errorf("unable to convert existing object"))
+	}
+
+	allErrs := field.ErrorList{}
+	basePath := field.NewPath("spec")
+
+	if err := r.Spec.ValidateUpdate(oldKeystoneAPI.Spec, basePath); err != nil {
+		allErrs = append(allErrs, err...)
+	}
+
+	if len(allErrs) != 0 {
+		return nil, apierrors.NewInvalid(GroupVersion.WithKind("KeystoneAPI").GroupKind(), r.Name, allErrs)
+	}
+
 	return nil, nil
+}
+
+// ValidateUpdate - Exported function wrapping non-exported validate functions,
+// this function can be called externally to validate an ironic spec.
+func (spec *KeystoneAPISpec) ValidateUpdate(old KeystoneAPISpec, basePath *field.Path) field.ErrorList {
+	return spec.KeystoneAPISpecCore.ValidateUpdate(old.KeystoneAPISpecCore, basePath)
+}
+
+func (spec *KeystoneAPISpecCore) ValidateUpdate(old KeystoneAPISpecCore, basePath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+
+	// validate the service override key is valid
+	allErrs = append(allErrs, service.ValidateRoutedOverrides(basePath.Child("override").Child("service"), spec.Override.Service)...)
+
+	return allErrs
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
