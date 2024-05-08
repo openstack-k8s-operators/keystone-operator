@@ -100,12 +100,9 @@ type KeystoneAPISpecCore struct {
 	Secret string `json:"secret"`
 
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=false
-	SecureRBACEnforceScope bool `json:"secureRBACEnforceScope"`
-
-	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=true
-	SecureRBACEnforceNewDefaults bool `json:"secureRBACEnforceNewDefaults"`
+	// EnableSecureRBAC - Enable Consistent and Secure RBAC policies
+	EnableSecureRBAC bool `json:"enableSecureRBAC"`
 
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=""
