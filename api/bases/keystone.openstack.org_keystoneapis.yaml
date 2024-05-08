@@ -84,6 +84,11 @@ spec:
                   files. Those get added to the service config dir in /etc/<service>
                   . TODO: -> implement'
                 type: object
+              enableSecureRBAC:
+                default: true
+                description: EnableSecureRBAC - Enable Consistent and Secure RBAC
+                  policies
+                type: boolean
               memcachedInstance:
                 default: memcached
                 description: Memcached instance name.
@@ -360,12 +365,6 @@ spec:
                 description: Secret containing OpenStack password information for
                   keystone AdminPassword
                 type: string
-              secureRBACEnforceNewDefaults:
-                default: true
-                type: boolean
-              secureRBACEnforceScope:
-                default: false
-                type: boolean
               tls:
                 description: TLS - Parameters related to the TLS
                 properties:
