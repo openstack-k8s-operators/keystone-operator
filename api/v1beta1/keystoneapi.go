@@ -25,6 +25,7 @@ import (
 	"github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/helper"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/secret"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/tls"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	openstack "github.com/openstack-k8s-operators/lib-common/modules/openstack"
@@ -111,9 +112,24 @@ func GetScopedAdminServiceClient(
 
 	tlsConfig := &openstack.TLSConfig{}
 	if parsedAuthURL.Scheme == "https" {
-		// TODO: (mschuppert) for now just set to insecure, when keystone got
-		// enabled for internal tls, get the CA secret name from the keystoneAPI
-		tlsConfig.Insecure = true
+		caCert, ctrlResult, err := secret.GetDataFromSecret(
+			ctx,
+			h,
+			keystoneAPI.Spec.TLS.CaBundleSecretName,
+			10*time.Second,
+			tls.InternalCABundleKey)
+		if err != nil {
+			return nil, ctrl.Result{}, err
+		}
+		if (ctrlResult != ctrl.Result{}) {
+			return nil, ctrl.Result{}, fmt.Errorf("the CABundleSecret %s not found", keystoneAPI.Spec.TLS.CaBundleSecretName)
+		}
+
+		tlsConfig = &openstack.TLSConfig{
+			CACerts: []string{
+				caCert,
+			},
+		}
 	}
 
 	// get the password of the admin user from Spec.Secret
@@ -128,7 +144,7 @@ func GetScopedAdminServiceClient(
 		return nil, ctrl.Result{}, err
 	}
 	if (ctrlResult != ctrl.Result{}) {
-		return nil, ctrlResult, nil
+		return nil, ctrlResult, fmt.Errorf("password for user %s not found", keystoneAPI.Spec.PasswordSelectors.Admin)
 	}
 
 	os, err := openstack.NewOpenStack(
