@@ -10,10 +10,10 @@ require (
 	github.com/onsi/gomega v1.33.1
 	github.com/openstack-k8s-operators/infra-operator/apis v0.3.1-0.20240604144138-996e41d1af19
 	github.com/openstack-k8s-operators/keystone-operator/api v0.3.1-0.20240213125925-e40975f3db7e
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.3.1-0.20240615134235-24529fcff658
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.3.1-0.20240618142732-ec81334ac10d
 	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.3.1-0.20240615134235-24529fcff658
 	github.com/openstack-k8s-operators/lib-common/modules/test v0.3.1-0.20240615134235-24529fcff658
-	github.com/openstack-k8s-operators/mariadb-operator/api v0.3.1-0.20240613130956-7d997dc5d972
+	github.com/openstack-k8s-operators/mariadb-operator/api v0.3.1-0.20240618160206-098a347e0f61
 	go.uber.org/zap v1.27.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.28.11
