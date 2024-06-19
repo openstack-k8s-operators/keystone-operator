@@ -9,24 +9,24 @@ apiVersion: keystone.openstack.org/v1beta1
 kind: KeystoneAPI
 metadata:
   finalizers:
-  - KeystoneAPI
-  - KeystoneService-placement
-  - KeystoneEndpoint-placement
+  - openstack.org/keystoneapi
+  - openstack.org/keystoneservice-placement
+  - openstack.org/keystoneendpoint-placement
   name: keystone
 ---
 apiVersion: keystone.openstack.org/v1beta1
 kind: KeystoneService
 metadata:
   finalizers:
-  - KeystoneService
-  - KeystoneEndpoint-placement
+  - openstack.org/keystoneservice
+  - openstack.org/keystoneendpoint-placement
   name: placement
 ---
 apiVersion: keystone.openstack.org/v1beta1
 kind: KeystoneEndpoint
 metadata:
   finalizers:
-  - KeystoneEndpoint
+  - openstack.org/keystoneendpoint
   name: placement
 spec:
   endpoints:

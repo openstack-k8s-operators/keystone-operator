@@ -8,15 +8,15 @@ apiVersion: keystone.openstack.org/v1beta1
 kind: KeystoneAPI
 metadata:
   finalizers:
-  - KeystoneAPI
-  - KeystoneService-placement
+  - openstack.org/keystoneapi
+  - openstack.org/keystoneservice-placement
   name: keystone
 ---
 apiVersion: keystone.openstack.org/v1beta1
 kind: KeystoneService
 metadata:
   finalizers:
-  - KeystoneService
+  - openstack.org/keystoneservice
   name: placement
 spec:
   enabled: true

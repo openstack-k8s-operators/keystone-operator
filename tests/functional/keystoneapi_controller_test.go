@@ -158,7 +158,7 @@ var _ = Describe("Keystone controller", func() {
 			// it to run
 			Eventually(func() []string {
 				return GetKeystoneAPI(keystoneAPIName).Finalizers
-			}, timeout, interval).Should(ContainElement("KeystoneAPI"))
+			}, timeout, interval).Should(ContainElement("openstack.org/keystoneapi"))
 		})
 	})
 
@@ -660,18 +660,18 @@ var _ = Describe("Keystone controller", func() {
 
 		It("removes the finalizers when deleted", func() {
 			keystone := GetKeystoneAPI(keystoneAPIName)
-			Expect(keystone.Finalizers).To(ContainElement("KeystoneAPI"))
+			Expect(keystone.Finalizers).To(ContainElement("openstack.org/keystoneapi"))
 			db := mariadb.GetMariaDBDatabase(keystoneAPIName)
-			Expect(db.Finalizers).To(ContainElement("KeystoneAPI"))
+			Expect(db.Finalizers).To(ContainElement("openstack.org/keystoneapi"))
 			dbAcc := mariadb.GetMariaDBAccount(keystoneAccountName)
-			Expect(dbAcc.Finalizers).To(ContainElement("KeystoneAPI"))
+			Expect(dbAcc.Finalizers).To(ContainElement("openstack.org/keystoneapi"))
 
 			th.DeleteInstance(GetKeystoneAPI(keystoneAPIName))
 
 			db = mariadb.GetMariaDBDatabase(keystoneAPIName)
-			Expect(db.Finalizers).NotTo(ContainElement("KeystoneAPI"))
+			Expect(db.Finalizers).NotTo(ContainElement("openstack.org/keystoneapi"))
 			dbAcc = mariadb.GetMariaDBAccount(keystoneAccountName)
-			Expect(dbAcc.Finalizers).NotTo(ContainElement("KeystoneAPI"))
+			Expect(dbAcc.Finalizers).NotTo(ContainElement("openstack.org/keystoneapi"))
 		})
 	})
 
@@ -1112,7 +1112,7 @@ var _ = Describe("Keystone controller", func() {
 				"Keystone",
 				keystoneAPIName.Namespace,
 				keystoneAPIName.Name,
-				"KeystoneAPI",
+				"openstack.org/keystoneapi",
 				mariadb,
 				timeout,
 				interval,

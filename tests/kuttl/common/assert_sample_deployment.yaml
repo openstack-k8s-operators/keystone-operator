@@ -10,7 +10,7 @@ apiVersion: keystone.openstack.org/v1beta1
 kind: KeystoneAPI
 metadata:
   finalizers:
-  - KeystoneAPI
+  - openstack.org/keystoneapi
   name: keystone
 spec:
   adminProject: admin
