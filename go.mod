@@ -8,7 +8,7 @@ require (
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.4.0
 	github.com/onsi/ginkgo/v2 v2.19.0
 	github.com/onsi/gomega v1.33.1
-	github.com/openstack-k8s-operators/infra-operator/apis v0.3.1-0.20240619095729-12880d8dcd1a
+	github.com/openstack-k8s-operators/infra-operator/apis v0.3.1-0.20240622123909-205129589c38
 	github.com/openstack-k8s-operators/keystone-operator/api v0.3.1-0.20240213125925-e40975f3db7e
 	github.com/openstack-k8s-operators/lib-common/modules/common v0.3.1-0.20240621144804-4b3c1fd10960
 	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.3.1-0.20240621144804-4b3c1fd10960
