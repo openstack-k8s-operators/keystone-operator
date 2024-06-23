@@ -729,6 +729,7 @@ var _ = Describe("Keystone controller", func() {
 				Namespace: namespace,
 			})
 			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateLoadBalancerServiceIP(types.NamespacedName{Namespace: namespace, Name: "keystone-internal"})
 			th.SimulateJobSuccess(bootstrapJobName)
 			th.SimulateDeploymentReplicaReady(deploymentName)
 		})
