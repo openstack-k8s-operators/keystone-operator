@@ -1280,8 +1280,10 @@ func (r *KeystoneAPIReconciler) reconcileCloudConfig(
 	if err != nil {
 		return err
 	}
+	cloudrc := keystone.GenerateCloudrc(&openStackConfigSecret, &openStackConfig)
 	secretString := map[string]string{
 		"secure.yaml": string(secretVal),
+		"cloudrc":     string(cloudrc),
 	}
 
 	secrets := []util.Template{
