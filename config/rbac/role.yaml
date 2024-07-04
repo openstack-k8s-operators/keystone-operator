@@ -25,6 +25,7 @@ rules:
   - create
   - get
   - list
+  - patch
   - update
   - watch
 - apiGroups:
@@ -124,6 +125,7 @@ rules:
   resources:
   - keystoneapis/finalizers
   verbs:
+  - patch
   - update
 - apiGroups:
   - keystone.openstack.org
@@ -150,6 +152,7 @@ rules:
   resources:
   - keystoneendpoints/finalizers
   verbs:
+  - patch
   - update
 - apiGroups:
   - keystone.openstack.org
@@ -176,6 +179,7 @@ rules:
   resources:
   - keystoneservices/finalizers
   verbs:
+  - patch
   - update
 - apiGroups:
   - keystone.openstack.org
@@ -202,6 +206,7 @@ rules:
   resources:
   - mariadbaccounts/finalizers
   verbs:
+  - patch
   - update
 - apiGroups:
   - mariadb.openstack.org
@@ -222,6 +227,7 @@ rules:
   verbs:
   - get
   - list
+  - patch
   - update
   - watch
 - apiGroups:
@@ -229,6 +235,7 @@ rules:
   resources:
   - memcacheds/finalizers
   verbs:
+  - patch
   - update
 - apiGroups:
   - rabbitmq.openstack.org
@@ -250,6 +257,7 @@ rules:
   - create
   - get
   - list
+  - patch
   - update
   - watch
 - apiGroups:
@@ -260,6 +268,7 @@ rules:
   - create
   - get
   - list
+  - patch
   - update
   - watch
 - apiGroups:
