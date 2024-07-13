@@ -7,9 +7,9 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gophercloud/gophercloud v1.12.0
 	github.com/onsi/gomega v1.33.1
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.4.1-0.20240709142659-5a0b4d5c6176
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.4.1-0.20240709142659-5a0b4d5c6176
-	github.com/openstack-k8s-operators/lib-common/modules/test v0.4.1-0.20240709142659-5a0b4d5c6176
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.4.1-0.20240709153313-544a55696489
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.4.1-0.20240709153313-544a55696489
+	github.com/openstack-k8s-operators/lib-common/modules/test v0.4.1-0.20240709153313-544a55696489
 	golang.org/x/exp v0.0.0-20240213143201-ec583247a57a
 	k8s.io/api v0.28.11
 	k8s.io/apimachinery v0.28.11
