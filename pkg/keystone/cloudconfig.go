@@ -16,6 +16,8 @@ limitations under the License.
 
 package keystone
 
+import "fmt"
+
 // OpenStackConfig type
 type OpenStackConfig struct {
 	Clouds struct {
@@ -41,4 +43,18 @@ type OpenStackConfigSecret struct {
 			}
 		}
 	}
+}
+
+// generateCloudrc - generate file contents of a cloudrc file for the clients
+// until there is parity with openstackclient.
+func GenerateCloudrc(secret *OpenStackConfigSecret, config *OpenStackConfig) string {
+	auth := config.Clouds.Default.Auth
+	val := fmt.Sprintf(
+		"export OS_AUTH_URL=" + auth.AuthURL +
+			"\nexport OS_USERNAME=" + auth.UserName +
+			"\nexport OS_PROJECT_NAME=" + auth.ProjectName +
+			"\nexport OS_PROJECT_DOMAIN_NAME=" + auth.ProjectDomainName +
+			"\nexport OS_USER_DOMAIN_NAME=" + auth.UserDomainName +
+			"\nexport OS_PASSWORD=" + secret.Clouds.Default.Auth.Password)
+	return val
 }
