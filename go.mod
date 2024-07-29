@@ -10,9 +10,9 @@ require (
 	github.com/onsi/gomega v1.33.1
 	github.com/openstack-k8s-operators/infra-operator/apis v0.4.1-0.20240723072244-35220eeedc06
 	github.com/openstack-k8s-operators/keystone-operator/api v0.3.1-0.20240213125925-e40975f3db7e
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.4.1-0.20240722053056-bd202c880706
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.4.1-0.20240722053056-bd202c880706
-	github.com/openstack-k8s-operators/lib-common/modules/test v0.4.1-0.20240722053056-bd202c880706
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.4.1-0.20240727081739-431d0dcd4c77
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.4.1-0.20240727081739-431d0dcd4c77
+	github.com/openstack-k8s-operators/lib-common/modules/test v0.4.1-0.20240727081739-431d0dcd4c77
 	github.com/openstack-k8s-operators/mariadb-operator/api v0.4.1-0.20240723061644-8b86dae4532b
 	go.uber.org/zap v1.27.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -42,7 +42,7 @@ require (
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20240424215950-a892ee059fd6 // indirect
-	github.com/gophercloud/gophercloud v1.13.0 // indirect
+	github.com/gophercloud/gophercloud v1.14.0 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
