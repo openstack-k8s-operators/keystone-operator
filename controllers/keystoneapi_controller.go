@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"time"
 
+	networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	rabbitmqv1 "github.com/openstack-k8s-operators/infra-operator/apis/rabbitmq/v1beta1"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
@@ -236,6 +237,7 @@ const (
 	caBundleSecretNameField = ".spec.tls.caBundleSecretName"
 	tlsAPIInternalField     = ".spec.tls.api.internal.secretName"
 	tlsAPIPublicField       = ".spec.tls.api.public.secretName"
+	networkAttachmentsField = ".spec.networkAttachments"
 )
 
 var allWatchFields = []string{
@@ -243,6 +245,7 @@ var allWatchFields = []string{
 	caBundleSecretNameField,
 	tlsAPIInternalField,
 	tlsAPIPublicField,
+	networkAttachmentsField,
 }
 
 // SetupWithManager -
@@ -297,6 +300,18 @@ func (r *KeystoneAPIReconciler) SetupWithManager(ctx context.Context, mgr ctrl.M
 		return err
 	}
 
+	// index networkAttachmentsField
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &keystonev1.KeystoneAPI{}, networkAttachmentsField, func(rawObj client.Object) []string {
+		// Extract the NetworkAttachments name from the spec, if one is provided
+		cr := rawObj.(*keystonev1.KeystoneAPI)
+		if cr.Spec.NetworkAttachments == nil {
+			return nil
+		}
+		return cr.Spec.NetworkAttachments
+	}); err != nil {
+		return err
+	}
+
 	memcachedFn := func(ctx context.Context, o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 
@@ -343,6 +358,10 @@ func (r *KeystoneAPIReconciler) SetupWithManager(ctx context.Context, mgr ctrl.M
 			handler.EnqueueRequestsFromMapFunc(memcachedFn)).
 		Watches(
 			&corev1.Secret{},
+			handler.EnqueueRequestsFromMapFunc(r.findObjectsForSrc),
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+		).
+		Watches(&networkv1.NetworkAttachmentDefinition{},
 			handler.EnqueueRequestsFromMapFunc(r.findObjectsForSrc),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
