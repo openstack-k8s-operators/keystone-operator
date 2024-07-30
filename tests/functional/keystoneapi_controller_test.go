@@ -859,8 +859,8 @@ var _ = Describe("Keystone controller", func() {
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.TLSInputReadyCondition,
 				corev1.ConditionFalse,
-				condition.ErrorReason,
-				fmt.Sprintf("TLSInput error occured in TLS sources Secret %s/combined-ca-bundle not found", namespace),
+				condition.RequestedReason,
+				fmt.Sprintf("TLSInput is missing: %s", CABundleSecretName),
 			)
 			th.ExpectCondition(
 				keystoneAPIName,
@@ -877,8 +877,8 @@ var _ = Describe("Keystone controller", func() {
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.TLSInputReadyCondition,
 				corev1.ConditionFalse,
-				condition.ErrorReason,
-				fmt.Sprintf("TLSInput error occured in TLS sources Secret %s/internal-tls-certs not found", namespace),
+				condition.RequestedReason,
+				"TLSInput is missing: one or more cert secrets",
 			)
 			th.ExpectCondition(
 				keystoneAPIName,
@@ -896,8 +896,8 @@ var _ = Describe("Keystone controller", func() {
 				ConditionGetterFunc(KeystoneConditionGetter),
 				condition.TLSInputReadyCondition,
 				corev1.ConditionFalse,
-				condition.ErrorReason,
-				fmt.Sprintf("TLSInput error occured in TLS sources Secret %s/public-tls-certs not found", namespace),
+				condition.RequestedReason,
+				"TLSInput is missing: one or more cert secrets",
 			)
 			th.ExpectCondition(
 				keystoneAPIName,
