@@ -712,7 +712,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	//
 	// check for required OpenStack secret holding passwords for service/admin user and add hash to the vars map
 	//
-	ospSecret, hash, err := oko_secret.GetSecret(ctx, helper, instance.Spec.Secret, instance.Namespace)
+	hash, result, err := oko_secret.VerifySecret(ctx, types.NamespacedName{Name: instance.Spec.Secret, Namespace: instance.Namespace}, []string{"AdminPassword"}, helper.GetClient(), time.Second*10)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			Log.Info(fmt.Sprintf("OpenStack secret %s not found", instance.Spec.Secret))
@@ -731,7 +731,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 			err.Error()))
 		return ctrl.Result{}, err
 	}
-	configMapVars[ospSecret.Name] = env.SetValue(hash)
+	configMapVars[instance.Spec.Secret] = env.SetValue(hash)
 
 	instance.Status.Conditions.MarkTrue(condition.InputReadyCondition, condition.InputReadyMessage)
 
