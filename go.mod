@@ -6,7 +6,7 @@ require (
 	github.com/go-logr/logr v1.4.2
 	github.com/google/uuid v1.6.0
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.4.0
-	github.com/onsi/ginkgo/v2 v2.19.0
+	github.com/onsi/ginkgo/v2 v2.19.1
 	github.com/onsi/gomega v1.34.1
 	github.com/openstack-k8s-operators/infra-operator/apis v0.4.1-0.20240730162859-91b64b2d2de7
 	github.com/openstack-k8s-operators/keystone-operator/api v0.3.1-0.20240213125925-e40975f3db7e
