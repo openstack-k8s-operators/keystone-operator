@@ -711,18 +711,11 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 
 	//
 	// check for required OpenStack secret holding passwords for service/admin user and add hash to the vars map
+	// NOTE: VerifySecret handles the "not found" error and returns RequeueAfter ctrl.Result if so, so we don't
+	//       need to check the error type here
 	//
-	ospSecret, hash, err := oko_secret.GetSecret(ctx, helper, instance.Spec.Secret, instance.Namespace)
+	hash, result, err := oko_secret.VerifySecret(ctx, types.NamespacedName{Name: instance.Spec.Secret, Namespace: instance.Namespace}, []string{"AdminPassword"}, helper.GetClient(), time.Second*10)
 	if err != nil {
-		if k8s_errors.IsNotFound(err) {
-			Log.Info(fmt.Sprintf("OpenStack secret %s not found", instance.Spec.Secret))
-			instance.Status.Conditions.Set(condition.FalseCondition(
-				condition.InputReadyCondition,
-				condition.RequestedReason,
-				condition.SeverityInfo,
-				condition.InputReadyWaitingMessage))
-			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
-		}
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.InputReadyCondition,
 			condition.ErrorReason,
@@ -730,8 +723,16 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 			condition.InputReadyErrorMessage,
 			err.Error()))
 		return ctrl.Result{}, err
+	} else if (result != ctrl.Result{}) {
+		// This case is "secret not found".  VerifySecret already logs a message for it
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.InputReadyCondition,
+			condition.RequestedReason,
+			condition.SeverityInfo,
+			condition.InputReadyWaitingMessage))
+		return result, nil
 	}
-	configMapVars[ospSecret.Name] = env.SetValue(hash)
+	configMapVars[instance.Spec.Secret] = env.SetValue(hash)
 
 	instance.Status.Conditions.MarkTrue(condition.InputReadyCondition, condition.InputReadyMessage)
 
@@ -889,6 +890,11 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 				err.Error()))
 			return ctrlResult, err
 		} else if (ctrlResult != ctrl.Result{}) {
+			instance.Status.Conditions.Set(condition.FalseCondition(
+				condition.TLSInputReadyCondition,
+				condition.RequestedReason,
+				condition.SeverityInfo,
+				fmt.Sprintf(condition.TLSInputReadyWaitingMessage, instance.Spec.TLS.CaBundleSecretName)))
 			return ctrlResult, nil
 		}
 
@@ -908,6 +914,11 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 			err.Error()))
 		return ctrlResult, err
 	} else if (ctrlResult != ctrl.Result{}) {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.TLSInputReadyCondition,
+			condition.RequestedReason,
+			condition.SeverityInfo,
+			fmt.Sprintf(condition.TLSInputReadyWaitingMessage, "one or more cert secrets")))
 		return ctrlResult, nil
 	}
 	configMapVars[tls.TLSHashName] = env.SetValue(certsHash)
