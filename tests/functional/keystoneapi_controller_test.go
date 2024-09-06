@@ -878,7 +878,8 @@ var _ = Describe("Keystone controller", func() {
 				condition.TLSInputReadyCondition,
 				corev1.ConditionFalse,
 				condition.RequestedReason,
-				"TLSInput is missing: one or more cert secrets",
+				fmt.Sprintf("TLSInput is missing: secrets \"%s in namespace %s\" not found",
+					internalCertSecretName.Name, internalCertSecretName.Namespace),
 			)
 			th.ExpectCondition(
 				keystoneAPIName,
@@ -897,7 +898,8 @@ var _ = Describe("Keystone controller", func() {
 				condition.TLSInputReadyCondition,
 				corev1.ConditionFalse,
 				condition.RequestedReason,
-				"TLSInput is missing: one or more cert secrets",
+				fmt.Sprintf("TLSInput is missing: secrets \"%s in namespace %s\" not found",
+					publicCertSecretName.Name, publicCertSecretName.Namespace),
 			)
 			th.ExpectCondition(
 				keystoneAPIName,
