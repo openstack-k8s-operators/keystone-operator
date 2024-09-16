@@ -11,9 +11,9 @@ require (
 	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.4.1-0.20240910122823-bdcfe881513b
 	github.com/openstack-k8s-operators/lib-common/modules/test v0.4.1-0.20240910122823-bdcfe881513b
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
-	k8s.io/api v0.28.13
-	k8s.io/apimachinery v0.28.13
-	sigs.k8s.io/controller-runtime v0.16.6
+	k8s.io/api v0.29.2
+	k8s.io/apimachinery v0.29.2
+	sigs.k8s.io/controller-runtime v0.17.5
 )
 
 require (
@@ -23,7 +23,6 @@ require (
 	github.com/emicklei/go-restful/v3 v3.11.2 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
-	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-openapi/jsonpointer v0.20.2 // indirect
 	github.com/go-openapi/jsonreference v0.20.4 // indirect
 	github.com/go-openapi/swag v0.22.9 // indirect
@@ -60,9 +59,9 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.28.13 // indirect
-	k8s.io/client-go v0.28.13 // indirect
-	k8s.io/component-base v0.28.13 // indirect
+	k8s.io/apiextensions-apiserver v0.29.2 // indirect
+	k8s.io/client-go v0.29.2 // indirect
+	k8s.io/component-base v0.29.2 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8 // indirect
@@ -71,6 +70,6 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-// mschuppert: map to latest commit from release-4.13 tag
+// mschuppert: map to latest commit from release-4.16 tag
 // must consistent within modules and service operators
-replace github.com/openshift/api => github.com/openshift/api v0.0.0-20230414143018-3367bc7e6ac7 //allow-merging
+replace github.com/openshift/api => github.com/openshift/api v0.0.0-20240830023148-b7d0481c9094 //allow-merging
