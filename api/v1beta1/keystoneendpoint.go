@@ -239,6 +239,5 @@ func GetKeystoneEndpointUrls(
 		}
 	}
 
-
 	return endpointurls, nil
 }

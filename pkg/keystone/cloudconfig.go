@@ -50,11 +50,17 @@ type OpenStackConfigSecret struct {
 func GenerateCloudrc(secret *OpenStackConfigSecret, config *OpenStackConfig) string {
 	auth := config.Clouds.Default.Auth
 	val := fmt.Sprintf(
-		"export OS_AUTH_URL=" + auth.AuthURL +
-			"\nexport OS_USERNAME=" + auth.UserName +
-			"\nexport OS_PROJECT_NAME=" + auth.ProjectName +
-			"\nexport OS_PROJECT_DOMAIN_NAME=" + auth.ProjectDomainName +
-			"\nexport OS_USER_DOMAIN_NAME=" + auth.UserDomainName +
-			"\nexport OS_PASSWORD=" + secret.Clouds.Default.Auth.Password)
+		"export OS_AUTH_URL=%s"+
+			"\nexport OS_USERNAME=%s"+
+			"\nexport OS_PROJECT_NAME=%s"+
+			"\nexport OS_PROJECT_DOMAIN_NAME=%s"+
+			"\nexport OS_USER_DOMAIN_NAME=%s"+
+			"\nexport OS_PASSWORD=%s",
+		auth.AuthURL,
+		auth.UserName,
+		auth.ProjectName,
+		auth.ProjectDomainName,
+		auth.UserDomainName,
+		secret.Clouds.Default.Auth.Password)
 	return val
 }
