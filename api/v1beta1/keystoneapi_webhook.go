@@ -151,7 +151,7 @@ func (spec *KeystoneAPISpec) ValidateUpdate(old KeystoneAPISpec, basePath *field
 	return spec.KeystoneAPISpecCore.ValidateUpdate(old.KeystoneAPISpecCore, basePath)
 }
 
-func (spec *KeystoneAPISpecCore) ValidateUpdate(old KeystoneAPISpecCore, basePath *field.Path) field.ErrorList {
+func (spec *KeystoneAPISpecCore) ValidateUpdate(_ KeystoneAPISpecCore, basePath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
 
 	// validate the service override key is valid
