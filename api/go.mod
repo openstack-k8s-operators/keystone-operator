@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/go-logr/logr v1.4.2
 	github.com/google/uuid v1.6.0
-	github.com/gophercloud/gophercloud v1.14.0
+	github.com/gophercloud/gophercloud v1.14.1
 	github.com/onsi/gomega v1.34.1
 	github.com/openstack-k8s-operators/lib-common/modules/common v0.4.1-0.20240910122823-bdcfe881513b
 	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.4.1-0.20240910122823-bdcfe881513b
