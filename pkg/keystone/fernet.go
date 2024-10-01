@@ -17,7 +17,6 @@ package keystone
 
 import (
 	"encoding/base64"
-
 	"math/rand"
 )
 

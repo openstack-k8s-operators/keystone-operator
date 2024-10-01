@@ -120,6 +120,18 @@ type KeystoneAPISpecCore struct {
 	TrustFlushSuspend bool `json:"trustFlushSuspend"`
 
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=1
+	// +kubebuilder:validation:Minimum=1
+	// FernetRotationDays - Rotate fernet token keys every X days
+	FernetRotationDays *int32 `json:"fernetRotationDays"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=5
+	// +kubebuilder:validation:Minimum=3
+	// FernetMaxActiveKeys - Maximum number of fernet token keys after rotation
+	FernetMaxActiveKeys *int32 `json:"fernetMaxActiveKeys"`
+
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:default={admin: AdminPassword}
 	// PasswordSelectors - Selectors to identify the AdminUser password from the Secret
 	PasswordSelectors PasswordSelector `json:"passwordSelectors"`

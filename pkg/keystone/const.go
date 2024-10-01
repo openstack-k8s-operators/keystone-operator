@@ -28,4 +28,9 @@ const (
 	KeystonePublicPort int32 = 5000
 	// KeystoneInternalPort -
 	KeystoneInternalPort int32 = 5000
+
+	// DefaultFernetMaxActiveKeys -
+	DefaultFernetMaxActiveKeys = 5
+	// DefaultFernetRotationDays -
+	DefaultFernetRotationDays = 1
 )

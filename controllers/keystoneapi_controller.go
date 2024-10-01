@@ -857,7 +857,6 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	//
 	// Create secret holding fernet keys (for token and credential)
 	//
-	// TODO key rotation
 	err = r.ensureFernetKeys(ctx, instance, helper, &configMapVars)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
@@ -1321,37 +1320,53 @@ func (r *KeystoneAPIReconciler) reconcileCloudConfig(
 	return oko_secret.EnsureSecrets(ctx, h, instance, secrets, nil)
 }
 
-// ensureFernetKeys - creates secret with fernet keys
+// ensureFernetKeys - creates secret with fernet keys, rotates the keys
 func (r *KeystoneAPIReconciler) ensureFernetKeys(
 	ctx context.Context,
 	instance *keystonev1.KeystoneAPI,
 	helper *helper.Helper,
 	envVars *map[string]env.Setter,
 ) error {
+	fernetAnnotation := labels.GetGroupLabel(keystone.ServiceName) + "/rotatedat"
 	labels := labels.GetLabels(instance, labels.GetGroupLabel(keystone.ServiceName), map[string]string{})
+	now := time.Now().UTC()
 
 	//
 	// check if secret already exist
 	//
 	secretName := keystone.ServiceName
+	var numberKeys int
+	if instance.Spec.FernetMaxActiveKeys == nil {
+		numberKeys = keystone.DefaultFernetMaxActiveKeys
+	} else {
+		numberKeys = int(*instance.Spec.FernetMaxActiveKeys)
+	}
+
 	secret, hash, err := oko_secret.GetSecret(ctx, helper, secretName, instance.Namespace)
+
 	if err != nil && !k8s_errors.IsNotFound(err) {
 		return err
 	} else if k8s_errors.IsNotFound(err) {
 		fernetKeys := map[string]string{
-			"FernetKeys0":     keystone.GenerateFernetKey(),
-			"FernetKeys1":     keystone.GenerateFernetKey(),
 			"CredentialKeys0": keystone.GenerateFernetKey(),
 			"CredentialKeys1": keystone.GenerateFernetKey(),
 		}
 
+		for i := 0; i < numberKeys; i++ {
+			fernetKeys[fmt.Sprintf("FernetKeys%d", i)] = keystone.GenerateFernetKey()
+		}
+
+		annotations := map[string]string{
+			fernetAnnotation: now.Format(time.RFC3339)}
+
 		tmpl := []util.Template{
 			{
-				Name:       secretName,
-				Namespace:  instance.Namespace,
-				Type:       util.TemplateTypeNone,
-				CustomData: fernetKeys,
-				Labels:     labels,
+				Name:        secretName,
+				Namespace:   instance.Namespace,
+				Type:        util.TemplateTypeNone,
+				CustomData:  fernetKeys,
+				Labels:      labels,
+				Annotations: annotations,
 			},
 		}
 		err := oko_secret.EnsureSecrets(ctx, helper, instance, tmpl, envVars)
@@ -1361,9 +1376,99 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 	} else {
 		// add hash to envVars
 		(*envVars)[secret.Name] = env.SetValue(hash)
-	}
 
-	// TODO: fernet key rotation
+		changedKeys := false
+
+		extraKey := fmt.Sprintf("FernetKeys%d", numberKeys)
+
+		//
+		// Fernet Key rotation
+		//
+		if secret.Annotations == nil {
+			secret.Annotations = map[string]string{}
+		}
+		rotatedAt, err := time.Parse(time.RFC3339, secret.Annotations[fernetAnnotation])
+
+		var duration int
+		if instance.Spec.FernetRotationDays == nil {
+			duration = keystone.DefaultFernetRotationDays
+		} else {
+			duration = int(*instance.Spec.FernetRotationDays)
+		}
+
+		if err != nil {
+			changedKeys = true
+		} else if rotatedAt.AddDate(0, 0, duration).Before(now) {
+			secret.Data[extraKey] = secret.Data["FernetKeys0"]
+			secret.Data["FernetKeys0"] = []byte(keystone.GenerateFernetKey())
+		}
+
+		//
+		// Remove extra keys when FernetMaxActiveKeys changes
+		//
+		for {
+			_, exists := secret.Data[extraKey]
+			if !exists {
+				break
+			}
+			changedKeys = true
+			i := 1
+			for {
+				key := fmt.Sprintf("FernetKeys%d", i)
+				i++
+				nextKey := fmt.Sprintf("FernetKeys%d", i)
+				_, exists = secret.Data[nextKey]
+				if !exists {
+					break
+				}
+				secret.Data[key] = secret.Data[nextKey]
+				delete(secret.Data, nextKey)
+			}
+		}
+
+		//
+		// Add extra keys when FernetMaxActiveKeys changes
+		//
+		lastKey := fmt.Sprintf("FernetKeys%d", numberKeys-1)
+		for {
+			_, exists := secret.Data[lastKey]
+			if exists {
+				break
+			}
+			changedKeys = true
+			i := 1
+			nextKeyValue := []byte(keystone.GenerateFernetKey())
+			for {
+				key := fmt.Sprintf("FernetKeys%d", i)
+				i++
+				keyValue, exists := secret.Data[key]
+				secret.Data[key] = nextKeyValue
+				nextKeyValue = keyValue
+				if !exists {
+					break
+				}
+			}
+		}
+
+		if !changedKeys {
+			return nil
+		}
+
+		fernetKeys := make(map[string]string, len(secret.Data))
+		for k, v := range secret.Data {
+			fernetKeys[k] = string(v[:])
+		}
+
+		secret.Annotations[fernetAnnotation] = now.Format(time.RFC3339)
+
+		// use update to apply changes to the secret, since EnsureSecrets
+		// does not handle annotation updates, also CreateOrPatchSecret would
+		// preserve the existing annotation
+		err = helper.GetClient().Update(ctx, secret, &client.UpdateOptions{})
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

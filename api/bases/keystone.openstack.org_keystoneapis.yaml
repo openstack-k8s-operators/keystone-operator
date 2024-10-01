@@ -89,6 +89,20 @@ spec:
                 description: EnableSecureRBAC - Enable Consistent and Secure RBAC
                   policies
                 type: boolean
+              fernetMaxActiveKeys:
+                default: 5
+                description: FernetMaxActiveKeys - Maximum number of fernet token
+                  keys after rotation
+                format: int32
+                minimum: 3
+                type: integer
+              fernetRotationDays:
+                default: 1
+                description: FernetRotationDays - Rotate fernet token keys every X
+                  days
+                format: int32
+                minimum: 1
+                type: integer
               memcachedInstance:
                 default: memcached
                 description: Memcached instance name.

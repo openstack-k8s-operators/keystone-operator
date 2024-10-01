@@ -88,6 +88,12 @@ spec:
             path: "0"
           - key: FernetKeys1
             path: "1"
+          - key: FernetKeys2
+            path: "2"
+          - key: FernetKeys3
+            path: "3"
+          - key: FernetKeys4
+            path: "4"
           secretName: keystone
       - name: credential-keys
         secret:
