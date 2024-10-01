@@ -168,6 +168,11 @@ type KeystoneAPISpecCore struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// TLS - Parameters related to the TLS
 	TLS tls.API `json:"tls,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=2
+	// Number of Fernet keys
+	FernetKeys *int32 `json:"numberFernetKeys"`
 }
 
 // APIOverrideSpec to override the generated manifest of several child resources.
