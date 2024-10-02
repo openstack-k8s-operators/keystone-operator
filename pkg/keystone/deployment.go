@@ -80,7 +80,7 @@ func Deployment(
 	envVars["CONFIG_HASH"] = env.SetValue(configHash)
 
 	// create Volume and VolumeMounts
-	volumes := getVolumes(instance.Name)
+	volumes := getVolumes(instance)
 	volumeMounts := getVolumeMounts()
 
 	// add CA cert if defined
