@@ -365,7 +365,7 @@ spec:
                 description: Secret containing OpenStack password information for
                   keystone AdminPassword
                 type: string
-              fernet:
+              numberFernetKeys:
                 default: 2
                 description: Number of Fernet keys
                 type: integer

@@ -1336,10 +1336,11 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 		return err
 	} else if k8s_errors.IsNotFound(err) {
 		fernetKeys := map[string]string{
-			"FernetKeys0":     keystone.GenerateFernetKey(),
-			"FernetKeys1":     keystone.GenerateFernetKey(),
 			"CredentialKeys0": keystone.GenerateFernetKey(),
 			"CredentialKeys1": keystone.GenerateFernetKey(),
+		}
+		for i := range instance.Spec.FernetKeys {
+			fernetKeys[fmt.Sprintf("FernetKeys%d", i)] = keystone.GenerateFernetKey()
 		}
 
 		tmpl := []util.Template{
