@@ -120,6 +120,16 @@ type KeystoneAPISpecCore struct {
 	TrustFlushSuspend bool `json:"trustFlushSuspend"`
 
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default="1 0 * * *"
+	// FernetRotationSchedule - Schedule rotate fernet token keys
+	FernetRotationSchedule string `json:"fernetRotationSchedule"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default="5"
+	// FernetMaxActiveKeys - Maximum number of fernet token keys after rotation
+	FernetMaxActiveKeys string `json:"fernetMaxActiveKeys"`
+
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:default={admin: AdminPassword}
 	// PasswordSelectors - Selectors to identify the AdminUser password from the Secret
 	PasswordSelectors PasswordSelector `json:"passwordSelectors"`
@@ -266,6 +276,16 @@ func (instance KeystoneAPI) RbacNamespace() string {
 // RbacResourceName - return the name to be used for rbac objects (serviceaccount, role, rolebinding)
 func (instance KeystoneAPI) RbacResourceName() string {
 	return "keystone-" + instance.Name
+}
+
+// KeystoneAPIFernet - used to create different role for fernet key rotation
+type KeystoneAPIFernet struct {
+	*KeystoneAPI
+}
+
+// RbacResourceName - return the name to be used for rbac objects used for fernet key rotation (serviceaccount, role, rolebinding)
+func (instance KeystoneAPIFernet) RbacResourceName() string {
+	return "keystone-fernet-" + instance.Name
 }
 
 // SetupDefaults - initializes any CRD field defaults based on environment variables (the defaulting mechanism itself is implemented via webhooks)
