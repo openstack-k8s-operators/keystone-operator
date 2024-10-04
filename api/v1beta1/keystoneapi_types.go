@@ -45,6 +45,9 @@ const (
 
 	// KeystoneAPIContainerImage is the fall-back container image for KeystoneAPI
 	KeystoneAPIContainerImage = "quay.io/podified-antelope-centos9/openstack-keystone:current-podified"
+
+	// KeystoneFernetRotationContainerImage is the fall-back container image for Keystone Fernet Rotation
+	KeystoneFernetRotationContainerImage = "registry.redhat.io/openshift4/ose-cli"
 )
 
 type KeystoneAPISpec struct {
@@ -53,6 +56,9 @@ type KeystoneAPISpec struct {
 	// +kubebuilder:validation:Required
 	// Keystone Container Image URL (will be set to environmental default if empty)
 	ContainerImage string `json:"containerImage"`
+	// +kubebuilder:validation:Required
+	// Keystone Fernet Rotation Container Image URL (will be set to environmental default if empty)
+	FernetRotationContainerImage string `json:"fernetRotationContainerImage"`
 }
 
 // KeystoneAPISpec defines the desired state of KeystoneAPI
@@ -293,6 +299,7 @@ func SetupDefaults() {
 	// Acquire environmental defaults and initialize Keystone defaults with them
 	keystoneDefaults := KeystoneAPIDefaults{
 		ContainerImageURL: util.GetEnvVar("RELATED_IMAGE_KEYSTONE_API_IMAGE_URL_DEFAULT", KeystoneAPIContainerImage),
+		FernetRotationContainerImageURL: util.GetEnvVar("RELATED_IMAGE_KEYSTONE_FERNET_ROTATION_IMAGE_URL_DEFAULT", KeystoneFernetRotationContainerImage),
 	}
 
 	SetupKeystoneAPIDefaults(keystoneDefaults)

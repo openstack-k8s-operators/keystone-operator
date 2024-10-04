@@ -38,6 +38,7 @@ import (
 // KeystoneAPIDefaults -
 type KeystoneAPIDefaults struct {
 	ContainerImageURL string
+	FernetRotationContainerImageURL string
 }
 
 var keystoneAPIDefaults KeystoneAPIDefaults
@@ -68,6 +69,9 @@ func (r *KeystoneAPI) Default() {
 
 	if r.Spec.ContainerImage == "" {
 		r.Spec.ContainerImage = keystoneAPIDefaults.ContainerImageURL
+	}
+	if r.Spec.FernetRotationContainerImage == "" {
+		r.Spec.FernetRotationContainerImage = keystoneAPIDefaults.FernetRotationContainerImageURL
 	}
 	r.Spec.Default()
 }

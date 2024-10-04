@@ -165,7 +165,7 @@ func FernetCronJob(
 							Containers: []corev1.Container{
 								{
 									Name:  ServiceName + "-fernet-job",
-									Image: instance.Spec.ContainerImage,
+									Image: instance.Spec.FernetRotationContainerImage,
 									Command: []string{
 										"/bin/bash",
 									},
