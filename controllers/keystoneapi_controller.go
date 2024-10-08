@@ -1339,8 +1339,9 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 			"CredentialKeys0": keystone.GenerateFernetKey(),
 			"CredentialKeys1": keystone.GenerateFernetKey(),
 		}
-		for i := range instance.Spec.FernetKeys {
-			fernetKeys[fmt.Sprintf("FernetKeys%d", i)] = keystone.GenerateFernetKey()
+		var i *int32 = new(int32)
+		for *i = 0; *i < *instance.Spec.FernetKeys; *i++ {
+			fernetKeys[fmt.Sprintf("FernetKeys%d", *i)] = keystone.GenerateFernetKey()
 		}
 
 		tmpl := []util.Template{

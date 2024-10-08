@@ -16,6 +16,8 @@ limitations under the License.
 package keystone
 
 import (
+	"fmt"
+	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -26,8 +28,15 @@ func getVolumes(instance *keystonev1.KeystoneAPI) []corev1.Volume {
 	var config0640AccessMode int32 = 0640
 
 	fernetKeys := []corev1.KeyToPath{}
-	for i := range instance.Spec.FernetKeys {
-		fernetKeys = append(fernetKeys, fmt.Sprintf("FernetKeys%d", i))
+	var i *int32 = new(int32)
+	for *i = 0; *i < *instance.Spec.FernetKeys; *i++ {
+		fernetKeys = append(
+			fernetKeys,
+			corev1.KeyToPath{
+				Key:  fmt.Sprintf("FernetKeys%d", *i),
+				Path: fmt.Sprintf("%d", *i),
+			},
+		)
 	}
 
 	return []corev1.Volume{
@@ -54,7 +63,7 @@ func getVolumes(instance *keystonev1.KeystoneAPI) []corev1.Volume {
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName: ServiceName,
-					Items: fernetKeys,
+					Items:      fernetKeys,
 				},
 			},
 		},
