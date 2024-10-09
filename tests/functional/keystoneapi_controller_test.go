@@ -41,7 +41,6 @@ import (
 )
 
 var _ = Describe("Keystone controller", func() {
-
 	var keystoneAPIName types.NamespacedName
 	var keystoneAccountName types.NamespacedName
 	var keystoneDatabaseName types.NamespacedName
@@ -56,7 +55,6 @@ var _ = Describe("Keystone controller", func() {
 	var cronJobName types.NamespacedName
 
 	BeforeEach(func() {
-
 		keystoneAPIName = types.NamespacedName{
 			Name:      "keystone",
 			Namespace: namespace,
@@ -424,7 +422,6 @@ var _ = Describe("Keystone controller", func() {
 				Namespace: namespace,
 			})
 		})
-
 	})
 
 	When("DB sync is completed", func() {
@@ -965,7 +962,6 @@ var _ = Describe("Keystone controller", func() {
 			configData = string(scrt.Data["my.cnf"])
 			Expect(configData).To(
 				ContainSubstring("[client]\nssl-ca=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem\nssl=1"))
-
 		})
 
 		It("it creates deployment with CA and service certs mounted", func() {
@@ -1434,7 +1430,6 @@ var _ = Describe("Keystone controller", func() {
 					}
 				}
 			}, timeout, interval).Should(Succeed())
-
 		})
 	})
 
@@ -1584,7 +1579,6 @@ var _ = Describe("Keystone controller", func() {
 		// needs to make it all the way to the end where the mariadb finalizers
 		// are removed from unused accounts since that's part of what we are testing
 		SetupCR: func(accountName types.NamespacedName) {
-
 			spec := GetDefaultKeystoneAPISpec()
 			spec["databaseAccount"] = accountName.Name
 
@@ -1627,17 +1621,14 @@ var _ = Describe("Keystone controller", func() {
 				condition.DeploymentReadyCondition,
 				corev1.ConditionTrue,
 			)
-
 		},
 		// Change the account name in the service to a new name
 		UpdateAccount: func(newAccountName types.NamespacedName) {
-
 			Eventually(func(g Gomega) {
 				keystoneapi := GetKeystoneAPI(keystoneAPIName)
 				keystoneapi.Spec.DatabaseAccount = newAccountName.Name
 				g.Expect(th.K8sClient.Update(ctx, keystoneapi)).Should(Succeed())
 			}, timeout, interval).Should(Succeed())
-
 		},
 		// delete the keystone instance to exercise finalizer removal
 		DeleteCR: func() {
@@ -1656,12 +1647,10 @@ var _ = Describe("Keystone controller", func() {
 				ContainSubstring(fmt.Sprintf("connection=mysql+pymysql://%s:%s@hostname-for-openstack.%s.svc/keystone?read_default_file=/etc/my.cnf",
 					username, password, namespace)))
 		}, timeout, interval).Should(Succeed())
-
 	})
 
 	mariadbSuite.RunConfigHashSuite(func() string {
 		deployment := th.GetDeployment(deploymentName)
 		return GetEnvVarValue(deployment.Spec.Template.Spec.Containers[0].Env, "CONFIG_HASH", "")
 	})
-
 })

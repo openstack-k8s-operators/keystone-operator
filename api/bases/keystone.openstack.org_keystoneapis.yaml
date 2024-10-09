@@ -134,6 +134,76 @@ spec:
                 description: NodeSelector to target subset of worker nodes running
                   this service
                 type: object
+              oidcFederation:
+                description: KeystoneFederationSpec to provide the configuration values
+                  for OIDC Federation
+                properties:
+                  keystoneFederationIdentityProviderName:
+                    default: ""
+                    description: KeystoneFederationIdentityProviderName
+                    type: string
+                  oidcCacheType:
+                    default: memcache
+                    description: OIDCCacheType
+                    type: string
+                  oidcClaimDelimiter:
+                    default: ;
+                    description: OIDCClaimDelimiter
+                    type: string
+                  oidcClaimPrefix:
+                    default: OIDC-
+                    description: OIDCClaimPrefix
+                    type: string
+                  oidcClientID:
+                    default: ""
+                    description: OIDCClientID
+                    type: string
+                  oidcIntrospectionEndpoint:
+                    default: ""
+                    description: OIDCIntrospectionEndpoint
+                    type: string
+                  oidcMemCacheServers:
+                    description: OIDCMemCacheServers
+                    type: string
+                  oidcPassClaimsAs:
+                    default: both
+                    description: OIDCPassClaimsAs
+                    type: string
+                  oidcPassUserInfoAs:
+                    default: claims
+                    description: OIDCPassUserInfoAs
+                    type: string
+                  oidcProviderMetadataURL:
+                    default: ""
+                    description: OIDCProviderMetadataURL
+                    type: string
+                  oidcResponseType:
+                    default: id_token
+                    description: OIDCResponseType
+                    type: string
+                  oidcScope:
+                    default: openid email profile
+                    description: OIDCScope
+                    type: string
+                  remoteIDAttribute:
+                    default: HTTP_OIDC_ISS
+                    description: RemoteIDAttribute
+                    type: string
+                required:
+                - keystoneFederationIdentityProviderName
+                - oidcCacheType
+                - oidcClaimDelimiter
+                - oidcClaimPrefix
+                - oidcClientID
+                - oidcIntrospectionEndpoint
+                - oidcMemCacheServers
+                - oidcPassClaimsAs
+                - oidcPassUserInfoAs
+                - oidcProviderMetadataURL
+                - oidcResponseType
+                - oidcScope
+                - remoteIDAttribute
+                type: object
               override:
                 description: Override, provides the ability to override the generated
                   manifest of several child resources.
@@ -295,13 +365,26 @@ spec:
               passwordSelectors:
                 default:
                   admin: AdminPassword
-                description: PasswordSelectors - Selectors to identify the AdminUser
-                  password from the Secret
+                  keystoneOIDCClientSecret: KeystoneClientSecret
+                  keystoneOIDCCryptoPassphrase: KeystoneCryptoPassphrase
+                description: PasswordSelectors - Selectors to identify the AdminUser,
+                  KeystoneOIDCClient, and KeystoneOIDCCryptoPassphrase passwords from
+                  the Secret
                 properties:
                   admin:
                     default: AdminPassword
                     description: Admin - Selector to get the keystone Admin password
                       from the Secret
+                    type: string
+                  keystoneOIDCClientSecret:
+                    default: KeystoneClientSecret
+                    description: OIDCClientSecret - Selector to get the IdP client
+                      secret from the Secret
+                    type: string
+                  keystoneOIDCCryptoPassphrase:
+                    default: KeystoneCryptoPassphrase
+                    description: OIDCCryptoPassphrase - Selector to get the OIDC crypto
+                      passphrase from the Secret
                     type: string
                 type: object
               preserveJobs:
