@@ -17,7 +17,9 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"maps"
 	"time"
 
 	networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
@@ -1185,6 +1187,11 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	databaseAccount := db.GetAccount()
 	dbSecret := db.GetSecret()
 
+	enableFederation := false
+	if instance.Spec.OIDCFederation != nil {
+		enableFederation = true
+	}
+
 	templateParameters := map[string]interface{}{
 		"memcachedServers": mc.GetMemcachedServerListString(),
 		"memcachedTLS":     mc.GetMemcachedTLSSupport(),
@@ -1197,6 +1204,21 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		),
 		"enableSecureRBAC": instance.Spec.EnableSecureRBAC,
 		"ProcessNumber":    instance.Spec.HttpdCustomization.ProcessNumber,
+		"enableFederation": enableFederation,
+	}
+
+	if enableFederation {
+		endpointPublic, err := instance.GetEndpoint(endpoint.EndpointPublic)
+		if err != nil {
+			return err
+		}
+
+		federationParameters := map[string]interface{}{
+			"federationTrustedDashboard": fmt.Sprintf("%s/dashboard/auth/websso/",
+				endpointPublic),
+			"federationRemoteIDAttribute": instance.Spec.OIDCFederation.RemoteIDAttribute,
+		}
+		maps.Copy(templateParameters, federationParameters)
 	}
 
 	// create httpd  vhost template parameters
@@ -1205,10 +1227,48 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		endptConfig := map[string]interface{}{}
 		endptConfig["ServerName"] = fmt.Sprintf("%s-%s.%s.svc", instance.Name, endpt.String(), instance.Namespace)
 		endptConfig["TLS"] = false // default TLS to false, and set it bellow to true if enabled
+		endptConfig["EnableFederation"] = enableFederation
 		if instance.Spec.TLS.API.Enabled(endpt) {
 			endptConfig["TLS"] = true
 			endptConfig["SSLCertificateFile"] = fmt.Sprintf("/etc/pki/tls/certs/%s.crt", endpt.String())
 			endptConfig["SSLCertificateKeyFile"] = fmt.Sprintf("/etc/pki/tls/private/%s.key", endpt.String())
+		}
+
+		if enableFederation {
+			ospSecret, _, err := oko_secret.GetSecret(
+				ctx,
+				h,
+				instance.Spec.Secret,
+				instance.Namespace)
+			if err != nil {
+				return err
+			}
+
+			OIDCClientSecret := string(ospSecret.Data[instance.Spec.PasswordSelectors.KeystoneOIDCCryptoPassphrase])
+			if OIDCClientSecret == "" {
+				return errors.New("OIDCClientSecret cannot be empty")
+			}
+
+			OIDCCryptoPassphrase := string(ospSecret.Data[instance.Spec.PasswordSelectors.KeystoneOIDCCryptoPassphrase])
+			if OIDCCryptoPassphrase == "" {
+				return errors.New("OIDCCryptoPassphrase cannot be empty")
+			}
+
+			endptConfig["OIDCClaimPrefix"] = instance.Spec.OIDCFederation.OIDCClaimPrefix
+			endptConfig["OIDCResponseType"] = instance.Spec.OIDCFederation.OIDCResponseType
+			endptConfig["OIDCScope"] = instance.Spec.OIDCFederation.OIDCScope
+			endptConfig["OIDCProviderMetadataURL"] = instance.Spec.OIDCFederation.OIDCProviderMetadataURL
+			endptConfig["OIDCIntrospectionEndpoint"] = instance.Spec.OIDCFederation.OIDCIntrospectionEndpoint
+			endptConfig["OIDCClientID"] = instance.Spec.OIDCFederation.OIDCClientID
+			endptConfig["OIDCClientSecret"] = OIDCClientSecret
+			endptConfig["OIDCCryptoPassphrase"] = OIDCCryptoPassphrase
+			endptConfig["OIDCPassUserInfoAs"] = instance.Spec.OIDCFederation.OIDCPassUserInfoAs
+			endptConfig["OIDCPassClaimsAs"] = instance.Spec.OIDCFederation.OIDCPassClaimsAs
+			endptConfig["OIDCClaimDelimiter"] = instance.Spec.OIDCFederation.OIDCClaimDelimiter
+			endptConfig["OIDCCacheType"] = instance.Spec.OIDCFederation.OIDCCacheType
+			endptConfig["OIDCMemCacheServers"] = mc.GetMemcachedServerListString()
+			endptConfig["KeystoneFederationIdentityProviderName"] = instance.Spec.OIDCFederation.KeystoneFederationIdentityProviderName
+			endptConfig["KeystoneEndpoint"], _ = instance.GetEndpoint(endpoint.EndpointPublic)
 		}
 		httpdVhostConfig[endpt.String()] = endptConfig
 	}
@@ -1364,7 +1424,8 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 		}
 
 		annotations := map[string]string{
-			fernetAnnotation: now.Format(time.RFC3339)}
+			fernetAnnotation: now.Format(time.RFC3339),
+		}
 
 		tmpl := []util.Template{
 			{
@@ -1509,7 +1570,6 @@ func (r *KeystoneAPIReconciler) ensureDB(
 	h *helper.Helper,
 	instance *keystonev1.KeystoneAPI,
 ) (*mariadbv1.Database, ctrl.Result, error) {
-
 	// ensure MariaDBAccount exists.  This account record may be created by
 	// openstack-operator or the cloud operator up front without a specific
 	// MariaDBDatabase configured yet.   Otherwise, a MariaDBAccount CR is
@@ -1520,7 +1580,6 @@ func (r *KeystoneAPIReconciler) ensureDB(
 		ctx, h, instance.Spec.DatabaseAccount,
 		instance.Namespace, false, keystone.DatabaseUsernamePrefix,
 	)
-
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			mariadbv1.MariaDBAccountReadyCondition,
@@ -1548,7 +1607,6 @@ func (r *KeystoneAPIReconciler) ensureDB(
 
 	// create or patch the DB
 	ctrlResult, err := db.CreateOrPatchAll(ctx, h)
-
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.DBReadyCondition,

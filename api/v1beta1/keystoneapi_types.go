@@ -132,8 +132,8 @@ type KeystoneAPISpecCore struct {
 	FernetMaxActiveKeys *int32 `json:"fernetMaxActiveKeys"`
 
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default={admin: AdminPassword}
-	// PasswordSelectors - Selectors to identify the AdminUser password from the Secret
+	// +kubebuilder:default={admin: AdminPassword, keystoneOIDCClientSecret: KeystoneClientSecret, keystoneOIDCCryptoPassphrase: KeystoneCryptoPassphrase}
+	// PasswordSelectors - Selectors to identify the AdminUser, KeystoneOIDCClient, and KeystoneOIDCCryptoPassphrase passwords from the Secret
 	PasswordSelectors PasswordSelector `json:"passwordSelectors"`
 
 	// +kubebuilder:validation:Optional
@@ -184,6 +184,10 @@ type KeystoneAPISpecCore struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// TLS - Parameters related to the TLS
 	TLS tls.API `json:"tls,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +OIDCFederation - parameters to configure keystone for OIDC federation
+	OIDCFederation *KeystoneFederationSpec `json:"oidcFederation,omitempty"`
 }
 
 // APIOverrideSpec to override the generated manifest of several child resources.
@@ -199,6 +203,83 @@ type PasswordSelector struct {
 	// +kubebuilder:default="AdminPassword"
 	// Admin - Selector to get the keystone Admin password from the Secret
 	Admin string `json:"admin"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default="KeystoneClientSecret"
+	// OIDCClientSecret - Selector to get the IdP client secret from the Secret
+	KeystoneOIDCClientSecret string `json:"keystoneOIDCClientSecret"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default="KeystoneCryptoPassphrase"
+	// OIDCCryptoPassphrase - Selector to get the OIDC crypto passphrase from the Secret
+	KeystoneOIDCCryptoPassphrase string `json:"keystoneOIDCCryptoPassphrase"`
+}
+
+// KeystoneFederationSpec to provide the configuration values for OIDC Federation
+type KeystoneFederationSpec struct {
+	// +kubebuilder:validation:Required
+	// +kubebuilder:default="OIDC-"
+	// OIDCClaimPrefix
+	OIDCClaimPrefix string `json:"oidcClaimPrefix"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:default="id_token"
+	// OIDCResponseType
+	OIDCResponseType string `json:"oidcResponseType"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:default="openid email profile"
+	// OIDCScope
+	OIDCScope string `json:"oidcScope"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:default=""
+	// OIDCProviderMetadataURL
+	OIDCProviderMetadataURL string `json:"oidcProviderMetadataURL"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:default=""
+	// OIDCIntrospectionEndpoint
+	OIDCIntrospectionEndpoint string `json:"oidcIntrospectionEndpoint"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:default=""
+	// OIDCClientID
+	OIDCClientID string `json:"oidcClientID"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:default=";"
+	// OIDCClaimDelimiter
+	OIDCClaimDelimiter string `json:"oidcClaimDelimiter"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:default="claims"
+	// OIDCPassUserInfoAs
+	OIDCPassUserInfoAs string `json:"oidcPassUserInfoAs"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:default="both"
+	// OIDCPassClaimsAs
+	OIDCPassClaimsAs string `json:"oidcPassClaimsAs"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:default="memcache"
+	// OIDCCacheType
+	OIDCCacheType string `json:"oidcCacheType"`
+
+	// +kubebuilder:validaton:Required
+	// OIDCMemCacheServers
+	OIDCMemCacheServers string `json:"oidcMemCacheServers"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:default="HTTP_OIDC_ISS"
+	// RemoteIDAttribute
+	RemoteIDAttribute string `json:"remoteIDAttribute"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:default=""
+	// KeystoneFederationIdentityProviderName
+	KeystoneFederationIdentityProviderName string `json:"keystoneFederationIdentityProviderName"`
 }
 
 // HttpdCustomization - customize the httpd service
@@ -233,7 +314,7 @@ type KeystoneAPIStatus struct {
 	// TransportURLSecret - Secret containing RabbitMQ transportURL
 	TransportURLSecret string `json:"transportURLSecret,omitempty"`
 
-	//ObservedGeneration - the most recent generation observed for this service. If the observed generation is less than the spec generation, then the controller has not processed the latest changes.
+	// ObservedGeneration - the most recent generation observed for this service. If the observed generation is less than the spec generation, then the controller has not processed the latest changes.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
