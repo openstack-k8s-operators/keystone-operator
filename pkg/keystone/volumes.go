@@ -22,22 +22,52 @@ import (
 )
 
 // getVolumes - service volumes
-func getVolumes(instance *keystonev1.KeystoneAPI) []corev1.Volume {
-	name := instance.Name
+func getVolumes(keystoneapiinstance *keystonev1.KeystoneAPI) []corev1.Volume {
+	//func getVolumes(instance *keystonev1.KeystoneAPIFernet) []corev1.Volume {
+	name := keystoneapiinstance.Name
 	var scriptsVolumeDefaultMode int32 = 0755
 	var config0640AccessMode int32 = 0640
 
 	fernetKeys := []corev1.KeyToPath{}
+	fmt.Println("=========================")
+	fmt.Println(fernetKeys)
+	fmt.Println("=========================")
+
+	fernetKeys = append(
+		fernetKeys,
+		corev1.KeyToPath{
+			Key:  fmt.Sprintf("FernetKeys%d", 10),
+			Path: fmt.Sprintf("%d", 10),
+		},
+	)
+
+	fmt.Println("=========================")
+	fmt.Println(fernetKeys)
+	fmt.Println("=========================")
+	instance := &keystonev1.KeystoneAPIFernet{KeystoneAPI: keystoneapiinstance}
+	fmt.Println(instance.Spec)
+	fmt.Println("=========================")
+	fmt.Println(instance.Spec.FernetMaxActiveKeys)
+	fmt.Println("=========================")
+	//fmt.Println(*instance.Spec.FernetKeys)
 	var i *int32 = new(int32)
-	for *i = 0; *i < *instance.Spec.FernetKeys; *i++ {
-		fernetKeys = append(
-			fernetKeys,
-			corev1.KeyToPath{
-				Key:  fmt.Sprintf("FernetKeys%d", *i),
-				Path: fmt.Sprintf("%d", *i),
-			},
-		)
+
+	//for *i = 0; *i < *instance.Spec.FernetKeys; *i++ {
+	for *i = 0; *i < 2; *i++ {
+		fmt.Println("FOR")
+		/*
+			fernetKeys = append(
+				fernetKeys,
+				corev1.KeyToPath{
+					Key:  fmt.Sprintf("FernetKeys%d", *i),
+					Path: fmt.Sprintf("%d", *i),
+				},
+			)
+		*/
 	}
+	fmt.Println("=========================")
+	fmt.Println(fernetKeys)
+	fmt.Println("=========================")
 
 	return []corev1.Volume{
 		{
