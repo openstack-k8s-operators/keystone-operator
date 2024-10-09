@@ -168,6 +168,8 @@ type KeystoneAPISpecCore struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// TLS - Parameters related to the TLS
 	TLS tls.API `json:"tls,omitempty"`
+
+	OIDCFederation KeystoneFederationSpec `json:"oidcFederation,omitempty"`
 }
 
 // APIOverrideSpec to override the generated manifest of several child resources.
@@ -183,6 +185,53 @@ type PasswordSelector struct {
 	// +kubebuilder:default="AdminPassword"
 	// Admin - Selector to get the keystone Admin password from the Secret
 	Admin string `json:"admin"`
+
+	// OIDCClientSecret - Selector to get the IdP client secret from the Secret
+	OIDCClientSecret string `json:"oidcClientSecret"`
+
+	// OIDCCryptoPassphrase - Selector to get the OIDC crypto passphrase from the Secret
+	OIDCCryptoPassphrase string `json:"oidcCryptoPassphrase"`
+}
+
+type KeystoneFederationSpec struct {
+	// Enablement of Federation configuration
+	EnableFederation bool `json:"enableFederation,omitempty"`
+
+	// OIDCClaimPrefix
+	OIDCClaimPrefix string `json:"oidcClaimPrefix,omitempty"`
+
+	// OIDCResponseType
+	OIDCResponseType string `json:"oidcResponseType,omitempty"`
+
+	// OIDCScope
+	OIDCScope string `json:"oidcScope,omitempty"`
+
+	// OIDCProviderMetadataURL
+	OIDCProviderMetadataURL string `json:"oidcProviderMetadataURL,omitempty"`
+
+	// OIDCClientID
+	OIDCClientID string `json:"oidcClientID,omitempty"`
+
+	// OIDCClientSecret
+	OIDCClientSecret PasswordSelector `json:"oidcClientSecret"`
+
+	// OIDCCryptoPassphrase
+	OIDCCryptoPassphrase PasswordSelector `json:"oidcCryptoPassphrase"`
+
+	// OIDCClaimDelimiter
+	OIDCClaimDelimiter string `json:"oidcClaimDelimiter,omitempty"`
+
+	// OIDCPassUserInfoAs
+	OIDCPassUserInfoAs string `json:"oidcPassUserInfoAs,omitempty"`
+
+	// OIDCPassClaimsAs
+	OIDCPassClaimsAs string `json:"oidcPassClaimsAs,omitempty"`
+
+	// OIDCCacheType
+	OIDCCacheType string `json:"oidcCacheType,omitempty"`
+
+	// OIDCRedirectURI
+	OIDCRedirectURI string `json:"oidcRedirectURI,omitempty"`
 }
 
 // KeystoneAPIStatus defines the observed state of KeystoneAPI
@@ -208,7 +257,7 @@ type KeystoneAPIStatus struct {
 	// TransportURLSecret - Secret containing RabbitMQ transportURL
 	TransportURLSecret string `json:"transportURLSecret,omitempty"`
 
-	//ObservedGeneration - the most recent generation observed for this service. If the observed generation is less than the spec generation, then the controller has not processed the latest changes.
+	// ObservedGeneration - the most recent generation observed for this service. If the observed generation is less than the spec generation, then the controller has not processed the latest changes.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
