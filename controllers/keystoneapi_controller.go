@@ -1193,11 +1193,14 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
     }
 
     if instance.Spec.EnableFederation {
-		templateParameters.append("enableFederation": instance.Spec.OIDCFederation.EnableFederation),
-		templateParameters.append("federationTrustedDashboard": fmt.Sprintf("https://%s/dashboard/auth/websso/",
-			service.EndpointPublic)),
-		templateParameters.append("federationRemoteIDAttribute": instance.Spec.OIDCFederation.OIDCClaimPrefix),
+        federationParameters := map[string]interface{}{
+            "enableFederation": instance.Spec.OIDCFederation.EnableFederation,
+		    "federationTrustedDashboard": fmt.Sprintf("https://%s/dashboard/auth/websso/",
+			service.EndpointPublic),
+            "federationRemoteIDAttribute": instance.Spec.OIDCFederation.OIDCClaimPrefix,
     }
+
+    maps.Copy(templateParameters, federationParameters)
 
 	// create httpd  vhost template parameters
 	httpdVhostConfig := map[string]interface{}{}
