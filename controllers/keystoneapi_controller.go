@@ -1190,11 +1190,14 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			keystone.DatabaseName,
 		),
 		"enableSecureRBAC": instance.Spec.EnableSecureRBAC,
-		"enableFederation": instance.Spec.OIDCFederation.EnableFederation,
-		"federationTrustedDashboard": fmt.Sprintf("https://%s/dashboard/auth/websso/",
-			service.EndpointPublic),
-		"federationRemoteIDAttribute": instance.Spec.OIDCFederation.OIDCClaimPrefix,
-	}
+    }
+
+    if instance.Spec.EnableFederation {
+		templateParameters.append("enableFederation": instance.Spec.OIDCFederation.EnableFederation),
+		templateParameters.append("federationTrustedDashboard": fmt.Sprintf("https://%s/dashboard/auth/websso/",
+			service.EndpointPublic)),
+		templateParameters.append("federationRemoteIDAttribute": instance.Spec.OIDCFederation.OIDCClaimPrefix),
+    }
 
 	// create httpd  vhost template parameters
 	httpdVhostConfig := map[string]interface{}{}
@@ -1229,7 +1232,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			endptConfig["OIDCPassUserInfoAs"] = instance.Spec.OIDCFederation.OIDCPassUserInfoAs
 			endptConfig["OIDCPassClaimsAs"] = instance.Spec.OIDCFederation.OIDCPassClaimsAs
 			endptConfig["OIDCCacheType"] = instance.Spec.OIDCFederation.OIDCCacheType
-			endptConfig["OIDCMemCacheServers"] = mc.GetMemcachedServerListString()
+            endptConfig["OIDCMemCacheServers"] = mc.GetMemcachedServerListString()
 			endptConfig["OIDCRedirectURI"] = instance.Spec.OIDCFederation.OIDCRedirectURI
 		}
 		httpdVhostConfig[endpt.String()] = endptConfig
