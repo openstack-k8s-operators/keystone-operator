@@ -362,7 +362,8 @@ func (r *KeystoneAPIReconciler) findObjectsForSrc(ctx context.Context, src clien
 		}
 		err := r.List(ctx, crList, listOps)
 		if err != nil {
-			return []reconcile.Request{}
+			Log.Error(err, fmt.Sprintf("listing %s for field: %s - %s", crList.GroupVersionKind().Kind, field, src.GetNamespace()))
+			return requests
 		}
 
 		for _, item := range crList.Items {
