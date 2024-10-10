@@ -45,6 +45,9 @@ const (
 
 	// KeystoneAPIContainerImage is the fall-back container image for KeystoneAPI
 	KeystoneAPIContainerImage = "quay.io/podified-antelope-centos9/openstack-keystone:current-podified"
+
+	// KeystoneFernetRotationContainerImage is the fall-back container image for Keystone Fernet Rotation
+	KeystoneFernetRotationContainerImage = "registry.redhat.io/openshift4/ose-cli"
 )
 
 type KeystoneAPISpec struct {
@@ -53,6 +56,9 @@ type KeystoneAPISpec struct {
 	// +kubebuilder:validation:Required
 	// Keystone Container Image URL (will be set to environmental default if empty)
 	ContainerImage string `json:"containerImage"`
+	// +kubebuilder:validation:Required
+	// Keystone Fernet Rotation Container Image URL (will be set to environmental default if empty)
+	FernetRotationContainerImage string `json:"fernetRotationContainerImage"`
 }
 
 // KeystoneAPISpec defines the desired state of KeystoneAPI
@@ -118,6 +124,16 @@ type KeystoneAPISpecCore struct {
 	// +kubebuilder:default=false
 	// TrustFlushSuspend - Suspend the cron job to purge trusts
 	TrustFlushSuspend bool `json:"trustFlushSuspend"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default="1 0 * * *"
+	// FernetRotationSchedule - Schedule rotate fernet token keys
+	FernetRotationSchedule string `json:"fernetRotationSchedule"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default="5"
+	// FernetMaxActiveKeys - Maximum number of fernet token keys after rotation
+	FernetMaxActiveKeys string `json:"fernetMaxActiveKeys"`
 
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default={admin: AdminPassword}
@@ -268,11 +284,22 @@ func (instance KeystoneAPI) RbacResourceName() string {
 	return "keystone-" + instance.Name
 }
 
+// KeystoneAPIFernet - used to create different role for fernet key rotation
+type KeystoneAPIFernet struct {
+	*KeystoneAPI
+}
+
+// RbacResourceName - return the name to be used for rbac objects used for fernet key rotation (serviceaccount, role, rolebinding)
+func (instance KeystoneAPIFernet) RbacResourceName() string {
+	return "keystone-fernet-" + instance.Name
+}
+
 // SetupDefaults - initializes any CRD field defaults based on environment variables (the defaulting mechanism itself is implemented via webhooks)
 func SetupDefaults() {
 	// Acquire environmental defaults and initialize Keystone defaults with them
 	keystoneDefaults := KeystoneAPIDefaults{
 		ContainerImageURL: util.GetEnvVar("RELATED_IMAGE_KEYSTONE_API_IMAGE_URL_DEFAULT", KeystoneAPIContainerImage),
+		FernetRotationContainerImageURL: util.GetEnvVar("RELATED_IMAGE_KEYSTONE_FERNET_ROTATION_IMAGE_URL_DEFAULT", KeystoneFernetRotationContainerImage),
 	}
 
 	SetupKeystoneAPIDefaults(keystoneDefaults)

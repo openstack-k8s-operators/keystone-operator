@@ -470,6 +470,29 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	}
 
 	//
+	// Service account, role, binding for fernet key rotation
+	//
+	fernetRbacRules := []rbacv1.PolicyRule{
+		{
+			APIGroups:     []string{"security.openshift.io"},
+			ResourceNames: []string{"anyuid"},
+			Resources:     []string{"securitycontextconstraints"},
+			Verbs:         []string{"use"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"secrets"},
+			Verbs:     []string{"patch"},
+		},
+	}
+	fernetRbacResult, err := common_rbac.ReconcileRbac(ctx, helper, keystonev1.KeystoneAPIFernet{KeystoneAPI: instance}, fernetRbacRules)
+	if err != nil {
+		return fernetRbacResult, err
+	} else if (rbacResult != ctrl.Result{}) {
+		return fernetRbacResult, nil
+	}
+
+	//
 	// run keystone db sync
 	//
 	dbSyncHash := instance.Status.Hash[keystonev1.DbSyncHash]
@@ -1082,14 +1105,14 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 		}
 	}
 
-	// create CronJob
+	// create Trust Flush CronJob
 	cronjobDef := keystone.CronJob(instance, serviceLabels, serviceAnnotations)
-	cronjob := cronjob.NewCronJob(
+	trustflushjob := cronjob.NewCronJob(
 		cronjobDef,
 		5*time.Second,
 	)
 
-	ctrlResult, err = cronjob.CreateOrPatch(ctx, helper)
+	ctrlResult, err = trustflushjob.CreateOrPatch(ctx, helper)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.CronJobReadyCondition,
@@ -1101,7 +1124,28 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	}
 
 	instance.Status.Conditions.MarkTrue(condition.CronJobReadyCondition, condition.CronJobReadyMessage)
-	// create CronJob - end
+	// create Trust Flush CronJob - end
+
+	// create Fernet Key Rotation CronJob
+	fernetjobDef := keystone.FernetCronJob(instance, serviceLabels, serviceAnnotations)
+	fernetjob := cronjob.NewCronJob(
+		fernetjobDef,
+		5*time.Second,
+	)
+
+	ctrlResult, err = fernetjob.CreateOrPatch(ctx, helper)
+	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.CronJobReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.CronJobReadyErrorMessage,
+			err.Error()))
+		return ctrlResult, err
+	}
+
+	instance.Status.Conditions.MarkTrue(condition.CronJobReadyCondition, condition.CronJobReadyMessage)
+	// create Fernet Key Rotation CronJob - end
 
 	//
 	// create OpenStackClient config
