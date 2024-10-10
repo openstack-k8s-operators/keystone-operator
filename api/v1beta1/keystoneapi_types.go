@@ -187,49 +187,66 @@ type PasswordSelector struct {
 	Admin string `json:"admin"`
 
 	// OIDCClientSecret - Selector to get the IdP client secret from the Secret
-	OIDCClientSecret string `json:"oidcClientSecret"`
+	KeystoneOIDCClientSecret string `json:"keystoneOIDCClientSecret"`
 
 	// OIDCCryptoPassphrase - Selector to get the OIDC crypto passphrase from the Secret
-	OIDCCryptoPassphrase string `json:"oidcCryptoPassphrase"`
+	KeystoneOIDCCryptoPassphrase string `json:"keystoneOIDCCryptoPassphrase"`
 }
 
 type KeystoneFederationSpec struct {
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=false
 	// Enablement of Federation configuration
 	EnableFederation bool `json:"enableFederation,omitempty"`
 
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=OIDC-iss
 	// OIDCClaimPrefix
 	OIDCClaimPrefix string `json:"oidcClaimPrefix,omitempty"`
 
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=id_token
 	// OIDCResponseType
 	OIDCResponseType string `json:"oidcResponseType,omitempty"`
 
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=openid email profile
 	// OIDCScope
 	OIDCScope string `json:"oidcScope,omitempty"`
 
+	// +kubebuilder:validation:Optional
 	// OIDCProviderMetadataURL
 	OIDCProviderMetadataURL string `json:"oidcProviderMetadataURL,omitempty"`
 
+	// +kubebuilder:validation:Optional
 	// OIDCClientID
 	OIDCClientID string `json:"oidcClientID,omitempty"`
 
-	// OIDCClientSecret
-	OIDCClientSecret PasswordSelector `json:"oidcClientSecret"`
-
-	// OIDCCryptoPassphrase
-	OIDCCryptoPassphrase PasswordSelector `json:"oidcCryptoPassphrase"`
-
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=;
 	// OIDCClaimDelimiter
 	OIDCClaimDelimiter string `json:"oidcClaimDelimiter,omitempty"`
 
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=claims
 	// OIDCPassUserInfoAs
 	OIDCPassUserInfoAs string `json:"oidcPassUserInfoAs,omitempty"`
 
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=both
 	// OIDCPassClaimsAs
 	OIDCPassClaimsAs string `json:"oidcPassClaimsAs,omitempty"`
 
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=memcache
 	// OIDCCacheType
 	OIDCCacheType string `json:"oidcCacheType,omitempty"`
 
+	// +kubebuilder:validaton:Optional
+	// OIDCMemCacheServers
+	OIDCMemCacheServers string `json:"oidcMemCacheServers"`
+
+	// +kubebuilder:validation:Optional
 	// OIDCRedirectURI
 	OIDCRedirectURI string `json:"oidcRedirectURI,omitempty"`
 }

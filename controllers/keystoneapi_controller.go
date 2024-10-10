@@ -1214,12 +1214,22 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			endptConfig["OIDCScope"] = instance.Spec.OIDCFederation.OIDCScope
 			endptConfig["OIDCProviderMetadataUrl"] = instance.Spec.OIDCFederation.OIDCProviderMetadataURL
 			endptConfig["OIDCClientID"] = instance.Spec.OIDCFederation.OIDCClientID
-			endptConfig["OIDCClientSecret"] = instance.Spec.OIDCFederation.OIDCClientSecret
-			endptConfig["OIDCCryptoPassphrase"] = instance.Spec.OIDCFederation.OIDCCryptoPassphrase
-			endptConfig["OIDCClaimDelimiter"] = instance.Spec.OIDCFederation.OIDCClaimDelimiter
+			endptConfig["OIDCClientSecret"], _, _ = oko_secret.GetDataFromSecret(
+				ctx,
+				h,
+				instance.Spec.PasswordSelectors.KeystoneOIDCClientSecret,
+				10*time.Second,
+				"KeystoneOIDCClientSecret")
+			endptConfig["OIDCCryptoPassphrase"], _, _ = oko_secret.GetDataFromSecret(
+				ctx,
+				h,
+				instance.Spec.PasswordSelectors.KeystoneOIDCCryptoPassphrase,
+				10*time.Second,
+				"KeystoneOIDCCryptoPassphrase")
 			endptConfig["OIDCPassUserInfoAs"] = instance.Spec.OIDCFederation.OIDCPassUserInfoAs
 			endptConfig["OIDCPassClaimsAs"] = instance.Spec.OIDCFederation.OIDCPassClaimsAs
 			endptConfig["OIDCCacheType"] = instance.Spec.OIDCFederation.OIDCCacheType
+			endptConfig["OIDCMemCacheServers"] = mc.GetMemcachedServerListString()
 			endptConfig["OIDCRedirectURI"] = instance.Spec.OIDCFederation.OIDCRedirectURI
 		}
 		httpdVhostConfig[endpt.String()] = endptConfig
