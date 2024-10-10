@@ -16,13 +16,34 @@ limitations under the License.
 package keystone
 
 import (
+	"fmt"
+	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 )
 
 // getVolumes - service volumes
-func getVolumes(name string) []corev1.Volume {
+func getVolumes(keystoneapiinstance *keystonev1.KeystoneAPI) []corev1.Volume {
+	//func getVolumes(instance *keystonev1.KeystoneAPIFernet) []corev1.Volume {
+	name := keystoneapiinstance.Name
 	var scriptsVolumeDefaultMode int32 = 0755
 	var config0640AccessMode int32 = 0640
+
+	instance := &keystonev1.KeystoneAPIFernet{KeystoneAPI: keystoneapiinstance}
+
+	fernetKeys := []corev1.KeyToPath{}
+
+	var numberKeys int
+	fmt.Sscan(instance.Spec.FernetMaxActiveKeys, &numberKeys)
+
+	for i := 0; i < numberKeys; i++ {
+		fernetKeys = append(
+			fernetKeys,
+			corev1.KeyToPath{
+				Key:  fmt.Sprintf("FernetKeys%d", i),
+				Path: fmt.Sprintf("%d", i),
+			},
+		)
+	}
 
 	return []corev1.Volume{
 		{
@@ -48,16 +69,7 @@ func getVolumes(name string) []corev1.Volume {
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName: ServiceName,
-					Items: []corev1.KeyToPath{
-						{
-							Key:  "FernetKeys0",
-							Path: "0",
-						},
-						{
-							Key:  "FernetKeys1",
-							Path: "1",
-						},
-					},
+					Items:      fernetKeys,
 				},
 			},
 		},
