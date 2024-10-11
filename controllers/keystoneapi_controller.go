@@ -18,6 +18,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
@@ -1190,17 +1191,17 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			keystone.DatabaseName,
 		),
 		"enableSecureRBAC": instance.Spec.EnableSecureRBAC,
-    }
+	}
 
-    if instance.Spec.EnableFederation {
-        federationParameters := map[string]interface{}{
-            "enableFederation": instance.Spec.OIDCFederation.EnableFederation,
-		    "federationTrustedDashboard": fmt.Sprintf("https://%s/dashboard/auth/websso/",
-			service.EndpointPublic),
-            "federationRemoteIDAttribute": instance.Spec.OIDCFederation.OIDCClaimPrefix,
-    }
-
-    maps.Copy(templateParameters, federationParameters)
+	if instance.Spec.OIDCFederation.EnableFederation {
+		federationParameters := map[string]interface{}{
+			"enableFederation": instance.Spec.OIDCFederation.EnableFederation,
+			"federationTrustedDashboard": fmt.Sprintf("https://%s/dashboard/auth/websso/",
+				service.EndpointPublic),
+			"federationRemoteIDAttribute": instance.Spec.OIDCFederation.OIDCClaimPrefix,
+		}
+		maps.Copy(templateParameters, federationParameters)
+	}
 
 	// create httpd  vhost template parameters
 	httpdVhostConfig := map[string]interface{}{}
@@ -1214,28 +1215,38 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			endptConfig["SSLCertificateKeyFile"] = fmt.Sprintf("/etc/pki/tls/private/%s.key", endpt.String())
 		}
 		if instance.Spec.OIDCFederation.EnableFederation {
+			oidcClientSecret, _, err := oko_secret.GetDataFromSecret(
+				ctx,
+				h,
+				instance.Spec.PasswordSelectors.KeystoneOIDCClientSecret,
+				10*time.Second,
+				"KeystoneOIDCClientSecret")
+			if err != nil {
+				return err
+			}
+
+			oidcCryptoPassphrase, _, err := oko_secret.GetDataFromSecret(
+				ctx,
+				h,
+				instance.Spec.PasswordSelectors.KeystoneOIDCCryptoPassphrase,
+				10*time.Second,
+				"KeystoneOIDCCryptoPassphrase")
+			if err != nil {
+				return err
+			}
+
 			endptConfig["EnableFederation"] = true
 			endptConfig["OIDCClaimPrefix"] = instance.Spec.OIDCFederation.OIDCClaimPrefix
 			endptConfig["OIDCResponseType"] = instance.Spec.OIDCFederation.OIDCClaimPrefix
 			endptConfig["OIDCScope"] = instance.Spec.OIDCFederation.OIDCScope
 			endptConfig["OIDCProviderMetadataUrl"] = instance.Spec.OIDCFederation.OIDCProviderMetadataURL
 			endptConfig["OIDCClientID"] = instance.Spec.OIDCFederation.OIDCClientID
-			endptConfig["OIDCClientSecret"], _, _ = oko_secret.GetDataFromSecret(
-				ctx,
-				h,
-				instance.Spec.PasswordSelectors.KeystoneOIDCClientSecret,
-				10*time.Second,
-				"KeystoneOIDCClientSecret")
-			endptConfig["OIDCCryptoPassphrase"], _, _ = oko_secret.GetDataFromSecret(
-				ctx,
-				h,
-				instance.Spec.PasswordSelectors.KeystoneOIDCCryptoPassphrase,
-				10*time.Second,
-				"KeystoneOIDCCryptoPassphrase")
+			endptConfig["OIDCClientSecret"] = oidcClientSecret
+			endptConfig["OIDCCryptoPassphrase"] = oidcCryptoPassphrase
 			endptConfig["OIDCPassUserInfoAs"] = instance.Spec.OIDCFederation.OIDCPassUserInfoAs
 			endptConfig["OIDCPassClaimsAs"] = instance.Spec.OIDCFederation.OIDCPassClaimsAs
 			endptConfig["OIDCCacheType"] = instance.Spec.OIDCFederation.OIDCCacheType
-            endptConfig["OIDCMemCacheServers"] = mc.GetMemcachedServerListString()
+			endptConfig["OIDCMemCacheServers"] = mc.GetMemcachedServerListString()
 			endptConfig["OIDCRedirectURI"] = instance.Spec.OIDCFederation.OIDCRedirectURI
 		}
 		httpdVhostConfig[endpt.String()] = endptConfig

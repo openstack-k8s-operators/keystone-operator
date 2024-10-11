@@ -169,6 +169,8 @@ type KeystoneAPISpecCore struct {
 	// TLS - Parameters related to the TLS
 	TLS tls.API `json:"tls,omitempty"`
 
+	// +kubebuilder:validation:Optional
+	// +OIDCFederation - parameters to configure keystone for OIDC federation
 	OIDCFederation KeystoneFederationSpec `json:"oidcFederation,omitempty"`
 }
 
@@ -193,6 +195,7 @@ type PasswordSelector struct {
 	KeystoneOIDCCryptoPassphrase string `json:"keystoneOIDCCryptoPassphrase"`
 }
 
+// KeystoneFederationSpec to provide the configuration values for OIDC Federation
 type KeystoneFederationSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=false
