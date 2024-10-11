@@ -1193,9 +1193,9 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		"enableSecureRBAC": instance.Spec.EnableSecureRBAC,
 	}
 
-	if instance.Spec.OIDCFederation.EnableFederation {
+	if instance.Spec.EnableFederation {
 		federationParameters := map[string]interface{}{
-			"enableFederation": instance.Spec.OIDCFederation.EnableFederation,
+			"enableFederation": instance.Spec.EnableFederation,
 			"federationTrustedDashboard": fmt.Sprintf("https://%s/dashboard/auth/websso/",
 				service.EndpointPublic),
 			"federationRemoteIDAttribute": instance.Spec.OIDCFederation.OIDCClaimPrefix,
@@ -1214,7 +1214,9 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			endptConfig["SSLCertificateFile"] = fmt.Sprintf("/etc/pki/tls/certs/%s.crt", endpt.String())
 			endptConfig["SSLCertificateKeyFile"] = fmt.Sprintf("/etc/pki/tls/private/%s.key", endpt.String())
 		}
-		if instance.Spec.OIDCFederation.EnableFederation {
+
+		endptConfig["EnableFederation"] = false // default OIDCFederation to false, and set it below to true if enabled
+		if instance.Spec.EnableFederation {
 			oidcClientSecret, _, err := oko_secret.GetDataFromSecret(
 				ctx,
 				h,
@@ -1249,8 +1251,6 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			endptConfig["OIDCCacheType"] = instance.Spec.OIDCFederation.OIDCCacheType
 			endptConfig["OIDCMemCacheServers"] = mc.GetMemcachedServerListString()
 			endptConfig["OIDCRedirectURI"] = instance.Spec.OIDCFederation.OIDCRedirectURI
-		} else {
-			endptConfig["EnableFederation"] = false
 		}
 		httpdVhostConfig[endpt.String()] = endptConfig
 	}
