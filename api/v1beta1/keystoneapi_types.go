@@ -226,7 +226,7 @@ type KeystoneFederationSpec struct {
 	OIDCClientID string `json:"oidcClientID,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=;
+	// +kubebuilder:default=";"
 	// OIDCClaimDelimiter
 	OIDCClaimDelimiter string `json:"oidcClaimDelimiter,omitempty"`
 

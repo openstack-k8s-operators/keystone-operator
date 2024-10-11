@@ -1245,6 +1245,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			endptConfig["OIDCCryptoPassphrase"] = oidcCryptoPassphrase
 			endptConfig["OIDCPassUserInfoAs"] = instance.Spec.OIDCFederation.OIDCPassUserInfoAs
 			endptConfig["OIDCPassClaimsAs"] = instance.Spec.OIDCFederation.OIDCPassClaimsAs
+			endptConfig["OIDCClaimDelimiter"] = instance.Spec.OIDCFederation.OIDCClaimDelimiter
 			endptConfig["OIDCCacheType"] = instance.Spec.OIDCFederation.OIDCCacheType
 			endptConfig["OIDCMemCacheServers"] = mc.GetMemcachedServerListString()
 			endptConfig["OIDCRedirectURI"] = instance.Spec.OIDCFederation.OIDCRedirectURI
