@@ -1249,6 +1249,8 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			endptConfig["OIDCCacheType"] = instance.Spec.OIDCFederation.OIDCCacheType
 			endptConfig["OIDCMemCacheServers"] = mc.GetMemcachedServerListString()
 			endptConfig["OIDCRedirectURI"] = instance.Spec.OIDCFederation.OIDCRedirectURI
+		} else {
+			endptConfig["EnableFederation"] = false
 		}
 		httpdVhostConfig[endpt.String()] = endptConfig
 	}
