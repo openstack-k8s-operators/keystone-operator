@@ -1191,11 +1191,11 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			keystone.DatabaseName,
 		),
 		"enableSecureRBAC": instance.Spec.EnableSecureRBAC,
+		"enableFederation": instance.Spec.EnableFederation,
 	}
 
 	if instance.Spec.EnableFederation {
 		federationParameters := map[string]interface{}{
-			"enableFederation": instance.Spec.EnableFederation,
 			"federationTrustedDashboard": fmt.Sprintf("https://%s/dashboard/auth/websso/",
 				service.EndpointPublic),
 			"federationRemoteIDAttribute": instance.Spec.OIDCFederation.OIDCClaimPrefix,
