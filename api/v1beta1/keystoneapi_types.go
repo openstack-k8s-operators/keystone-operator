@@ -193,9 +193,13 @@ type PasswordSelector struct {
 	// Admin - Selector to get the keystone Admin password from the Secret
 	Admin string `json:"admin"`
 
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default="KeystoneClientSecret"
 	// OIDCClientSecret - Selector to get the IdP client secret from the Secret
 	KeystoneOIDCClientSecret string `json:"keystoneOIDCClientSecret"`
 
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default="KeystoneCryptoPassphrase"
 	// OIDCCryptoPassphrase - Selector to get the OIDC crypto passphrase from the Secret
 	KeystoneOIDCCryptoPassphrase string `json:"keystoneOIDCCryptoPassphrase"`
 }
