@@ -113,6 +113,9 @@ spec:
                 description: KeystoneFederationSpec to provide the configuration values
                   for OIDC Federation
                 properties:
+                  KeystoneFederationIdentityProviderName:
+                    description: KeystoneFederationIdentityProviderName
+                    type: string
                   oidcCacheType:
                     default: memcache
                     description: OIDCCacheType
@@ -141,9 +144,6 @@ spec:
                     type: string
                   oidcProviderMetadataURL:
                     description: OIDCProviderMetadataURL
-                    type: string
-                  oidcRedirectURI:
-                    description: OIDCRedirectURI
                     type: string
                   oidcResponseType:
                     default: id_token

@@ -1250,7 +1250,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			endptConfig["OIDCClaimDelimiter"] = instance.Spec.OIDCFederation.OIDCClaimDelimiter
 			endptConfig["OIDCCacheType"] = instance.Spec.OIDCFederation.OIDCCacheType
 			endptConfig["OIDCMemCacheServers"] = mc.GetMemcachedServerListString()
-			endptConfig["OIDCRedirectURI"] = instance.Spec.OIDCFederation.OIDCRedirectURI
+			endptConfig["KeystoneFederationIdentityProviderName"] = instance.Spec.OIDCFederation.KeystoneFederationIdentityProviderName
 		}
 		httpdVhostConfig[endpt.String()] = endptConfig
 	}
