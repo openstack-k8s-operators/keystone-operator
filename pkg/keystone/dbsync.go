@@ -45,12 +45,13 @@ func DbSyncJob(
 	envVars["KOLLA_BOOTSTRAP"] = env.SetValue("true")
 
 	// create Volume and VolumeMounts
-	volumes := getVolumes(instance.Name)
+	volumes := getVolumes(instance)
 	volumeMounts := getVolumeMounts()
 
 	// add CA cert if defined
 	if instance.Spec.TLS.CaBundleSecretName != "" {
-		volumes = append(getVolumes(instance.Name), instance.Spec.TLS.CreateVolume())
+		//TODO(afaranha): Why not reuse the 'volumes'?
+		volumes = append(getVolumes(instance), instance.Spec.TLS.CreateVolume())
 		volumeMounts = append(getVolumeMounts(), instance.Spec.TLS.CreateVolumeMounts(nil)...)
 	}
 

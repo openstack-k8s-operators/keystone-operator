@@ -470,6 +470,29 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	}
 
 	//
+	// Service account, role, binding for fernet key rotation
+	//
+	fernetRbacRules := []rbacv1.PolicyRule{
+		{
+			APIGroups:     []string{"security.openshift.io"},
+			ResourceNames: []string{"anyuid"},
+			Resources:     []string{"securitycontextconstraints"},
+			Verbs:         []string{"use"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"secrets"},
+			Verbs:     []string{"patch"},
+		},
+	}
+	fernetRbacResult, err := common_rbac.ReconcileRbac(ctx, helper, keystonev1.KeystoneAPIFernet{KeystoneAPI: instance}, fernetRbacRules)
+	if err != nil {
+		return fernetRbacResult, err
+	} else if (rbacResult != ctrl.Result{}) {
+		return fernetRbacResult, nil
+	}
+
+	//
 	// run keystone db sync
 	//
 	dbSyncHash := instance.Status.Hash[keystonev1.DbSyncHash]
@@ -1082,14 +1105,14 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 		}
 	}
 
-	// create CronJob
+	// create Trust Flush CronJob
 	cronjobDef := keystone.CronJob(instance, serviceLabels, serviceAnnotations)
-	cronjob := cronjob.NewCronJob(
+	trustflushjob := cronjob.NewCronJob(
 		cronjobDef,
 		5*time.Second,
 	)
 
-	ctrlResult, err = cronjob.CreateOrPatch(ctx, helper)
+	ctrlResult, err = trustflushjob.CreateOrPatch(ctx, helper)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.CronJobReadyCondition,
@@ -1101,7 +1124,28 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	}
 
 	instance.Status.Conditions.MarkTrue(condition.CronJobReadyCondition, condition.CronJobReadyMessage)
-	// create CronJob - end
+	// create Trust Flush CronJob - end
+
+	// create Fernet Key Rotation CronJob
+	fernetjobDef := keystone.FernetCronJob(instance, serviceLabels, serviceAnnotations)
+	fernetjob := cronjob.NewCronJob(
+		fernetjobDef,
+		5*time.Second,
+	)
+
+	ctrlResult, err = fernetjob.CreateOrPatch(ctx, helper)
+	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.CronJobReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.CronJobReadyErrorMessage,
+			err.Error()))
+		return ctrlResult, err
+	}
+
+	instance.Status.Conditions.MarkTrue(condition.CronJobReadyCondition, condition.CronJobReadyMessage)
+	// create Fernet Key Rotation CronJob - end
 
 	//
 	// create OpenStackClient config
@@ -1334,15 +1378,20 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 	// check if secret already exist
 	//
 	secretName := keystone.ServiceName
+	numberKeys := int(*instance.Spec.FernetMaxActiveKeys)
+
 	secret, hash, err := oko_secret.GetSecret(ctx, helper, secretName, instance.Namespace)
+
 	if err != nil && !k8s_errors.IsNotFound(err) {
 		return err
 	} else if k8s_errors.IsNotFound(err) {
 		fernetKeys := map[string]string{
-			"FernetKeys0":     keystone.GenerateFernetKey(),
-			"FernetKeys1":     keystone.GenerateFernetKey(),
 			"CredentialKeys0": keystone.GenerateFernetKey(),
 			"CredentialKeys1": keystone.GenerateFernetKey(),
+		}
+
+		for i := 0; i < numberKeys; i++ {
+			fernetKeys[fmt.Sprintf("FernetKeys%d", i)] = keystone.GenerateFernetKey()
 		}
 
 		tmpl := []util.Template{
@@ -1361,9 +1410,81 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 	} else {
 		// add hash to envVars
 		(*envVars)[secret.Name] = env.SetValue(hash)
-	}
 
-	// TODO: fernet key rotation
+		changedKeys := false
+
+		//
+		// Remove extra keys when FernetMaxActiveKeys changes
+		//
+		extraKey := fmt.Sprintf("FernetKeys%d", numberKeys)
+		for {
+			_, exists := secret.Data[extraKey]
+			if !exists {
+				break
+			}
+			changedKeys = true
+			i := 1
+			for {
+				key := fmt.Sprintf("FernetKeys%d", i)
+				i++
+				nextKey := fmt.Sprintf("FernetKeys%d", i)
+				_, exists = secret.Data[nextKey]
+				if !exists {
+					break
+				}
+				secret.Data[key] = secret.Data[nextKey]
+				delete(secret.Data, nextKey)
+			}
+		}
+
+		//
+		// Add extra keys when FernetMaxActiveKeys changes
+		//
+		lastKey := fmt.Sprintf("FernetKeys%d", numberKeys-1)
+		for {
+			_, exists := secret.Data[lastKey]
+			if exists {
+				break
+			}
+			changedKeys = true
+			i := 1
+			nextKeyValue := []byte(keystone.GenerateFernetKey())
+			for {
+				key := fmt.Sprintf("FernetKeys%d", i)
+				i++
+				keyValue, exists := secret.Data[key]
+				secret.Data[key] = nextKeyValue
+				nextKeyValue = keyValue
+				if !exists {
+					break
+				}
+			}
+		}
+
+		if !changedKeys {
+			return nil
+		}
+
+		fernetKeys := make(map[string]string, len(secret.Data))
+		for k, v := range secret.Data {
+			fernetKeys[k] = string(v[:])
+		}
+
+		tmpl := []util.Template{
+			{
+				Name:       secretName,
+				Namespace:  instance.Namespace,
+				Type:       util.TemplateTypeNone,
+				CustomData: fernetKeys,
+				Labels:     labels,
+			},
+		}
+
+		err = oko_secret.EnsureSecrets(ctx, helper, instance, tmpl, envVars)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

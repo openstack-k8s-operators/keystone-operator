@@ -89,6 +89,21 @@ spec:
                 description: EnableSecureRBAC - Enable Consistent and Secure RBAC
                   policies
                 type: boolean
+              fernetMaxActiveKeys:
+                default: 5
+                description: FernetMaxActiveKeys - Maximum number of fernet token
+                  keys after rotation
+                format: int32
+                type: integer
+              fernetRotationContainerImage:
+                description: Keystone Fernet Rotation Container Image URL (will be
+                  set to environmental default if empty)
+                type: string
+              fernetRotationSchedule:
+                default: 1 0 * * *
+                description: FernetRotationSchedule - Schedule rotate fernet token
+                  keys
+                type: string
               memcachedInstance:
                 default: memcached
                 description: Memcached instance name.
@@ -412,6 +427,7 @@ spec:
             required:
             - containerImage
             - databaseInstance
+            - fernetRotationContainerImage
             - memcachedInstance
             - rabbitMqClusterName
             - secret
