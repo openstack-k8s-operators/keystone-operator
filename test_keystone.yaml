@@ -1,0 +1,177 @@
+apiVersion: v1
+items:
+- apiVersion: keystone.openstack.org/v1beta1
+  kind: KeystoneAPI
+  metadata:
+    creationTimestamp: "2024-10-15T09:49:52Z"
+    finalizers:
+    - openstack.org/keystoneapi
+    - openstack.org/keystoneservice-nova
+    - openstack.org/keystoneservice-swift
+    - openstack.org/keystoneservice-glance
+    - openstack.org/keystoneservice-barbican
+    - openstack.org/keystoneendpoint-swift
+    - openstack.org/keystoneendpoint-glance-default-single
+    - openstack.org/keystoneservice-ceilometer
+    - openstack.org/keystoneendpoint-barbican-api
+    - openstack.org/keystoneservice-cinderv3
+    - openstack.org/keystoneservice-placement
+    - openstack.org/keystoneendpoint-cinderv3
+    - openstack.org/keystoneendpoint-placement
+    - openstack.org/keystoneservice-neutron
+    - openstack.org/keystoneendpoint-neutron
+    - openstack.org/keystoneendpoint-nova
+    generation: 2
+    name: keystone
+    namespace: openstack
+    ownerReferences:
+    - apiVersion: core.openstack.org/v1beta1
+      blockOwnerDeletion: true
+      controller: true
+      kind: OpenStackControlPlane
+      name: openstack-galera
+      uid: d9262aa4-b233-4aeb-b383-018983f62f33
+    resourceVersion: "1273973"
+    uid: 743bf48e-5697-4f4c-9103-939c9ad47564
+  spec:
+    adminProject: admin
+    adminUser: admin
+    containerImage: quay.io/podified-antelope-centos9/openstack-keystone@sha256:a71e5eaf974d4ecc8f3185fa5b76c8d21416d9dd1fac9c02b9f62bc39005d969
+    databaseAccount: keystone
+    databaseInstance: openstack
+    enableSecureRBAC: true
+    fernetMaxActiveKeys: "6"
+    fernetRotationSchedule: 1 0 * * *
+    memcachedInstance: memcached
+    override:
+      service:
+        internal:
+          metadata:
+            labels:
+              osctlplane: ""
+              osctlplane-service: keystone
+        public:
+          endpointURL: https://keystone-public-openstack.apps-crc.testing
+          metadata:
+            labels:
+              osctlplane: ""
+              osctlplane-service: keystone
+    passwordSelectors:
+      admin: AdminPassword
+    preserveJobs: false
+    rabbitMqClusterName: rabbitmq
+    region: regionOne
+    replicas: 1
+    resources: {}
+    secret: osp-secret
+    tls:
+      api:
+        internal:
+          secretName: cert-keystone-internal-svc
+        public:
+          secretName: cert-keystone-public-svc
+      caBundleSecretName: combined-ca-bundle
+    trustFlushArgs: ""
+    trustFlushSchedule: 1 * * * *
+    trustFlushSuspend: false
+  status:
+    apiEndpoints:
+      internal: https://keystone-internal.openstack.svc:5000
+      public: https://keystone-public-openstack.apps-crc.testing
+    conditions:
+    - lastTransitionTime: "2024-10-16T10:44:12Z"
+      message: Setup complete
+      reason: Ready
+      status: "True"
+      type: Ready
+    - lastTransitionTime: "2024-10-16T10:44:12Z"
+      message: Bootstrap completed
+      reason: Ready
+      status: "True"
+      type: BootstrapReady
+    - lastTransitionTime: "2024-10-16T10:44:12Z"
+      message: CronJob completed
+      reason: Ready
+      status: "True"
+      type: CronJobReady
+    - lastTransitionTime: "2024-10-15T09:50:39Z"
+      message: DB create completed
+      reason: Ready
+      status: "True"
+      type: DBReady
+    - lastTransitionTime: "2024-10-16T10:44:12Z"
+      message: DBsync completed
+      reason: Ready
+      status: "True"
+      type: DBSyncReady
+    - lastTransitionTime: "2024-10-16T10:44:12Z"
+      message: Deployment completed
+      reason: Ready
+      status: "True"
+      type: DeploymentReady
+    - lastTransitionTime: "2024-10-16T10:44:12Z"
+      message: Exposing service completed
+      reason: Ready
+      status: "True"
+      type: ExposeServiceReady
+    - lastTransitionTime: "2024-10-15T09:49:52Z"
+      message: Input data complete
+      reason: Ready
+      status: "True"
+      type: InputReady
+    - lastTransitionTime: "2024-10-15T09:49:52Z"
+      message: MariaDBAccount creation complete
+      reason: Ready
+      status: "True"
+      type: MariaDBAccountReady
+    - lastTransitionTime: "2024-10-15T09:50:53Z"
+      message: ' Memcached instance has been provisioned'
+      reason: Ready
+      status: "True"
+      type: MemcachedReady
+    - lastTransitionTime: "2024-10-16T10:44:12Z"
+      message: NetworkAttachments completed
+      reason: Ready
+      status: "True"
+      type: NetworkAttachmentsReady
+    - lastTransitionTime: "2024-10-15T09:50:53Z"
+      message: RabbitMqTransportURL successfully created
+      reason: Ready
+      status: "True"
+      type: RabbitMqTransportURLReady
+    - lastTransitionTime: "2024-10-16T09:20:03Z"
+      message: RoleBinding created
+      reason: Ready
+      status: "True"
+      type: RoleBindingReady
+    - lastTransitionTime: "2024-10-16T09:20:03Z"
+      message: Role created
+      reason: Ready
+      status: "True"
+      type: RoleReady
+    - lastTransitionTime: "2024-10-16T09:20:03Z"
+      message: ServiceAccount created
+      reason: Ready
+      status: "True"
+      type: ServiceAccountReady
+    - lastTransitionTime: "2024-10-16T09:20:03Z"
+      message: Service config create completed
+      reason: Ready
+      status: "True"
+      type: ServiceConfigReady
+    - lastTransitionTime: "2024-10-15T09:50:53Z"
+      message: Input data complete
+      reason: Ready
+      status: "True"
+      type: TLSInputReady
+    databaseHostname: openstack.openstack.svc
+    hash:
+      bootstrap: n5cfh9ch5f5h59dh599h65bh654h667h676h5ffh588h576h4h89h669h655h678h97h569h5d6h58h5b8h56dh5h544h5fch87hd7hdch694h5d9hbq
+      dbsync: n546hcch5bbh5b5h646h59fhb5h5d8h54chd9hfh5d7h7ch9fh5cfh5dch5c9h649h694h576h65h547h588h66fh88h66ch56dh54dhc9h698h696h66bq
+      input: n79h99hb4hbfh55dh8bh54ch554h9bh56ch558h5ch649h696h586h689h74h95h57fh8bhbbhd6h689h66h648h57fh575hfdh547hb7h664h5dfq
+    observedGeneration: 2
+    readyCount: 1
+    transportURLSecret: rabbitmq-transport-url-keystone-keystone-transport
+kind: List
+metadata:
+  resourceVersion: ""

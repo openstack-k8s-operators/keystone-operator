@@ -94,6 +94,9 @@ var _ = Describe("KeystoneAPI Webhook", func() {
 			Expect(KeystoneAPI.Spec.ContainerImage).Should(Equal(
 				keystonev1.KeystoneAPIContainerImage,
 			))
+			Expect(KeystoneAPI.Spec.FernetRotationContainerImage).Should(Equal(
+				keystonev1.KeystoneFernetRotationContainerImage,
+			))
 		})
 	})
 
@@ -101,6 +104,7 @@ var _ = Describe("KeystoneAPI Webhook", func() {
 		BeforeEach(func() {
 			spec := GetDefaultKeystoneAPISpec()
 			spec["containerImage"] = "api-container-image"
+			spec["fernetRotationContainerImage"] = "fernet-rotation-container-image"
 			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, spec))
 		})
 
@@ -108,6 +112,9 @@ var _ = Describe("KeystoneAPI Webhook", func() {
 			KeystoneAPI := GetKeystoneAPI(keystoneAPIName)
 			Expect(KeystoneAPI.Spec.ContainerImage).Should(Equal(
 				"api-container-image",
+			))
+			Expect(KeystoneAPI.Spec.FernetRotationContainerImage).Should(Equal(
+				"fernet-rotation-container-image",
 			))
 		})
 	})
