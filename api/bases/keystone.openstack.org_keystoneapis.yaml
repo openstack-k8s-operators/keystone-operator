@@ -113,7 +113,7 @@ spec:
                 description: KeystoneFederationSpec to provide the configuration values
                   for OIDC Federation
                 properties:
-                  KeystoneFederationIdentityProviderName:
+                  keystoneFederationIdentityProviderName:
                     description: KeystoneFederationIdentityProviderName
                     type: string
                   oidcCacheType:

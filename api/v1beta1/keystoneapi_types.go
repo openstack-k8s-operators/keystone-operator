@@ -255,7 +255,7 @@ type KeystoneFederationSpec struct {
 
 	// +kubebuilder:validation:Optional
 	// KeystoneFederationIdentityProviderName
-	KeystoneFederationIdentityProviderName string `json:"KeystoneFederationIdentityProviderName,omitempty"`
+	KeystoneFederationIdentityProviderName string `json:"keystoneFederationIdentityProviderName,omitempty"`
 }
 
 // KeystoneAPIStatus defines the observed state of KeystoneAPI
