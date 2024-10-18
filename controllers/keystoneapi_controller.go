@@ -1240,7 +1240,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 
 			endptConfig["EnableFederation"] = true
 			endptConfig["OIDCClaimPrefix"] = instance.Spec.OIDCFederation.OIDCClaimPrefix
-			endptConfig["OIDCResponseType"] = instance.Spec.OIDCFederation.OIDCClaimPrefix
+			endptConfig["OIDCResponseType"] = instance.Spec.OIDCFederation.OIDCResponseType
 			endptConfig["OIDCScope"] = instance.Spec.OIDCFederation.OIDCScope
 			endptConfig["OIDCProviderMetadataURL"] = instance.Spec.OIDCFederation.OIDCProviderMetadataURL
 			endptConfig["OIDCClientID"] = instance.Spec.OIDCFederation.OIDCClientID
