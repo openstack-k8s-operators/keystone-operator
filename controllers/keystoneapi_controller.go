@@ -1242,7 +1242,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			endptConfig["OIDCClaimPrefix"] = instance.Spec.OIDCFederation.OIDCClaimPrefix
 			endptConfig["OIDCResponseType"] = instance.Spec.OIDCFederation.OIDCClaimPrefix
 			endptConfig["OIDCScope"] = instance.Spec.OIDCFederation.OIDCScope
-			endptConfig["OIDCProviderMetadataUrl"] = instance.Spec.OIDCFederation.OIDCProviderMetadataURL
+			endptConfig["OIDCProviderMetadataURL"] = instance.Spec.OIDCFederation.OIDCProviderMetadataURL
 			endptConfig["OIDCClientID"] = instance.Spec.OIDCFederation.OIDCClientID
 			endptConfig["OIDCClientSecret"] = oidcClientSecret
 			endptConfig["OIDCCryptoPassphrase"] = oidcCryptoPassphrase
