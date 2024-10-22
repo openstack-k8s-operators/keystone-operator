@@ -84,6 +84,10 @@ spec:
                   files. Those get added to the service config dir in /etc/<service>
                   . TODO: -> implement'
                 type: object
+              enableFederation:
+                default: false
+                description: Enablement of Federation configuration
+                type: boolean
               enableSecureRBAC:
                 default: true
                 description: EnableSecureRBAC - Enable Consistent and Secure RBAC
@@ -118,6 +122,53 @@ spec:
                   type: string
                 description: NodeSelector to target subset of worker nodes running
                   this service
+                type: object
+              oidcFederation:
+                description: KeystoneFederationSpec to provide the configuration values
+                  for OIDC Federation
+                properties:
+                  keystoneFederationIdentityProviderName:
+                    description: KeystoneFederationIdentityProviderName
+                    type: string
+                  oidcCacheType:
+                    default: memcache
+                    description: OIDCCacheType
+                    type: string
+                  oidcClaimDelimiter:
+                    default: ;
+                    description: OIDCClaimDelimiter
+                    type: string
+                  oidcClaimPrefix:
+                    default: OIDC-iss
+                    description: OIDCClaimPrefix
+                    type: string
+                  oidcClientID:
+                    description: OIDCClientID
+                    type: string
+                  oidcMemCacheServers:
+                    description: OIDCMemCacheServers
+                    type: string
+                  oidcPassClaimsAs:
+                    default: both
+                    description: OIDCPassClaimsAs
+                    type: string
+                  oidcPassUserInfoAs:
+                    default: claims
+                    description: OIDCPassUserInfoAs
+                    type: string
+                  oidcProviderMetadataURL:
+                    description: OIDCProviderMetadataURL
+                    type: string
+                  oidcResponseType:
+                    default: id_token
+                    description: OIDCResponseType
+                    type: string
+                  oidcScope:
+                    default: openid email profile
+                    description: OIDCScope
+                    type: string
+                required:
+                - oidcMemCacheServers
                 type: object
               override:
                 description: Override, provides the ability to override the generated
@@ -303,6 +354,16 @@ spec:
                     default: AdminPassword
                     description: Admin - Selector to get the keystone Admin password
                       from the Secret
+                    type: string
+                  keystoneOIDCClientSecret:
+                    default: KeystoneClientSecret
+                    description: OIDCClientSecret - Selector to get the IdP client
+                      secret from the Secret
+                    type: string
+                  keystoneOIDCCryptoPassphrase:
+                    default: KeystoneCryptoPassphrase
+                    description: OIDCCryptoPassphrase - Selector to get the OIDC crypto
+                      passphrase from the Secret
                     type: string
                 type: object
               preserveJobs:

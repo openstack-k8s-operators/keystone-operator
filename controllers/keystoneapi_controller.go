@@ -18,6 +18,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
@@ -1190,6 +1191,18 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			keystone.DatabaseName,
 		),
 		"enableSecureRBAC": instance.Spec.EnableSecureRBAC,
+		"enableFederation": instance.Spec.EnableFederation,
+	}
+	// TODO(d34dh0r53): Delete this, just for development
+	Log := r.GetLogger(ctx)
+
+	if instance.Spec.EnableFederation {
+		federationParameters := map[string]interface{}{
+			"federationTrustedDashboard": fmt.Sprintf("https://%s/dashboard/auth/websso/",
+				service.EndpointPublic),
+			"federationRemoteIDAttribute": instance.Spec.OIDCFederation.OIDCClaimPrefix,
+		}
+		maps.Copy(templateParameters, federationParameters)
 	}
 
 	// create httpd  vhost template parameters
@@ -1202,6 +1215,44 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			endptConfig["TLS"] = true
 			endptConfig["SSLCertificateFile"] = fmt.Sprintf("/etc/pki/tls/certs/%s.crt", endpt.String())
 			endptConfig["SSLCertificateKeyFile"] = fmt.Sprintf("/etc/pki/tls/private/%s.key", endpt.String())
+		}
+
+		endptConfig["EnableFederation"] = false // default OIDCFederation to false, and set it below to true if enabled
+		if instance.Spec.EnableFederation {
+			oidcClientSecret, _, err := oko_secret.GetSecret(
+				ctx,
+				h,
+				instance.Spec.PasswordSelectors.KeystoneOIDCClientSecret,
+				instance.Namespace)
+			if err != nil {
+				return err
+			}
+			Log.Info(fmt.Sprintf("OIDCClientSecret: %s", oidcClientSecret))
+
+			oidcCryptoPassphrase, _, err := oko_secret.GetSecret(
+				ctx,
+				h,
+				instance.Spec.PasswordSelectors.KeystoneOIDCCryptoPassphrase,
+				instance.Namespace)
+			if err != nil {
+				return err
+			}
+			Log.Info(fmt.Sprintf("OIDCCryptoPassphrase: %s", oidcCryptoPassphrase))
+
+			endptConfig["EnableFederation"] = true
+			endptConfig["OIDCClaimPrefix"] = instance.Spec.OIDCFederation.OIDCClaimPrefix
+			endptConfig["OIDCResponseType"] = instance.Spec.OIDCFederation.OIDCResponseType
+			endptConfig["OIDCScope"] = instance.Spec.OIDCFederation.OIDCScope
+			endptConfig["OIDCProviderMetadataURL"] = instance.Spec.OIDCFederation.OIDCProviderMetadataURL
+			endptConfig["OIDCClientID"] = instance.Spec.OIDCFederation.OIDCClientID
+			endptConfig["OIDCClientSecret"] = oidcClientSecret
+			endptConfig["OIDCCryptoPassphrase"] = oidcCryptoPassphrase
+			endptConfig["OIDCPassUserInfoAs"] = instance.Spec.OIDCFederation.OIDCPassUserInfoAs
+			endptConfig["OIDCPassClaimsAs"] = instance.Spec.OIDCFederation.OIDCPassClaimsAs
+			endptConfig["OIDCClaimDelimiter"] = instance.Spec.OIDCFederation.OIDCClaimDelimiter
+			endptConfig["OIDCCacheType"] = instance.Spec.OIDCFederation.OIDCCacheType
+			endptConfig["OIDCMemCacheServers"] = mc.GetMemcachedServerListString()
+			endptConfig["KeystoneFederationIdentityProviderName"] = instance.Spec.OIDCFederation.KeystoneFederationIdentityProviderName
 		}
 		httpdVhostConfig[endpt.String()] = endptConfig
 	}
@@ -1502,7 +1553,6 @@ func (r *KeystoneAPIReconciler) ensureDB(
 	h *helper.Helper,
 	instance *keystonev1.KeystoneAPI,
 ) (*mariadbv1.Database, ctrl.Result, error) {
-
 	// ensure MariaDBAccount exists.  This account record may be created by
 	// openstack-operator or the cloud operator up front without a specific
 	// MariaDBDatabase configured yet.   Otherwise, a MariaDBAccount CR is
@@ -1513,7 +1563,6 @@ func (r *KeystoneAPIReconciler) ensureDB(
 		ctx, h, instance.Spec.DatabaseAccount,
 		instance.Namespace, false, keystone.DatabaseUsernamePrefix,
 	)
-
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			mariadbv1.MariaDBAccountReadyCondition,
@@ -1541,7 +1590,6 @@ func (r *KeystoneAPIReconciler) ensureDB(
 
 	// create or patch the DB
 	ctrlResult, err := db.CreateOrPatchAll(ctx, h)
-
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.DBReadyCondition,
