@@ -1165,10 +1165,25 @@ var _ = Describe("Keystone controller", func() {
 				updatedSecret := th.GetSecret(types.NamespacedName{Namespace: keystoneAPIName.Namespace, Name: "keystone"})
 				g.Expect(updatedSecret).ToNot(BeNil())
 
-				oldKey := string(currentSecret.Data["FernetKeys"+strconv.Itoa(0)])
-				newKey := string(updatedSecret.Data["FernetKeys"+strconv.Itoa((4))])
+				for i := 0; i < 4; i++ {
 
-				g.Expect(oldKey).To(Equal(newKey))
+					// old idx 0 > new 4
+					if i == 0 {
+						oldKey := string(currentSecret.Data["FernetKeys"+strconv.Itoa(0)])
+						newKey := string(updatedSecret.Data["FernetKeys"+strconv.Itoa((4))])
+						g.Expect(oldKey).To(Equal(newKey))
+						continue
+					}
+
+					// old idx > new idx-1, except idx 1 which should be gone and not match new idx 0
+					oldKey := string(currentSecret.Data["FernetKeys"+strconv.Itoa(i)])
+					newKey := string(updatedSecret.Data["FernetKeys"+strconv.Itoa((i-1))])
+					if i == 1 {
+						g.Expect(oldKey).ToNot(Equal(newKey))
+					} else {
+						g.Expect(oldKey).To(Equal(newKey))
+					}
+				}
 			}, timeout, interval).Should(Succeed())
 
 		})
