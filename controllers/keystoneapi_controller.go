@@ -1220,23 +1220,21 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 
 		endptConfig["EnableFederation"] = false // default OIDCFederation to false, and set it below to true if enabled
 		if instance.Spec.EnableFederation {
-			oidcClientSecret, _, err := oko_secret.GetDataFromSecret(
+			oidcClientSecret, _, err := oko_secret.GetSecret(
 				ctx,
 				h,
 				instance.Spec.PasswordSelectors.KeystoneOIDCClientSecret,
-				10*time.Second,
-				"KeystoneClientSecret")
+				instance.Namespace)
 			if err != nil {
 				return err
 			}
 			Log.Info(fmt.Sprintf("OIDCClientSecret: %s", oidcClientSecret))
 
-			oidcCryptoPassphrase, _, err := oko_secret.GetDataFromSecret(
+			oidcCryptoPassphrase, _, err := oko_secret.GetSecret(
 				ctx,
 				h,
 				instance.Spec.PasswordSelectors.KeystoneOIDCCryptoPassphrase,
-				10*time.Second,
-				"KeystoneCryptoPassphrase")
+				instance.Namespace)
 			if err != nil {
 				return err
 			}
