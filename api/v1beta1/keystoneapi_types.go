@@ -207,25 +207,27 @@ type PasswordSelector struct {
 // KeystoneFederationSpec to provide the configuration values for OIDC Federation
 type KeystoneFederationSpec struct {
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=OIDC-iss
+	// +kubebuilder:default="OIDC-iss"
 	// OIDCClaimPrefix
 	OIDCClaimPrefix string `json:"oidcClaimPrefix"`
 
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=id_token
+	// +kubebuilder:default="id_token"
 	// OIDCResponseType
 	OIDCResponseType string `json:"oidcResponseType"`
 
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=openid email profile
+	// +kubebuilder:default="openid email profile"
 	// OIDCScope
 	OIDCScope string `json:"oidcScope"`
 
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=""
 	// OIDCProviderMetadataURL
 	OIDCProviderMetadataURL string `json:"oidcProviderMetadataURL,omitempty"`
 
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=""
 	// OIDCClientID
 	OIDCClientID string `json:"oidcClientID,omitempty"`
 
@@ -235,17 +237,17 @@ type KeystoneFederationSpec struct {
 	OIDCClaimDelimiter string `json:"oidcClaimDelimiter"`
 
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=claims
+	// +kubebuilder:default="claims"
 	// OIDCPassUserInfoAs
 	OIDCPassUserInfoAs string `json:"oidcPassUserInfoAs"`
 
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=both
+	// +kubebuilder:default="both"
 	// OIDCPassClaimsAs
 	OIDCPassClaimsAs string `json:"oidcPassClaimsAs"`
 
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=memcache
+	// +kubebuilder:default="memcache"
 	// OIDCCacheType
 	OIDCCacheType string `json:"oidcCacheType"`
 
@@ -254,6 +256,7 @@ type KeystoneFederationSpec struct {
 	OIDCMemCacheServers string `json:"oidcMemCacheServers"`
 
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=""
 	// KeystoneFederationIdentityProviderName
 	KeystoneFederationIdentityProviderName string `json:"keystoneFederationIdentityProviderName,omitempty"`
 }

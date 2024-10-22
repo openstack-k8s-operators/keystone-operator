@@ -114,6 +114,7 @@ spec:
                   for OIDC Federation
                 properties:
                   keystoneFederationIdentityProviderName:
+                    default: ""
                     description: KeystoneFederationIdentityProviderName
                     type: string
                   oidcCacheType:
@@ -129,6 +130,7 @@ spec:
                     description: OIDCClaimPrefix
                     type: string
                   oidcClientID:
+                    default: ""
                     description: OIDCClientID
                     type: string
                   oidcMemCacheServers:
@@ -143,6 +145,7 @@ spec:
                     description: OIDCPassUserInfoAs
                     type: string
                   oidcProviderMetadataURL:
+                    default: ""
                     description: OIDCProviderMetadataURL
                     type: string
                   oidcResponseType:
