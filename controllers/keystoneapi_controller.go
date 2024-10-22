@@ -1194,8 +1194,6 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		"enableSecureRBAC": instance.Spec.EnableSecureRBAC,
 		"enableFederation": instance.Spec.EnableFederation,
 	}
-	// TODO(d34dh0r53): Delete this, just for development
-	Log := r.GetLogger(ctx)
 
 	if instance.Spec.EnableFederation {
 		federationParameters := map[string]interface{}{
@@ -1220,25 +1218,14 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 
 		endptConfig["EnableFederation"] = false // default OIDCFederation to false, and set it below to true if enabled
 		if instance.Spec.EnableFederation {
-			oidcClientSecret, _, err := oko_secret.GetSecret(
+			ospSecret, _, err := oko_secret.GetSecret(
 				ctx,
 				h,
-				instance.Spec.PasswordSelectors.KeystoneOIDCClientSecret,
+				instance.Spec.Secret,
 				instance.Namespace)
 			if err != nil {
 				return err
 			}
-			Log.Info(fmt.Sprintf("OIDCClientSecret: %s", oidcClientSecret))
-
-			oidcCryptoPassphrase, _, err := oko_secret.GetSecret(
-				ctx,
-				h,
-				instance.Spec.PasswordSelectors.KeystoneOIDCCryptoPassphrase,
-				instance.Namespace)
-			if err != nil {
-				return err
-			}
-			Log.Info(fmt.Sprintf("OIDCCryptoPassphrase: %s", oidcCryptoPassphrase))
 
 			endptConfig["EnableFederation"] = true
 			endptConfig["OIDCClaimPrefix"] = instance.Spec.OIDCFederation.OIDCClaimPrefix
@@ -1246,8 +1233,8 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			endptConfig["OIDCScope"] = instance.Spec.OIDCFederation.OIDCScope
 			endptConfig["OIDCProviderMetadataURL"] = instance.Spec.OIDCFederation.OIDCProviderMetadataURL
 			endptConfig["OIDCClientID"] = instance.Spec.OIDCFederation.OIDCClientID
-			endptConfig["OIDCClientSecret"] = oidcClientSecret
-			endptConfig["OIDCCryptoPassphrase"] = oidcCryptoPassphrase
+			endptConfig["OIDCClientSecret"] = string(ospSecret.Data[instance.Spec.PasswordSelectors.KeystoneOIDCClientSecret])
+			endptConfig["OIDCCryptoPassphrase"] = string(ospSecret.Data[instance.Spec.PasswordSelectors.KeystoneOIDCCryptoPassphrase])
 			endptConfig["OIDCPassUserInfoAs"] = instance.Spec.OIDCFederation.OIDCPassUserInfoAs
 			endptConfig["OIDCPassClaimsAs"] = instance.Spec.OIDCFederation.OIDCPassClaimsAs
 			endptConfig["OIDCClaimDelimiter"] = instance.Spec.OIDCFederation.OIDCClaimDelimiter

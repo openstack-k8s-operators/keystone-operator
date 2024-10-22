@@ -333,8 +333,11 @@ spec:
               passwordSelectors:
                 default:
                   admin: AdminPassword
-                description: PasswordSelectors - Selectors to identify the AdminUser
-                  password from the Secret
+                  keystoneOIDCClientSecret: KeystoneClientSecret
+                  keystoneOIDCCryptoPassphrase: KeystoneCryptoPassphrase
+                description: PasswordSelectors - Selectors to identify the AdminUser,
+                  KeystoneOIDCClient, and KeystoneOIDCCryptoPassphrase passwords from
+                  the Secret
                 properties:
                   admin:
                     default: AdminPassword
