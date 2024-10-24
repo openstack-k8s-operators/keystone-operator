@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2" //revive:disable:dot-imports
@@ -36,6 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 var _ = Describe("Keystone controller", func() {
@@ -1106,6 +1108,248 @@ var _ = Describe("Keystone controller", func() {
 				condition.ReadyCondition,
 				corev1.ConditionTrue,
 			)
+		})
+	})
+
+	When("When FernetMaxActiveKeys is created with a number lower than 3", func() {
+		It("should fail", func() {
+			err := InterceptGomegaFailure(
+				func() {
+					CreateKeystoneAPI(keystoneAPIName, GetKeystoneAPISpec(-1))
+				})
+			Expect(err).To(BeEmpty())
+		})
+	})
+
+	When("When the fernet keys are created with FernetMaxActiveKeys as 3", func() {
+		BeforeEach(func() {
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, GetKeystoneAPISpec(3)))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
+				Namespace: namespace,
+			})
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+			th.SimulateDeploymentReplicaReady(deploymentName)
+		})
+
+		It("creates 3 keys", func() {
+			secret := th.GetSecret(types.NamespacedName{Namespace: keystoneAPIName.Namespace, Name: "keystone"})
+			Expect(secret).ToNot(BeNil())
+
+			Eventually(func(g Gomega) {
+				numberFernetKeys := 0
+				for k := range secret.Data {
+					if strings.HasPrefix(k, "FernetKeys") {
+						numberFernetKeys++
+					}
+				}
+
+				Expect(numberFernetKeys).Should(BeNumerically("==", 3))
+				for i := 0; i < 3; i++ {
+					g.Expect(secret.Data["FernetKeys"+strconv.Itoa(i)]).NotTo(BeNil())
+				}
+			}, timeout, interval).Should(Succeed())
+		})
+	})
+
+	When("When the fernet keys are created with FernetMaxActiveKeys as 100", func() {
+		BeforeEach(func() {
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, GetKeystoneAPISpec(100)))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
+				Namespace: namespace,
+			})
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+			th.SimulateDeploymentReplicaReady(deploymentName)
+		})
+
+		It("creates 100 keys", func() {
+			secret := th.GetSecret(types.NamespacedName{Namespace: keystoneAPIName.Namespace, Name: "keystone"})
+			Expect(secret).ToNot(BeNil())
+
+			Eventually(func(g Gomega) {
+				numberFernetKeys := 0
+				for k := range secret.Data {
+					if strings.HasPrefix(k, "FernetKeys") {
+						numberFernetKeys++
+					}
+				}
+
+				Expect(numberFernetKeys).Should(BeNumerically("==", 100))
+				for i := 0; i < 100; i++ {
+					g.Expect(secret.Data["FernetKeys"+strconv.Itoa(i)]).NotTo(BeNil())
+				}
+			}, timeout, interval).Should(Succeed())
+		})
+	})
+
+	When("When the fernet keys are updated from 5 to 4", func() {
+		BeforeEach(func() {
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, GetDefaultKeystoneAPISpec()))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
+				Namespace: namespace,
+			})
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+			th.SimulateDeploymentReplicaReady(deploymentName)
+		})
+
+		It("removes the additional key", func() {
+			secret := th.GetSecret(types.NamespacedName{Namespace: keystoneAPIName.Namespace, Name: "keystone"})
+			Expect(secret).ToNot(BeNil())
+
+			keystone := GetKeystoneAPI(keystoneAPIName)
+
+			_, err := controllerutil.CreateOrPatch(
+				th.Ctx, th.K8sClient, keystone, func() error {
+					keystone.Spec.FernetMaxActiveKeys = ptr.To(int32(4))
+					return nil
+				})
+			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(func(g Gomega) {
+				secret = th.GetSecret(types.NamespacedName{Namespace: keystoneAPIName.Namespace, Name: "keystone"})
+				numberFernetKeys := 0
+				for k := range secret.Data {
+					if strings.HasPrefix(k, "FernetKeys") {
+						numberFernetKeys++
+					}
+				}
+
+				g.Expect(numberFernetKeys).Should(BeNumerically("==", 4))
+				for i := 0; i < 4; i++ {
+					g.Expect(secret.Data["FernetKeys"+strconv.Itoa(i)]).NotTo(BeNil())
+				}
+			}, timeout, interval).Should(Succeed())
+		})
+	})
+
+	When("When the fernet keys are updated from 5 to 6", func() {
+		BeforeEach(func() {
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, GetDefaultKeystoneAPISpec()))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
+				Namespace: namespace,
+			})
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+			th.SimulateDeploymentReplicaReady(deploymentName)
+		})
+
+		It("creates an additional key", func() {
+			secret := th.GetSecret(types.NamespacedName{Namespace: keystoneAPIName.Namespace, Name: "keystone"})
+			Expect(secret).ToNot(BeNil())
+
+			keystone := GetKeystoneAPI(keystoneAPIName)
+
+			_, err := controllerutil.CreateOrPatch(
+				th.Ctx, th.K8sClient, keystone, func() error {
+					keystone.Spec.FernetMaxActiveKeys = ptr.To(int32(6))
+					return nil
+				})
+			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(func(g Gomega) {
+				secret = th.GetSecret(types.NamespacedName{Namespace: keystoneAPIName.Namespace, Name: "keystone"})
+				numberFernetKeys := 0
+				for k := range secret.Data {
+					if strings.HasPrefix(k, "FernetKeys") {
+						numberFernetKeys++
+					}
+				}
+
+				g.Expect(numberFernetKeys).Should(BeNumerically("==", 6))
+				for i := 0; i < 6; i++ {
+					g.Expect(secret.Data["FernetKeys"+strconv.Itoa(i)]).NotTo(BeNil())
+				}
+			}, timeout, interval).Should(Succeed())
 		})
 	})
 
