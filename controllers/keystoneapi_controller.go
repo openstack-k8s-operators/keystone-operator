@@ -1197,8 +1197,8 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 
 	if instance.Spec.EnableFederation {
 		federationParameters := map[string]interface{}{
-			"federationTrustedDashboard": fmt.Sprintf("https://%s/dashboard/auth/websso/",
-				service.EndpointPublic),
+			"federationTrustedDashboard": fmt.Sprintf("https://%s-%s.%s.svc/dashboard/auth/websso/",
+				instance.Name, service.EndpointPublic, instance.Namespace),
 			"federationRemoteIDAttribute": instance.Spec.OIDCFederation.OIDCClaimPrefix,
 		}
 		maps.Copy(templateParameters, federationParameters)

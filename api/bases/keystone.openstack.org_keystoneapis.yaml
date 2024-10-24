@@ -157,7 +157,14 @@ spec:
                     description: OIDCScope
                     type: string
                 required:
+                - oidcCacheType
+                - oidcClaimDelimiter
+                - oidcClaimPrefix
                 - oidcMemCacheServers
+                - oidcPassClaimsAs
+                - oidcPassUserInfoAs
+                - oidcResponseType
+                - oidcScope
                 type: object
               override:
                 description: Override, provides the ability to override the generated
