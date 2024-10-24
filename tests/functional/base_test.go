@@ -30,13 +30,18 @@ import (
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 )
 
-func GetDefaultKeystoneAPISpec() map[string]interface{} {
+func GetKeystoneAPISpec(fernetMaxKeys int32) map[string]interface{} {
 	return map[string]interface{}{
-		"databaseInstance": "openstack",
-		"replicas":         1,
-		"secret":           SecretName,
-		"databaseAccount":  AccountName,
+		"databaseInstance":    "openstack",
+		"replicas":            1,
+		"secret":              SecretName,
+		"databaseAccount":     AccountName,
+		"fernetMaxActiveKeys": fernetMaxKeys,
 	}
+}
+
+func GetDefaultKeystoneAPISpec() map[string]interface{} {
+	return GetKeystoneAPISpec(5)
 }
 
 func GetTLSKeystoneAPISpec() map[string]interface{} {

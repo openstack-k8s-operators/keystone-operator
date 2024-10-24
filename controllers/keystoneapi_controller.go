@@ -1189,7 +1189,8 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			instance.Status.DatabaseHostname,
 			keystone.DatabaseName,
 		),
-		"enableSecureRBAC": instance.Spec.EnableSecureRBAC,
+		"enableSecureRBAC":    instance.Spec.EnableSecureRBAC,
+		"fernetMaxActiveKeys": instance.Spec.FernetMaxActiveKeys,
 	}
 
 	// create httpd  vhost template parameters
