@@ -194,7 +194,7 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		condition.UnknownCondition(condition.DBSyncReadyCondition, condition.InitReason, condition.DBSyncReadyInitMessage),
 		condition.UnknownCondition(condition.RabbitMqTransportURLReadyCondition, condition.InitReason, condition.RabbitMqTransportURLReadyInitMessage),
 		condition.UnknownCondition(condition.MemcachedReadyCondition, condition.InitReason, condition.MemcachedReadyInitMessage),
-		condition.UnknownCondition(condition.ExposeServiceReadyCondition, condition.InitReason, condition.ExposeServiceReadyInitMessage),
+		condition.UnknownCondition(condition.CreateServiceReadyCondition, condition.InitReason, condition.CreateServiceReadyInitMessage),
 		condition.UnknownCondition(condition.BootstrapReadyCondition, condition.InitReason, condition.BootstrapReadyInitMessage),
 		condition.UnknownCondition(condition.InputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
 		condition.UnknownCondition(condition.ServiceConfigReadyCondition, condition.InitReason, condition.ServiceConfigReadyInitMessage),
@@ -557,10 +557,10 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 		)
 		if err != nil {
 			instance.Status.Conditions.Set(condition.FalseCondition(
-				condition.ExposeServiceReadyCondition,
+				condition.CreateServiceReadyCondition,
 				condition.ErrorReason,
 				condition.SeverityWarning,
-				condition.ExposeServiceReadyErrorMessage,
+				condition.CreateServiceReadyErrorMessage,
 				err.Error()))
 
 			return ctrl.Result{}, err
@@ -589,19 +589,19 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 		ctrlResult, err := svc.CreateOrPatch(ctx, helper)
 		if err != nil {
 			instance.Status.Conditions.Set(condition.FalseCondition(
-				condition.ExposeServiceReadyCondition,
+				condition.CreateServiceReadyCondition,
 				condition.ErrorReason,
 				condition.SeverityWarning,
-				condition.ExposeServiceReadyErrorMessage,
+				condition.CreateServiceReadyErrorMessage,
 				err.Error()))
 
 			return ctrlResult, err
 		} else if (ctrlResult != ctrl.Result{}) {
 			instance.Status.Conditions.Set(condition.FalseCondition(
-				condition.ExposeServiceReadyCondition,
+				condition.CreateServiceReadyCondition,
 				condition.RequestedReason,
 				condition.SeverityInfo,
-				condition.ExposeServiceReadyRunningMessage))
+				condition.CreateServiceReadyRunningMessage))
 			return ctrlResult, nil
 		}
 		// create service - end
@@ -619,7 +619,7 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 		}
 	}
 
-	instance.Status.Conditions.MarkTrue(condition.ExposeServiceReadyCondition, condition.ExposeServiceReadyMessage)
+	instance.Status.Conditions.MarkTrue(condition.CreateServiceReadyCondition, condition.CreateServiceReadyMessage)
 
 	//
 	// Update instance status with service endpoint url from route host information
