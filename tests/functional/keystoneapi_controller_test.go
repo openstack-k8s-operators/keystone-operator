@@ -141,7 +141,7 @@ var _ = Describe("Keystone controller", func() {
 				condition.ServiceConfigReadyCondition,
 				condition.DBReadyCondition,
 				condition.DBSyncReadyCondition,
-				condition.ExposeServiceReadyCondition,
+				condition.CreateServiceReadyCondition,
 				condition.BootstrapReadyCondition,
 				condition.DeploymentReadyCondition,
 				condition.NetworkAttachmentsReadyCondition,
@@ -465,7 +465,7 @@ var _ = Describe("Keystone controller", func() {
 			th.ExpectCondition(
 				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),
-				condition.ExposeServiceReadyCondition,
+				condition.CreateServiceReadyCondition,
 				corev1.ConditionTrue,
 			)
 			th.ExpectCondition(
