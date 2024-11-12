@@ -117,8 +117,8 @@ func BootstrapJob(
 	}
 	job.Spec.Template.Spec.Containers[0].Env = env.MergeEnvs(job.Spec.Template.Spec.Containers[0].Env, envVars)
 
-	if len(instance.Spec.NodeSelector) > 0 {
-		job.Spec.Template.Spec.NodeSelector = instance.Spec.NodeSelector
+	if instance.Spec.NodeSelector != nil && len(*instance.Spec.NodeSelector) > 0 {
+		job.Spec.Template.Spec.NodeSelector = *instance.Spec.NodeSelector
 	}
 
 	return job
