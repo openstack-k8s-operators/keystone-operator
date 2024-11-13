@@ -51,6 +51,7 @@ var _ = Describe("Keystone controller", func() {
 	var internalCertSecretName types.NamespacedName
 	var publicCertSecretName types.NamespacedName
 	var memcachedSpec memcachedv1.MemcachedSpec
+	var cronJobName types.NamespacedName
 
 	BeforeEach(func() {
 
@@ -98,6 +99,10 @@ var _ = Describe("Keystone controller", func() {
 			MemcachedSpecCore: memcachedv1.MemcachedSpecCore{
 				Replicas: ptr.To(int32(3)),
 			},
+		}
+		cronJobName = types.NamespacedName{
+			Namespace: keystoneAPIName.Namespace,
+			Name:      "keystone-cron",
 		}
 
 		err := os.Setenv("OPERATOR_TEMPLATES", "../../templates")
@@ -609,11 +614,7 @@ var _ = Describe("Keystone controller", func() {
 		})
 
 		It("should create a CronJob for trust flush", func() {
-			cronJob := types.NamespacedName{
-				Namespace: keystoneAPIName.Namespace,
-				Name:      fmt.Sprintf("%s-%s", keystoneAPIName.Name, "cron"),
-			}
-			GetCronJob(cronJob)
+			GetCronJob(cronJobName)
 		})
 
 		It("should create a ConfigMap and Secret for client config", func() {
@@ -1186,6 +1187,133 @@ var _ = Describe("Keystone controller", func() {
 				}
 			}, timeout, interval).Should(Succeed())
 
+		})
+	})
+
+	When("A KeystoneAPI is created with nodeSelector", func() {
+		BeforeEach(func() {
+			spec := GetDefaultKeystoneAPISpec()
+			spec["nodeSelector"] = map[string]interface{}{
+				"foo": "bar",
+			}
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			keystone := CreateKeystoneAPI(keystoneAPIName, spec)
+			DeferCleanup(th.DeleteInstance, keystone)
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
+				Namespace: namespace,
+			})
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+			th.SimulateDeploymentReplicaReady(deploymentName)
+		})
+
+		It("sets nodeSelector in resource specs", func() {
+			Eventually(func(g Gomega) {
+				g.Expect(th.GetDeployment(deploymentName).Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
+				g.Expect(th.GetJob(bootstrapJobName).Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
+				g.Expect(th.GetJob(dbSyncJobName).Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
+				g.Expect(GetCronJob(cronJobName).Spec.JobTemplate.Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
+			}, timeout, interval).Should(Succeed())
+		})
+
+		It("updates nodeSelector in resource specs when changed", func() {
+			Eventually(func(g Gomega) {
+				g.Expect(th.GetDeployment(deploymentName).Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
+				g.Expect(th.GetJob(bootstrapJobName).Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
+				g.Expect(th.GetJob(dbSyncJobName).Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
+				g.Expect(GetCronJob(cronJobName).Spec.JobTemplate.Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				keystone := GetKeystoneAPI(keystoneAPIName)
+				newNodeSelector := map[string]string{
+					"foo2": "bar2",
+				}
+				keystone.Spec.NodeSelector = &newNodeSelector
+				g.Expect(k8sClient.Update(ctx, keystone)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				th.SimulateJobSuccess(dbSyncJobName)
+				th.SimulateJobSuccess(bootstrapJobName)
+				th.SimulateDeploymentReplicaReady(deploymentName)
+				g.Expect(th.GetDeployment(deploymentName).Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo2": "bar2"}))
+				g.Expect(th.GetJob(bootstrapJobName).Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo2": "bar2"}))
+				g.Expect(th.GetJob(dbSyncJobName).Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo2": "bar2"}))
+				g.Expect(GetCronJob(cronJobName).Spec.JobTemplate.Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo2": "bar2"}))
+			}, timeout, interval).Should(Succeed())
+		})
+
+		It("removes nodeSelector from resource specs when cleared", func() {
+			Eventually(func(g Gomega) {
+				g.Expect(th.GetDeployment(deploymentName).Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
+				g.Expect(th.GetJob(bootstrapJobName).Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
+				g.Expect(th.GetJob(dbSyncJobName).Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
+				g.Expect(GetCronJob(cronJobName).Spec.JobTemplate.Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				keystone := GetKeystoneAPI(keystoneAPIName)
+				emptyNodeSelector := map[string]string{}
+				keystone.Spec.NodeSelector = &emptyNodeSelector
+				g.Expect(k8sClient.Update(ctx, keystone)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				th.SimulateJobSuccess(dbSyncJobName)
+				th.SimulateJobSuccess(bootstrapJobName)
+				th.SimulateDeploymentReplicaReady(deploymentName)
+				g.Expect(th.GetDeployment(deploymentName).Spec.Template.Spec.NodeSelector).To(BeNil())
+				g.Expect(th.GetJob(bootstrapJobName).Spec.Template.Spec.NodeSelector).To(BeNil())
+				g.Expect(th.GetJob(dbSyncJobName).Spec.Template.Spec.NodeSelector).To(BeNil())
+				g.Expect(GetCronJob(cronJobName).Spec.JobTemplate.Spec.Template.Spec.NodeSelector).To(BeNil())
+			}, timeout, interval).Should(Succeed())
+		})
+
+		It("removes nodeSelector from resource specs when nilled", func() {
+			Eventually(func(g Gomega) {
+				g.Expect(th.GetDeployment(deploymentName).Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
+				g.Expect(th.GetJob(bootstrapJobName).Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
+				g.Expect(th.GetJob(dbSyncJobName).Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
+				g.Expect(GetCronJob(cronJobName).Spec.JobTemplate.Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				keystone := GetKeystoneAPI(keystoneAPIName)
+				keystone.Spec.NodeSelector = nil
+				g.Expect(k8sClient.Update(ctx, keystone)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				th.SimulateJobSuccess(dbSyncJobName)
+				th.SimulateJobSuccess(bootstrapJobName)
+				th.SimulateDeploymentReplicaReady(deploymentName)
+				g.Expect(th.GetDeployment(deploymentName).Spec.Template.Spec.NodeSelector).To(BeNil())
+				g.Expect(th.GetJob(bootstrapJobName).Spec.Template.Spec.NodeSelector).To(BeNil())
+				g.Expect(th.GetJob(dbSyncJobName).Spec.Template.Spec.NodeSelector).To(BeNil())
+				g.Expect(GetCronJob(cronJobName).Spec.JobTemplate.Spec.Template.Spec.NodeSelector).To(BeNil())
+			}, timeout, interval).Should(Succeed())
 		})
 	})
 
