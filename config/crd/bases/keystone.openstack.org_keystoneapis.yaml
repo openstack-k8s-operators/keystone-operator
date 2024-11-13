@@ -103,6 +103,17 @@ spec:
                 format: int32
                 minimum: 1
                 type: integer
+              httpdCustomization:
+                description: HttpdCustomization - customize the httpd service
+                properties:
+                  processNumber:
+                    default: 3
+                    description: ProcessNumber - Number of processes running in keystone
+                      API
+                    format: int32
+                    minimum: 1
+                    type: integer
+                type: object
               memcachedInstance:
                 default: memcached
                 description: Memcached instance name.
