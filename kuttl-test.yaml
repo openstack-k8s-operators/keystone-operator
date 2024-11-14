@@ -14,7 +14,7 @@
 
 apiVersion: kuttl.dev/v1beta1
 kind: TestSuite
-reportFormat: JSON
+reportFormat: XML
 reportName: kuttl-test-keystone
 timeout: 180
 namespace: keystone-kuttl-tests
