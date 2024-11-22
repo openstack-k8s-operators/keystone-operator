@@ -158,6 +158,10 @@ type KeystoneAPISpecCore struct {
 	DefaultConfigOverwrite map[string]string `json:"defaultConfigOverwrite,omitempty"`
 
 	// +kubebuilder:validation:Optional
+	// HttpdCustomization - customize the httpd service
+	HttpdCustomization HttpdCustomization `json:"httpdCustomization,omitempty"`
+
+	// +kubebuilder:validation:Optional
 	// Resources - Compute Resources required by this service (Limits/Requests).
 	// https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
@@ -195,6 +199,15 @@ type PasswordSelector struct {
 	// +kubebuilder:default="AdminPassword"
 	// Admin - Selector to get the keystone Admin password from the Secret
 	Admin string `json:"admin"`
+}
+
+// HttpdCustomization - customize the httpd service
+type HttpdCustomization struct {
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=3
+	// +kubebuilder:validation:Minimum=1
+	// ProcessNumber - Number of processes running in keystone API
+	ProcessNumber *int32 `json:"processNumber"`
 }
 
 // KeystoneAPIStatus defines the observed state of KeystoneAPI

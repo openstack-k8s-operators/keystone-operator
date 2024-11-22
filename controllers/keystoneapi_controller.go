@@ -1196,6 +1196,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			keystone.DatabaseName,
 		),
 		"enableSecureRBAC": instance.Spec.EnableSecureRBAC,
+		"ProcessNumber":    instance.Spec.HttpdCustomization.ProcessNumber,
 	}
 
 	// create httpd  vhost template parameters
