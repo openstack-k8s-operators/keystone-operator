@@ -1195,8 +1195,9 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			instance.Status.DatabaseHostname,
 			keystone.DatabaseName,
 		),
-		"enableSecureRBAC": instance.Spec.EnableSecureRBAC,
-		"ProcessNumber":    instance.Spec.HttpdCustomization.ProcessNumber,
+		"ProcessNumber":       instance.Spec.HttpdCustomization.ProcessNumber,
+		"enableSecureRBAC":    instance.Spec.EnableSecureRBAC,
+		"fernetMaxActiveKeys": instance.Spec.FernetMaxActiveKeys,
 	}
 
 	// create httpd  vhost template parameters
@@ -1459,11 +1460,6 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 
 		if !changedKeys {
 			return nil
-		}
-
-		fernetKeys := make(map[string]string, len(secret.Data))
-		for k, v := range secret.Data {
-			fernetKeys[k] = string(v[:])
 		}
 
 		secret.Annotations[fernetAnnotation] = now.Format(time.RFC3339)
