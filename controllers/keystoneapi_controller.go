@@ -716,7 +716,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	// NOTE: VerifySecret handles the "not found" error and returns RequeueAfter ctrl.Result if so, so we don't
 	//       need to check the error type here
 	//
-	hash, result, err := oko_secret.VerifySecret(ctx, types.NamespacedName{Name: instance.Spec.Secret, Namespace: instance.Namespace}, []string{"AdminPassword"}, helper.GetClient(), time.Second*10)
+	hash, result, err := oko_secret.VerifySecret(ctx, types.NamespacedName{Name: instance.Spec.Secret, Namespace: instance.Namespace}, []string{"AdminPassword", "KeystoneOIDCClientSecret", "KeystoneOIDCCryptoPassphrase"}, helper.GetClient(), time.Second*10)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.InputReadyCondition,
@@ -1211,7 +1211,10 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		"enableFederation":            enableFederation,
 		"federationTrustedDashboard":  fmt.Sprintf("%s/dashboard/auth/websso/", endpointPublic),
 		"federationRemoteIDAttribute": instance.Spec.OIDCFederation.RemoteIDAttribute,
+<<<<<<< HEAD
 		"fernetMaxActiveKeys":         instance.Spec.FernetMaxActiveKeys,
+=======
+>>>>>>> 3ba233c (Rebase temp commit)
 	}
 
 	var OIDCClientSecret string
@@ -1227,6 +1230,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			return err
 		}
 
+<<<<<<< HEAD
 		OIDCClientSecret := string(ospSecret.Data[instance.Spec.PasswordSelectors.KeystoneOIDCClientSecret])
 		if OIDCClientSecret == "" {
 			return fmt.Errorf("OIDCClientSecret cannot be empty, no password found for selector %s in secret %s", ospSecret.Name, instance.Spec.PasswordSelectors.KeystoneOIDCClientSecret)
@@ -1237,6 +1241,17 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			return fmt.Errorf("OIDCCryptoPassphrase cannot be empty, no password found for selector %s in secret %s", ospSecret.Name, instance.Spec.PasswordSelectors.KeystoneOIDCCryptoPassphrase)
 		}
 
+=======
+		OIDCClientSecret = string(ospSecret.Data[instance.Spec.PasswordSelectors.KeystoneOIDCClientSecret])
+		if OIDCClientSecret == "" {
+			return fmt.Errorf("OIDCClientSecret cannot be empty, no password found for selector %s in secret %s", ospSecret.Name, instance.Spec.PasswordSelectors.KeystoneOIDCClientSecret)
+		}
+
+		OIDCCryptoPassphrase = string(ospSecret.Data[instance.Spec.PasswordSelectors.KeystoneOIDCCryptoPassphrase])
+		if OIDCCryptoPassphrase == "" {
+			return fmt.Errorf("OIDCCryptoPassphrase cannot be empty, no password found for selector %s in secret %s", ospSecret.Name, instance.Spec.PasswordSelectors.KeystoneOIDCCryptoPassphrase)
+		}
+>>>>>>> 3ba233c (Rebase temp commit)
 	}
 
 	// create httpd  vhost template parameters
@@ -1261,7 +1276,10 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		endptConfig["OIDCMemCacheServers"] = mc.GetMemcachedServerListString()
 		endptConfig["KeystoneFederationIdentityProviderName"] = instance.Spec.OIDCFederation.KeystoneFederationIdentityProviderName
 		endptConfig["KeystoneEndpoint"], _ = instance.GetEndpoint(endpoint.EndpointPublic)
+<<<<<<< HEAD
 
+=======
+>>>>>>> 3ba233c (Rebase temp commit)
 		if instance.Spec.TLS.API.Enabled(endpt) {
 			endptConfig["TLS"] = true
 			endptConfig["SSLCertificateFile"] = fmt.Sprintf("/etc/pki/tls/certs/%s.crt", endpt.String())
