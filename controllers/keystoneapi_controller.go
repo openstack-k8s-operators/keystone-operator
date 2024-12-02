@@ -17,9 +17,7 @@ package controllers
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"maps"
 	"time"
 
 	networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
@@ -718,7 +716,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	// NOTE: VerifySecret handles the "not found" error and returns RequeueAfter ctrl.Result if so, so we don't
 	//       need to check the error type here
 	//
-	hash, result, err := oko_secret.VerifySecret(ctx, types.NamespacedName{Name: instance.Spec.Secret, Namespace: instance.Namespace}, []string{"AdminPassword"}, helper.GetClient(), time.Second*10)
+	hash, result, err := oko_secret.VerifySecret(ctx, types.NamespacedName{Name: instance.Spec.Secret, Namespace: instance.Namespace}, []string{"AdminPassword", "KeystoneOIDCClientSecret", "KeystoneOIDCCryptoPassphrase"}, helper.GetClient(), time.Second*10)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.InputReadyCondition,
@@ -1187,9 +1185,14 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	databaseAccount := db.GetAccount()
 	dbSecret := db.GetSecret()
 
+	var endpointPublic string
 	enableFederation := false
 	if instance.Spec.OIDCFederation != nil {
 		enableFederation = true
+		endpointPublic, err = instance.GetEndpoint(endpoint.EndpointPublic)
+		if err != nil {
+			return err
+		}
 	}
 
 	templateParameters := map[string]interface{}{
@@ -1202,23 +1205,35 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			instance.Status.DatabaseHostname,
 			keystone.DatabaseName,
 		),
-		"enableSecureRBAC": instance.Spec.EnableSecureRBAC,
-		"ProcessNumber":    instance.Spec.HttpdCustomization.ProcessNumber,
-		"enableFederation": enableFederation,
+		"enableSecureRBAC":            instance.Spec.EnableSecureRBAC,
+		"ProcessNumber":               instance.Spec.HttpdCustomization.ProcessNumber,
+		"enableFederation":            enableFederation,
+		"federationTrustedDashboard":  fmt.Sprintf("%s/dashboard/auth/websso/", endpointPublic),
+		"federationRemoteIDAttribute": instance.Spec.OIDCFederation.RemoteIDAttribute,
 	}
 
+	var OIDCClientSecret string
+	var OIDCCryptoPassphrase string
+
 	if enableFederation {
-		endpointPublic, err := instance.GetEndpoint(endpoint.EndpointPublic)
+		ospSecret, _, err := oko_secret.GetSecret(
+			ctx,
+			h,
+			instance.Spec.Secret,
+			instance.Namespace)
 		if err != nil {
 			return err
 		}
 
-		federationParameters := map[string]interface{}{
-			"federationTrustedDashboard": fmt.Sprintf("%s/dashboard/auth/websso/",
-				endpointPublic),
-			"federationRemoteIDAttribute": instance.Spec.OIDCFederation.RemoteIDAttribute,
+		OIDCClientSecret = string(ospSecret.Data[instance.Spec.PasswordSelectors.KeystoneOIDCClientSecret])
+		if OIDCClientSecret == "" {
+			return fmt.Errorf("OIDCClientSecret cannot be empty, no password found for selector %s in secret %s", ospSecret.Name, instance.Spec.PasswordSelectors.KeystoneOIDCClientSecret)
 		}
-		maps.Copy(templateParameters, federationParameters)
+
+		OIDCCryptoPassphrase = string(ospSecret.Data[instance.Spec.PasswordSelectors.KeystoneOIDCCryptoPassphrase])
+		if OIDCCryptoPassphrase == "" {
+			return fmt.Errorf("OIDCCryptoPassphrase cannot be empty, no password found for selector %s in secret %s", ospSecret.Name, instance.Spec.PasswordSelectors.KeystoneOIDCCryptoPassphrase)
+		}
 	}
 
 	// create httpd  vhost template parameters
@@ -1228,48 +1243,27 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		endptConfig["ServerName"] = fmt.Sprintf("%s-%s.%s.svc", instance.Name, endpt.String(), instance.Namespace)
 		endptConfig["TLS"] = false // default TLS to false, and set it bellow to true if enabled
 		endptConfig["EnableFederation"] = enableFederation
+		endptConfig["OIDCClaimPrefix"] = instance.Spec.OIDCFederation.OIDCClaimPrefix
+		endptConfig["OIDCResponseType"] = instance.Spec.OIDCFederation.OIDCResponseType
+		endptConfig["OIDCScope"] = instance.Spec.OIDCFederation.OIDCScope
+		endptConfig["OIDCProviderMetadataURL"] = instance.Spec.OIDCFederation.OIDCProviderMetadataURL
+		endptConfig["OIDCIntrospectionEndpoint"] = instance.Spec.OIDCFederation.OIDCIntrospectionEndpoint
+		endptConfig["OIDCClientID"] = instance.Spec.OIDCFederation.OIDCClientID
+		endptConfig["OIDCClientSecret"] = OIDCClientSecret
+		endptConfig["OIDCCryptoPassphrase"] = OIDCCryptoPassphrase
+		endptConfig["OIDCPassUserInfoAs"] = instance.Spec.OIDCFederation.OIDCPassUserInfoAs
+		endptConfig["OIDCPassClaimsAs"] = instance.Spec.OIDCFederation.OIDCPassClaimsAs
+		endptConfig["OIDCClaimDelimiter"] = instance.Spec.OIDCFederation.OIDCClaimDelimiter
+		endptConfig["OIDCCacheType"] = instance.Spec.OIDCFederation.OIDCCacheType
+		endptConfig["OIDCMemCacheServers"] = mc.GetMemcachedServerListString()
+		endptConfig["KeystoneFederationIdentityProviderName"] = instance.Spec.OIDCFederation.KeystoneFederationIdentityProviderName
+		endptConfig["KeystoneEndpoint"], _ = instance.GetEndpoint(endpoint.EndpointPublic)
 		if instance.Spec.TLS.API.Enabled(endpt) {
 			endptConfig["TLS"] = true
 			endptConfig["SSLCertificateFile"] = fmt.Sprintf("/etc/pki/tls/certs/%s.crt", endpt.String())
 			endptConfig["SSLCertificateKeyFile"] = fmt.Sprintf("/etc/pki/tls/private/%s.key", endpt.String())
 		}
 
-		if enableFederation {
-			ospSecret, _, err := oko_secret.GetSecret(
-				ctx,
-				h,
-				instance.Spec.Secret,
-				instance.Namespace)
-			if err != nil {
-				return err
-			}
-
-			OIDCClientSecret := string(ospSecret.Data[instance.Spec.PasswordSelectors.KeystoneOIDCCryptoPassphrase])
-			if OIDCClientSecret == "" {
-				return errors.New("OIDCClientSecret cannot be empty")
-			}
-
-			OIDCCryptoPassphrase := string(ospSecret.Data[instance.Spec.PasswordSelectors.KeystoneOIDCCryptoPassphrase])
-			if OIDCCryptoPassphrase == "" {
-				return errors.New("OIDCCryptoPassphrase cannot be empty")
-			}
-
-			endptConfig["OIDCClaimPrefix"] = instance.Spec.OIDCFederation.OIDCClaimPrefix
-			endptConfig["OIDCResponseType"] = instance.Spec.OIDCFederation.OIDCResponseType
-			endptConfig["OIDCScope"] = instance.Spec.OIDCFederation.OIDCScope
-			endptConfig["OIDCProviderMetadataURL"] = instance.Spec.OIDCFederation.OIDCProviderMetadataURL
-			endptConfig["OIDCIntrospectionEndpoint"] = instance.Spec.OIDCFederation.OIDCIntrospectionEndpoint
-			endptConfig["OIDCClientID"] = instance.Spec.OIDCFederation.OIDCClientID
-			endptConfig["OIDCClientSecret"] = OIDCClientSecret
-			endptConfig["OIDCCryptoPassphrase"] = OIDCCryptoPassphrase
-			endptConfig["OIDCPassUserInfoAs"] = instance.Spec.OIDCFederation.OIDCPassUserInfoAs
-			endptConfig["OIDCPassClaimsAs"] = instance.Spec.OIDCFederation.OIDCPassClaimsAs
-			endptConfig["OIDCClaimDelimiter"] = instance.Spec.OIDCFederation.OIDCClaimDelimiter
-			endptConfig["OIDCCacheType"] = instance.Spec.OIDCFederation.OIDCCacheType
-			endptConfig["OIDCMemCacheServers"] = mc.GetMemcachedServerListString()
-			endptConfig["KeystoneFederationIdentityProviderName"] = instance.Spec.OIDCFederation.KeystoneFederationIdentityProviderName
-			endptConfig["KeystoneEndpoint"], _ = instance.GetEndpoint(endpoint.EndpointPublic)
-		}
 		httpdVhostConfig[endpt.String()] = endptConfig
 	}
 	templateParameters["VHosts"] = httpdVhostConfig
