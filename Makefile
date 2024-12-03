@@ -370,3 +370,21 @@ run-with-webhook: export METRICS_PORT?=8080
 run-with-webhook: export HEALTH_PORT?=8081
 run-with-webhook: manifests generate fmt vet ## Run a controller from your host.
 	/bin/bash hack/run_with_local_webhook.sh
+
+
+BRANCH=main
+.PHONY: force-bump
+force-bump: ## Force bump operator and lib-common dependencies
+	for dep in $$(cat go.mod | grep openstack-k8s-operators | grep -vE -- 'indirect|keystone-operator|^replace' | awk '{print $$1}'); do \
+		go get $$dep@$(BRANCH) ; \
+	done
+	for dep in $$(cat api/go.mod | grep openstack-k8s-operators | grep -vE -- 'indirect|keystone-operator|^replace' | awk '{print $$1}'); do \
+		cd ./api && go get $$dep@$(BRANCH) && cd .. ; \
+	done
+
+CRD_SCHEMA_CHECKER_VERSION ?= release-4.16
+
+PHONY: crd-schema-check
+crd-schema-check: manifests
+	INSTALL_DIR=$(LOCALBIN) CRD_SCHEMA_CHECKER_VERSION=$(CRD_SCHEMA_CHECKER_VERSION) hack/build-crd-schema-checker.sh
+	INSTALL_DIR=$(LOCALBIN) BASE_REF="$${PULL_BASE_SHA:-$(BRANCH)}" hack/crd-schema-checker.sh

@@ -1210,6 +1210,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		"enableFederation":            enableFederation,
 		"federationTrustedDashboard":  fmt.Sprintf("%s/dashboard/auth/websso/", endpointPublic),
 		"federationRemoteIDAttribute": instance.Spec.OIDCFederation.RemoteIDAttribute,
+    "fernetMaxActiveKeys":         instance.Spec.FernetMaxActiveKeys,
 	}
 
 	var OIDCClientSecret string
@@ -1514,11 +1515,6 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 
 		if !changedKeys {
 			return nil
-		}
-
-		fernetKeys := make(map[string]string, len(secret.Data))
-		for k, v := range secret.Data {
-			fernetKeys[k] = string(v[:])
 		}
 
 		secret.Annotations[fernetAnnotation] = now.Format(time.RFC3339)
