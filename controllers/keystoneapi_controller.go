@@ -1212,9 +1212,13 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		"federationTrustedDashboard":  fmt.Sprintf("%s/dashboard/auth/websso/", endpointPublic),
 		"federationRemoteIDAttribute": instance.Spec.OIDCFederation.RemoteIDAttribute,
 <<<<<<< HEAD
+<<<<<<< HEAD
 		"fernetMaxActiveKeys":         instance.Spec.FernetMaxActiveKeys,
 =======
 >>>>>>> 3ba233c (Rebase temp commit)
+=======
+		"fernetMaxActiveKeys":         instance.Spec.FernetMaxActiveKeys,
+>>>>>>> 98b420d (Fix formatting)
 	}
 
 	var OIDCClientSecret string
@@ -1276,10 +1280,6 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		endptConfig["OIDCMemCacheServers"] = mc.GetMemcachedServerListString()
 		endptConfig["KeystoneFederationIdentityProviderName"] = instance.Spec.OIDCFederation.KeystoneFederationIdentityProviderName
 		endptConfig["KeystoneEndpoint"], _ = instance.GetEndpoint(endpoint.EndpointPublic)
-<<<<<<< HEAD
-
-=======
->>>>>>> 3ba233c (Rebase temp commit)
 		if instance.Spec.TLS.API.Enabled(endpt) {
 			endptConfig["TLS"] = true
 			endptConfig["SSLCertificateFile"] = fmt.Sprintf("/etc/pki/tls/certs/%s.crt", endpt.String())
