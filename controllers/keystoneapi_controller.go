@@ -1210,7 +1210,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		"enableFederation":            enableFederation,
 		"federationTrustedDashboard":  fmt.Sprintf("%s/dashboard/auth/websso/", endpointPublic),
 		"federationRemoteIDAttribute": instance.Spec.OIDCFederation.RemoteIDAttribute,
-    "fernetMaxActiveKeys":         instance.Spec.FernetMaxActiveKeys,
+		"fernetMaxActiveKeys":         instance.Spec.FernetMaxActiveKeys,
 	}
 
 	var OIDCClientSecret string
