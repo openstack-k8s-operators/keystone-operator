@@ -163,6 +163,7 @@ spec:
                     description: OIDCIntrospectionEndpoint
                     type: string
                   oidcMemCacheServers:
+                    default: ""
                     description: OIDCMemCacheServers
                     type: string
                   oidcPassClaimsAs:
@@ -190,19 +191,7 @@ spec:
                     description: RemoteIDAttribute
                     type: string
                 required:
-                - keystoneFederationIdentityProviderName
-                - oidcCacheType
-                - oidcClaimDelimiter
-                - oidcClaimPrefix
-                - oidcClientID
-                - oidcIntrospectionEndpoint
                 - oidcMemCacheServers
-                - oidcPassClaimsAs
-                - oidcPassUserInfoAs
-                - oidcProviderMetadataURL
-                - oidcResponseType
-                - oidcScope
-                - remoteIDAttribute
                 type: object
               override:
                 description: Override, provides the ability to override the generated

@@ -217,66 +217,67 @@ type PasswordSelector struct {
 
 // KeystoneFederationSpec to provide the configuration values for OIDC Federation
 type KeystoneFederationSpec struct {
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:default="OIDC-"
 	// OIDCClaimPrefix
 	OIDCClaimPrefix string `json:"oidcClaimPrefix"`
 
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:default="id_token"
 	// OIDCResponseType
 	OIDCResponseType string `json:"oidcResponseType"`
 
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:default="openid email profile"
 	// OIDCScope
 	OIDCScope string `json:"oidcScope"`
 
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=""
 	// OIDCProviderMetadataURL
 	OIDCProviderMetadataURL string `json:"oidcProviderMetadataURL"`
 
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=""
 	// OIDCIntrospectionEndpoint
 	OIDCIntrospectionEndpoint string `json:"oidcIntrospectionEndpoint"`
 
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=""
 	// OIDCClientID
 	OIDCClientID string `json:"oidcClientID"`
 
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=";"
 	// OIDCClaimDelimiter
 	OIDCClaimDelimiter string `json:"oidcClaimDelimiter"`
 
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:default="claims"
 	// OIDCPassUserInfoAs
 	OIDCPassUserInfoAs string `json:"oidcPassUserInfoAs"`
 
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:default="both"
 	// OIDCPassClaimsAs
 	OIDCPassClaimsAs string `json:"oidcPassClaimsAs"`
 
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:default="memcache"
 	// OIDCCacheType
 	OIDCCacheType string `json:"oidcCacheType"`
 
-	// +kubebuilder:validaton:Required
+	// +kubebuilder:validaton:Optional
+	// +kubebuilder:default=""
 	// OIDCMemCacheServers
 	OIDCMemCacheServers string `json:"oidcMemCacheServers"`
 
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:default="HTTP_OIDC_ISS"
 	// RemoteIDAttribute
 	RemoteIDAttribute string `json:"remoteIDAttribute"`
 
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=""
 	// KeystoneFederationIdentityProviderName
 	KeystoneFederationIdentityProviderName string `json:"keystoneFederationIdentityProviderName"`
