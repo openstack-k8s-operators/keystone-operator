@@ -90,7 +90,9 @@ func CreateKeystoneAPISecret(namespace string, name string) *corev1.Secret {
 	return th.CreateSecret(
 		types.NamespacedName{Namespace: namespace, Name: name},
 		map[string][]byte{
-			"AdminPassword": []byte("12345678"),
+			"AdminPassword":                []byte("12345678"),
+			"KeystoneOIDCClientSecret":     []byte("secret"),
+			"KeystoneOIDCCryptoPassphrase": []byte("openstack"),
 		},
 	)
 }
