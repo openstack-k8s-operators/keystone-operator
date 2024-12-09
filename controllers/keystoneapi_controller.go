@@ -1211,14 +1211,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		"enableFederation":            enableFederation,
 		"federationTrustedDashboard":  fmt.Sprintf("%s/dashboard/auth/websso/", endpointPublic),
 		"federationRemoteIDAttribute": instance.Spec.OIDCFederation.RemoteIDAttribute,
-<<<<<<< HEAD
-<<<<<<< HEAD
 		"fernetMaxActiveKeys":         instance.Spec.FernetMaxActiveKeys,
-=======
->>>>>>> 3ba233c (Rebase temp commit)
-=======
-		"fernetMaxActiveKeys":         instance.Spec.FernetMaxActiveKeys,
->>>>>>> 98b420d (Fix formatting)
 	}
 
 	var OIDCClientSecret string
@@ -1234,18 +1227,6 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			return err
 		}
 
-<<<<<<< HEAD
-		OIDCClientSecret := string(ospSecret.Data[instance.Spec.PasswordSelectors.KeystoneOIDCClientSecret])
-		if OIDCClientSecret == "" {
-			return fmt.Errorf("OIDCClientSecret cannot be empty, no password found for selector %s in secret %s", ospSecret.Name, instance.Spec.PasswordSelectors.KeystoneOIDCClientSecret)
-		}
-
-		OIDCCryptoPassphrase := string(ospSecret.Data[instance.Spec.PasswordSelectors.KeystoneOIDCCryptoPassphrase])
-		if OIDCCryptoPassphrase == "" {
-			return fmt.Errorf("OIDCCryptoPassphrase cannot be empty, no password found for selector %s in secret %s", ospSecret.Name, instance.Spec.PasswordSelectors.KeystoneOIDCCryptoPassphrase)
-		}
-
-=======
 		OIDCClientSecret = string(ospSecret.Data[instance.Spec.PasswordSelectors.KeystoneOIDCClientSecret])
 		if OIDCClientSecret == "" {
 			return fmt.Errorf("OIDCClientSecret cannot be empty, no password found for selector %s in secret %s", ospSecret.Name, instance.Spec.PasswordSelectors.KeystoneOIDCClientSecret)
@@ -1255,7 +1236,6 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		if OIDCCryptoPassphrase == "" {
 			return fmt.Errorf("OIDCCryptoPassphrase cannot be empty, no password found for selector %s in secret %s", ospSecret.Name, instance.Spec.PasswordSelectors.KeystoneOIDCCryptoPassphrase)
 		}
->>>>>>> 3ba233c (Rebase temp commit)
 	}
 
 	// create httpd  vhost template parameters
