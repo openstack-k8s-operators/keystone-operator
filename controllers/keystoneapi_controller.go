@@ -1214,6 +1214,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		httpdVhostConfig[endpt.String()] = endptConfig
 	}
 	templateParameters["VHosts"] = httpdVhostConfig
+	templateParameters["TimeOut"] = instance.Spec.APITimeout
 
 	tmpl := []util.Template{
 		// Scripts
