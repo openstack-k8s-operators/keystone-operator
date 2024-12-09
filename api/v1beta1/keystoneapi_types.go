@@ -267,11 +267,6 @@ type KeystoneFederationSpec struct {
 	// OIDCCacheType
 	OIDCCacheType string `json:"oidcCacheType"`
 
-	// +kubebuilder:validaton:Optional
-	// +kubebuilder:default=""
-	// OIDCMemCacheServers
-	OIDCMemCacheServers string `json:"oidcMemCacheServers"`
-
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default="HTTP_OIDC_ISS"
 	// RemoteIDAttribute

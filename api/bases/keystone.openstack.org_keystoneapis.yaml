@@ -162,10 +162,6 @@ spec:
                     default: ""
                     description: OIDCIntrospectionEndpoint
                     type: string
-                  oidcMemCacheServers:
-                    default: ""
-                    description: OIDCMemCacheServers
-                    type: string
                   oidcPassClaimsAs:
                     default: both
                     description: OIDCPassClaimsAs
@@ -190,8 +186,6 @@ spec:
                     default: HTTP_OIDC_ISS
                     description: RemoteIDAttribute
                     type: string
-                required:
-                - oidcMemCacheServers
                 type: object
               override:
                 description: Override, provides the ability to override the generated
