@@ -1186,6 +1186,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	dbSecret := db.GetSecret()
 
 	var endpointPublic string
+	var federationRemoteIDAttribute string
 	enableFederation := false
 	if instance.Spec.OIDCFederation != nil {
 		enableFederation = true
@@ -1193,6 +1194,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		if err != nil {
 			return err
 		}
+		federationRemoteIDAttribute = instance.Spec.OIDCFederation.RemoteIDAttribute
 	}
 
 	templateParameters := map[string]interface{}{
@@ -1210,7 +1212,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		"ProcessNumber":               instance.Spec.HttpdCustomization.ProcessNumber,
 		"enableFederation":            enableFederation,
 		"federationTrustedDashboard":  fmt.Sprintf("%s/dashboard/auth/websso/", endpointPublic),
-		"federationRemoteIDAttribute": instance.Spec.OIDCFederation.RemoteIDAttribute,
+		"federationRemoteIDAttribute": federationRemoteIDAttribute,
 		"fernetMaxActiveKeys":         instance.Spec.FernetMaxActiveKeys,
 	}
 
@@ -1245,21 +1247,23 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		endptConfig["ServerName"] = fmt.Sprintf("%s-%s.%s.svc", instance.Name, endpt.String(), instance.Namespace)
 		endptConfig["TLS"] = false // default TLS to false, and set it bellow to true if enabled
 		endptConfig["EnableFederation"] = enableFederation
-		endptConfig["OIDCClaimPrefix"] = instance.Spec.OIDCFederation.OIDCClaimPrefix
-		endptConfig["OIDCResponseType"] = instance.Spec.OIDCFederation.OIDCResponseType
-		endptConfig["OIDCScope"] = instance.Spec.OIDCFederation.OIDCScope
-		endptConfig["OIDCProviderMetadataURL"] = instance.Spec.OIDCFederation.OIDCProviderMetadataURL
-		endptConfig["OIDCIntrospectionEndpoint"] = instance.Spec.OIDCFederation.OIDCIntrospectionEndpoint
-		endptConfig["OIDCClientID"] = instance.Spec.OIDCFederation.OIDCClientID
-		endptConfig["OIDCClientSecret"] = OIDCClientSecret
-		endptConfig["OIDCCryptoPassphrase"] = OIDCCryptoPassphrase
-		endptConfig["OIDCPassUserInfoAs"] = instance.Spec.OIDCFederation.OIDCPassUserInfoAs
-		endptConfig["OIDCPassClaimsAs"] = instance.Spec.OIDCFederation.OIDCPassClaimsAs
-		endptConfig["OIDCClaimDelimiter"] = instance.Spec.OIDCFederation.OIDCClaimDelimiter
-		endptConfig["OIDCCacheType"] = instance.Spec.OIDCFederation.OIDCCacheType
-		endptConfig["OIDCMemCacheServers"] = mc.GetMemcachedServerListString()
-		endptConfig["KeystoneFederationIdentityProviderName"] = instance.Spec.OIDCFederation.KeystoneFederationIdentityProviderName
-		endptConfig["KeystoneEndpoint"], _ = instance.GetEndpoint(endpoint.EndpointPublic)
+		if enableFederation {
+			endptConfig["OIDCClaimPrefix"] = instance.Spec.OIDCFederation.OIDCClaimPrefix
+			endptConfig["OIDCResponseType"] = instance.Spec.OIDCFederation.OIDCResponseType
+			endptConfig["OIDCScope"] = instance.Spec.OIDCFederation.OIDCScope
+			endptConfig["OIDCProviderMetadataURL"] = instance.Spec.OIDCFederation.OIDCProviderMetadataURL
+			endptConfig["OIDCIntrospectionEndpoint"] = instance.Spec.OIDCFederation.OIDCIntrospectionEndpoint
+			endptConfig["OIDCClientID"] = instance.Spec.OIDCFederation.OIDCClientID
+			endptConfig["OIDCClientSecret"] = OIDCClientSecret
+			endptConfig["OIDCCryptoPassphrase"] = OIDCCryptoPassphrase
+			endptConfig["OIDCPassUserInfoAs"] = instance.Spec.OIDCFederation.OIDCPassUserInfoAs
+			endptConfig["OIDCPassClaimsAs"] = instance.Spec.OIDCFederation.OIDCPassClaimsAs
+			endptConfig["OIDCClaimDelimiter"] = instance.Spec.OIDCFederation.OIDCClaimDelimiter
+			endptConfig["OIDCCacheType"] = instance.Spec.OIDCFederation.OIDCCacheType
+			endptConfig["OIDCMemCacheServers"] = mc.GetMemcachedServerListString()
+			endptConfig["KeystoneFederationIdentityProviderName"] = instance.Spec.OIDCFederation.KeystoneFederationIdentityProviderName
+			endptConfig["KeystoneEndpoint"], _ = instance.GetEndpoint(endpoint.EndpointPublic)
+		}
 		if instance.Spec.TLS.API.Enabled(endpt) {
 			endptConfig["TLS"] = true
 			endptConfig["SSLCertificateFile"] = fmt.Sprintf("/etc/pki/tls/certs/%s.crt", endpt.String())
