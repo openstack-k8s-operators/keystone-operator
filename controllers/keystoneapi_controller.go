@@ -1186,9 +1186,10 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	dbSecret := db.GetSecret()
 
 	templateParameters := map[string]interface{}{
-		"memcachedServers": mc.GetMemcachedServerListString(),
-		"memcachedTLS":     mc.GetMemcachedTLSSupport(),
-		"TransportURL":     string(transportURLSecret.Data["transport_url"]),
+		"memcachedServers":         mc.GetMemcachedServerListString(),
+		"memcachedServersWithInet": mc.GetMemcachedServerListWithInetString(),
+		"memcachedTLS":             mc.GetMemcachedTLSSupport(),
+		"TransportURL":             string(transportURLSecret.Data["transport_url"]),
 		"DatabaseConnection": fmt.Sprintf("mysql+pymysql://%s:%s@%s/%s?read_default_file=/etc/my.cnf",
 			databaseAccount.Spec.UserName,
 			string(dbSecret.Data[mariadbv1.DatabasePasswordSelector]),
