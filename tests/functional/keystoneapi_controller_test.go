@@ -402,7 +402,9 @@ var _ = Describe("Keystone controller", func() {
 			scrt := th.GetSecret(keystoneAPIConfigDataName)
 			configData := string(scrt.Data["keystone.conf"])
 			Expect(configData).To(
-				ContainSubstring(fmt.Sprintf("memcache_servers=memcached-0.memcached.%s.svc:11211,memcached-1.memcached.%s.svc:11211,memcached-2.memcached.%s.svc:11211",
+				ContainSubstring("backend = dogpile.cache.memcached"))
+			Expect(configData).To(
+				ContainSubstring(fmt.Sprintf("memcache_servers=inet:[memcached-0.memcached.%s.svc]:11211,inet:[memcached-1.memcached.%s.svc]:11211,inet:[memcached-2.memcached.%s.svc]:11211",
 					keystoneAPIName.Namespace, keystoneAPIName.Namespace, keystoneAPIName.Namespace)))
 			mariadbAccount := mariadb.GetMariaDBAccount(keystoneAccountName)
 			mariadbSecret := th.GetSecret(types.NamespacedName{Name: mariadbAccount.Spec.Secret, Namespace: keystoneAPIName.Namespace})
@@ -851,7 +853,7 @@ var _ = Describe("Keystone controller", func() {
 				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
 				Namespace: namespace,
 			})
-			infra.SimulateMemcachedReady(types.NamespacedName{
+			infra.SimulateTLSMemcachedReady(types.NamespacedName{
 				Name:      "memcached",
 				Namespace: namespace,
 			})
@@ -945,6 +947,8 @@ var _ = Describe("Keystone controller", func() {
 		It("should create a Secret for keystone.conf and my.cnf", func() {
 			scrt := th.GetSecret(keystoneAPIConfigDataName)
 			configData := string(scrt.Data["keystone.conf"])
+			Expect(configData).To(
+				ContainSubstring("backend = dogpile.cache.pymemcache"))
 			Expect(configData).To(
 				ContainSubstring(fmt.Sprintf("memcache_servers=memcached-0.memcached.%s.svc:11211,memcached-1.memcached.%s.svc:11211,memcached-2.memcached.%s.svc:11211",
 					keystoneAPIName.Namespace, keystoneAPIName.Namespace, keystoneAPIName.Namespace)))
