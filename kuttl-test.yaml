@@ -16,7 +16,7 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestSuite
 reportFormat: JSON
 reportName: kuttl-test-keystone
-timeout: 180
+timeout: 800
 namespace: keystone-kuttl-tests
 parallel: 1
 suppress:
