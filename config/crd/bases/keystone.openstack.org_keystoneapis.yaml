@@ -59,6 +59,11 @@ spec:
                 default: admin
                 description: AdminUser - admin user name
                 type: string
+              apiTimeout:
+                default: 60
+                description: APITimeout for HAProxy, Apache
+                minimum: 10
+                type: integer
               containerImage:
                 description: Keystone Container Image URL (will be set to environmental
                   default if empty)

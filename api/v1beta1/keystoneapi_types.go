@@ -45,6 +45,9 @@ const (
 
 	// KeystoneAPIContainerImage is the fall-back container image for KeystoneAPI
 	KeystoneAPIContainerImage = "quay.io/podified-antelope-centos9/openstack-keystone:current-podified"
+
+	// APIDefaultTimeout default timeout for HAProxy, Apache
+	APIDefaultTimeout = 60
 )
 
 type KeystoneAPISpec struct {
@@ -184,6 +187,12 @@ type KeystoneAPISpecCore struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// TLS - Parameters related to the TLS
 	TLS tls.API `json:"tls,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=60
+	// +kubebuilder:validation:Minimum=10
+	// APITimeout for HAProxy, Apache
+	APITimeout int `json:"apiTimeout"`
 }
 
 // APIOverrideSpec to override the generated manifest of several child resources.
@@ -298,6 +307,7 @@ func SetupDefaults() {
 	// Acquire environmental defaults and initialize Keystone defaults with them
 	keystoneDefaults := KeystoneAPIDefaults{
 		ContainerImageURL: util.GetEnvVar("RELATED_IMAGE_KEYSTONE_API_IMAGE_URL_DEFAULT", KeystoneAPIContainerImage),
+		APITimeout:        APIDefaultTimeout,
 	}
 
 	SetupKeystoneAPIDefaults(keystoneDefaults)

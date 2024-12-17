@@ -417,6 +417,9 @@ var _ = Describe("Keystone controller", func() {
 			configData = string(scrt.Data["my.cnf"])
 			Expect(configData).To(
 				ContainSubstring("[client]\nssl=0"))
+			httpdConfData := string(scrt.Data["httpd.conf"])
+			Expect(httpdConfData).To(
+				ContainSubstring("TimeOut 60"))
 		})
 		It("should create a Secret for fernet keys", func() {
 			th.GetSecret(types.NamespacedName{
