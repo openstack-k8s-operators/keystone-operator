@@ -348,8 +348,8 @@ spec:
               passwordSelectors:
                 default:
                   admin: AdminPassword
-                  keystoneOIDCClientSecret: KeystoneClientSecret
-                  keystoneOIDCCryptoPassphrase: KeystoneCryptoPassphrase
+                  keystoneOIDCClientSecret: KeystoneOIDCClientSecret
+                  keystoneOIDCCryptoPassphrase: KeystoneOIDCCryptoPassphrase
                 description: PasswordSelectors - Selectors to identify the AdminUser,
                   KeystoneOIDCClient, and KeystoneOIDCCryptoPassphrase passwords from
                   the Secret
@@ -360,12 +360,12 @@ spec:
                       from the Secret
                     type: string
                   keystoneOIDCClientSecret:
-                    default: KeystoneClientSecret
+                    default: KeystoneOIDCClientSecret
                     description: OIDCClientSecret - Selector to get the IdP client
                       secret from the Secret
                     type: string
                   keystoneOIDCCryptoPassphrase:
-                    default: KeystoneCryptoPassphrase
+                    default: KeystoneOIDCCryptoPassphrase
                     description: OIDCCryptoPassphrase - Selector to get the OIDC crypto
                       passphrase from the Secret
                     type: string

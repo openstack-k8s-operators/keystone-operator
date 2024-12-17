@@ -1560,6 +1560,93 @@ var _ = Describe("Keystone controller", func() {
 		})
 	})
 
+	When("A KeystoneAPI is created with OIDC Federation configuration", func() {
+		BeforeEach(func() {
+			spec := GetDefaultKeystoneAPISpec()
+			spec["oidcFederation"] = map[string]interface{}{
+				"idpName":             "myidp",
+				"idpURL":              "https://idp.example.com",
+				"idpClientID":         "client123",
+				"idpClientSecret":     "secret123",
+				"idpMetadataURL":      "https://idp.example.com/.well-known/openid-configuration",
+				"idpUserInfoURL":      "https://idp.example.com/userinfo",
+				"idpAuthURL":          "https://idp.example.com/auth",
+				"idpTokenURL":         "https://idp.example.com/token",
+				"idpRemoteIDClaim":    "sub",
+				"idpUsernameClaim":    "preferred_username",
+				"idpScopeClaim":       "scope",
+				"idpRolesClaim":       "roles",
+				"idpDomainName":       "Default",
+				"idpDefaultProject":   "demo",
+				"idpDefaultRole":      "member",
+				"idpScopedTokenGroup": "oidc",
+			}
+
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, spec))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
+				Namespace: namespace,
+			})
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+			th.SimulateDeploymentReplicaReady(deploymentName)
+		})
+
+		It("should configure OIDC in httpd.conf and keystone.conf", func() {
+			scrt := th.GetSecret(keystoneAPIConfigDataName)
+			Expect(scrt).ShouldNot(BeNil())
+
+			// Verify httpd.conf OIDC configuration
+			httpdConf := string(scrt.Data["httpd.conf"])
+			Expect(httpdConf).Should(ContainSubstring("LoadModule auth_openidc_module modules/mod_auth_openidc.so"))
+			Expect(httpdConf).Should(ContainSubstring("OIDCProviderMetadataURL https://idp.example.com/.well-known/openid-configuration"))
+			Expect(httpdConf).Should(ContainSubstring("OIDCClientID client123"))
+			Expect(httpdConf).Should(ContainSubstring("OIDCClientSecret secret123"))
+			Expect(httpdConf).Should(ContainSubstring("OIDCRedirectURI https://keystone-public."))
+			Expect(httpdConf).Should(ContainSubstring("/v3/OS-FEDERATION/identity_providers/myidp/protocols/openid/auth"))
+			Expect(httpdConf).Should(ContainSubstring("OIDCRemoteUserClaim preferred_username"))
+			Expect(httpdConf).Should(ContainSubstring("OIDCProviderTokenEndpointAuth client_secret_basic"))
+			Expect(httpdConf).Should(ContainSubstring("OIDCScope \"openid profile email\""))
+
+			// Verify keystone.conf federation configuration
+			keystoneConf := string(scrt.Data["keystone.conf"])
+			Expect(keystoneConf).Should(ContainSubstring("[auth]"))
+			Expect(keystoneConf).Should(ContainSubstring("methods = password,token,oauth1,openid"))
+			Expect(keystoneConf).Should(ContainSubstring("[federation]"))
+			Expect(keystoneConf).Should(ContainSubstring("remote_id_attribute = HTTP_OIDC_ISS"))
+			Expect(keystoneConf).Should(ContainSubstring("[openid]"))
+			Expect(keystoneConf).Should(ContainSubstring("remote_id_claim = sub"))
+			Expect(keystoneConf).Should(ContainSubstring("username_claim = preferred_username"))
+			Expect(keystoneConf).Should(ContainSubstring("scope_claim = scope"))
+			Expect(keystoneConf).Should(ContainSubstring("roles_claim = roles"))
+			Expect(keystoneConf).Should(ContainSubstring("domain_name = Default"))
+			Expect(keystoneConf).Should(ContainSubstring("default_project = demo"))
+			Expect(keystoneConf).Should(ContainSubstring("default_role = member"))
+			Expect(keystoneConf).Should(ContainSubstring("scoped_token_group = oidc"))
+		})
+	})
+
 	// Run MariaDBAccount suite tests.  these are pre-packaged ginkgo tests
 	// that exercise standard account create / update patterns that should be
 	// common to all controllers that ensure MariaDBAccount CRs.
