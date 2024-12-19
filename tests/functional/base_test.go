@@ -65,7 +65,6 @@ func GetTLSKeystoneAPISpec() map[string]interface{} {
 }
 
 func CreateKeystoneAPI(name types.NamespacedName, spec map[string]interface{}) client.Object {
-
 	raw := map[string]interface{}{
 		"apiVersion": "keystone.openstack.org/v1beta1",
 		"kind":       "KeystoneAPI",
@@ -90,7 +89,9 @@ func CreateKeystoneAPISecret(namespace string, name string) *corev1.Secret {
 	return th.CreateSecret(
 		types.NamespacedName{Namespace: namespace, Name: name},
 		map[string][]byte{
-			"AdminPassword": []byte("12345678"),
+			"AdminPassword":                []byte("12345678"),
+			"KeystoneOIDCClientSecret":     []byte("secret123"),
+			"KeystoneOIDCCryptoPassphrase": []byte("openstack"),
 		},
 	)
 }

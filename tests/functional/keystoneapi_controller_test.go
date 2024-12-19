@@ -41,7 +41,6 @@ import (
 )
 
 var _ = Describe("Keystone controller", func() {
-
 	var keystoneAPIName types.NamespacedName
 	var keystoneAccountName types.NamespacedName
 	var keystoneDatabaseName types.NamespacedName
@@ -56,7 +55,6 @@ var _ = Describe("Keystone controller", func() {
 	var cronJobName types.NamespacedName
 
 	BeforeEach(func() {
-
 		keystoneAPIName = types.NamespacedName{
 			Name:      "keystone",
 			Namespace: namespace,
@@ -424,7 +422,6 @@ var _ = Describe("Keystone controller", func() {
 				Namespace: namespace,
 			})
 		})
-
 	})
 
 	When("DB sync is completed", func() {
@@ -965,7 +962,6 @@ var _ = Describe("Keystone controller", func() {
 			configData = string(scrt.Data["my.cnf"])
 			Expect(configData).To(
 				ContainSubstring("[client]\nssl-ca=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem\nssl=1"))
-
 		})
 
 		It("it creates deployment with CA and service certs mounted", func() {
@@ -1113,6 +1109,116 @@ var _ = Describe("Keystone controller", func() {
 				condition.ReadyCondition,
 				corev1.ConditionTrue,
 			)
+		})
+	})
+
+	When("A TLS KeystoneAPI is created with an OIDC Federation configuration", func() {
+		BeforeEach(func() {
+			spec := GetTLSKeystoneAPISpec()
+			/* serviceOverride := map[string]interface{}{}
+			serviceOverride["public"] = map[string]interface{}{
+				"endpointURL": "https://keystone-openstack.apps-crc.testing",
+			}
+			spec["override"] = map[string]interface{}{
+				"service": serviceOverride,
+			} */
+			spec["oidcFederation"] = map[string]interface{}{
+				"keystoneFederationIdentityProviderName": "myidp",
+				"oidcCacheType":                          "memcache",
+				"oidcClaimDelimiter":                     ";",
+				"oidcClaimPrefix":                        "OIDC-",
+				"oidcClientID":                           "client123",
+				"oidcIntrospectionEndpoint":              "https://idp.example.com/token/introspect",
+				"oidcPassClaimsAs":                       "both",
+				"oidcPassUserInfoAs":                     "claims",
+				"oidcProviderMetadataURL":                "https://idp.example.com/.well-known/openid-configuration",
+				"oidcResponseType":                       "id_token",
+				"oidcScope":                              "openid email profile",
+				"remoteIDAttribute":                      "HTTP_OIDC_ISS",
+			}
+
+			DeferCleanup(k8sClient.Delete, ctx, th.CreateCABundleSecret(caBundleSecretName))
+			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(internalCertSecretName))
+			DeferCleanup(k8sClient.Delete, ctx, th.CreateCertSecret(publicCertSecretName))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, spec))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
+				Namespace: namespace,
+			})
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+			th.SimulateDeploymentReplicaReady(deploymentName)
+		})
+
+		/* It("registers LoadBalancer services keystone endpoints", func() {
+			instance := keystone.GetKeystoneAPI(keystoneAPIName)
+			Expect(instance).NotTo(BeNil())
+			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("public", "https://keystone-openstack.apps-crc.testing"))
+			Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("internal", "https://keystone-internal."+keystoneAPIName.Namespace+".svc:5000"))
+
+			th.ExpectCondition(
+				keystoneAPIName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionTrue,
+			)
+		}) */
+
+		It("should configure OIDC in httpd.conf and keystone.conf", func() {
+			scrt := th.GetSecret(keystoneAPIConfigDataName)
+			Expect(scrt).ShouldNot(BeNil())
+
+			// Verify httpd.conf OIDC configuration
+			httpdConf := string(scrt.Data["httpd.conf"])
+			Expect(httpdConf).Should(ContainSubstring("OIDCClaimPrefix \"OIDC-\""))
+			Expect(httpdConf).Should(ContainSubstring("OIDCResponseType \"id_token\""))
+			Expect(httpdConf).Should(ContainSubstring("OIDCScope \"openid email profile\""))
+			Expect(httpdConf).Should(ContainSubstring("OIDCProviderMetadataURL https://idp.example.com/.well-known/openid-configuration"))
+			Expect(httpdConf).Should(ContainSubstring("OIDCClientID \"client123\""))
+			Expect(httpdConf).Should(ContainSubstring("OIDCClientSecret \"secret123\""))
+			Expect(httpdConf).Should(ContainSubstring("OIDCCryptoPassphrase \"openstack\""))
+			Expect(httpdConf).Should(ContainSubstring("OIDCCClaimDelimiter \";\""))
+			Expect(httpdConf).Should(ContainSubstring("OIDCCPassUserInfoAs \"claims\""))
+			Expect(httpdConf).Should(ContainSubstring("OIDCCPassClaimsAs \"both\""))
+			Expect(httpdConf).Should(ContainSubstring("OIDCCacheType \"memcache\""))
+			Expect(httpdConf).Should(ContainSubstring("OIDCRedirectURI \"https://keystone-openstack.apps-crc.testing/v3/auth/OS-FEDERATION/identity_providers/myidp/protocols/openid/websso\""))
+			Expect(httpdConf).Should(ContainSubstring("OIDCRedirectURI \"https://keystone-openstack.apps-crc.testing/v3/auth/OS-FEDERATION/websso/openid\""))
+			Expect(httpdConf).Should(ContainSubstring("LocationMatch \"/v3/auth/OS-FEDERATION/websso/openid\""))
+			Expect(httpdConf).Should(ContainSubstring("LocationMatch \"/v3/auth/OS-FEDERATION/identity_providers/myidp/protocols/openid/websso\""))
+			Expect(httpdConf).Should(ContainSubstring("OIDCAuthClientID \"client123\""))
+			Expect(httpdConf).Should(ContainSubstring("OIDCAuthClientSecret \"secret123\""))
+			Expect(httpdConf).Should(ContainSubstring("OIDCAuthIntrospectionEndpoint \"https://idp.example.com/token/introspect\""))
+			Expect(httpdConf).Should(ContainSubstring("Location ~ \"/v3/auth/OS-FEDERATION/identity_providers/myidp/protocols/openid/auth\""))
+
+			// Verify keystone.conf federation configuration
+			keystoneConf := string(scrt.Data["keystone.conf"])
+			Expect(keystoneConf).Should(ContainSubstring("[federation]"))
+			Expect(keystoneConf).Should(ContainSubstring("trusted_dashboard=https://keystone-openstack.apps-crc.testing/dashboard/auth/websso/"))
+			Expect(keystoneConf).Should(ContainSubstring("[openid]"))
+			Expect(keystoneConf).Should(ContainSubstring("remote_id_attribute = HTTP_OIDC_ISS"))
+			Expect(keystoneConf).Should(ContainSubstring("[auth]"))
+			Expect(keystoneConf).Should(ContainSubstring("methods = password,token,oauth1,mapped,application_credential,openid"))
 		})
 	})
 
@@ -1434,7 +1540,6 @@ var _ = Describe("Keystone controller", func() {
 					}
 				}
 			}, timeout, interval).Should(Succeed())
-
 		})
 	})
 
@@ -1584,7 +1689,6 @@ var _ = Describe("Keystone controller", func() {
 		// needs to make it all the way to the end where the mariadb finalizers
 		// are removed from unused accounts since that's part of what we are testing
 		SetupCR: func(accountName types.NamespacedName) {
-
 			spec := GetDefaultKeystoneAPISpec()
 			spec["databaseAccount"] = accountName.Name
 
@@ -1627,17 +1731,14 @@ var _ = Describe("Keystone controller", func() {
 				condition.DeploymentReadyCondition,
 				corev1.ConditionTrue,
 			)
-
 		},
 		// Change the account name in the service to a new name
 		UpdateAccount: func(newAccountName types.NamespacedName) {
-
 			Eventually(func(g Gomega) {
 				keystoneapi := GetKeystoneAPI(keystoneAPIName)
 				keystoneapi.Spec.DatabaseAccount = newAccountName.Name
 				g.Expect(th.K8sClient.Update(ctx, keystoneapi)).Should(Succeed())
 			}, timeout, interval).Should(Succeed())
-
 		},
 		// delete the keystone instance to exercise finalizer removal
 		DeleteCR: func() {
@@ -1656,12 +1757,10 @@ var _ = Describe("Keystone controller", func() {
 				ContainSubstring(fmt.Sprintf("connection=mysql+pymysql://%s:%s@hostname-for-openstack.%s.svc/keystone?read_default_file=/etc/my.cnf",
 					username, password, namespace)))
 		}, timeout, interval).Should(Succeed())
-
 	})
 
 	mariadbSuite.RunConfigHashSuite(func() string {
 		deployment := th.GetDeployment(deploymentName)
 		return GetEnvVarValue(deployment.Spec.Template.Spec.Containers[0].Env, "CONFIG_HASH", "")
 	})
-
 })
