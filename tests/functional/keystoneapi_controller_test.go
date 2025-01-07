@@ -45,6 +45,7 @@ var _ = Describe("Keystone controller", func() {
 	var keystoneAccountName types.NamespacedName
 	var keystoneDatabaseName types.NamespacedName
 	var keystoneAPIConfigDataName types.NamespacedName
+	var keystoneEndpointName types.NamespacedName
 	var dbSyncJobName types.NamespacedName
 	var bootstrapJobName types.NamespacedName
 	var deploymentName types.NamespacedName
@@ -81,6 +82,10 @@ var _ = Describe("Keystone controller", func() {
 		}
 		keystoneAPIConfigDataName = types.NamespacedName{
 			Name:      "keystone-config-data",
+			Namespace: namespace,
+		}
+		keystoneEndpointName = types.NamespacedName{
+			Name:      "public",
 			Namespace: namespace,
 		}
 		caBundleSecretName = types.NamespacedName{
@@ -1168,6 +1173,7 @@ var _ = Describe("Keystone controller", func() {
 			})
 			th.SimulateJobSuccess(dbSyncJobName)
 			th.SimulateJobSuccess(bootstrapJobName)
+			keystone.SimulateKeystoneEndpointReady(keystoneEndpointName)
 			th.SimulateDeploymentReplicaReady(deploymentName)
 		})
 
