@@ -80,21 +80,12 @@ github.com/onsi/gomega v1.34.1 h1:EUMJIKUjM8sKjYbtxQI9A4z2o+rruxnzNvpknOXie6k=
 github.com/onsi/gomega v1.34.1/go.mod h1:kU1QgUvBDLXBJq618Xvm2LUX6rSAfRaFRTcdOeDLwwY=
 github.com/openshift/api v0.0.0-20240830023148-b7d0481c9094 h1:J1wuGhVxpsHykZBa6Beb1gQ96Ptej9AE/BvwCBiRj1E=
 github.com/openshift/api v0.0.0-20240830023148-b7d0481c9094/go.mod h1:CxgbWAlvu2iQB0UmKTtRu1YfepRg1/vJ64n2DlIEVz4=
-<<<<<<< HEAD
 github.com/openstack-k8s-operators/lib-common/modules/common v0.5.1-0.20241216113837-d172b3ac0f4e h1:hf4kVQBkyG79WcHBxdQ25QrDBbGFdarebS1Tc0Xclq4=
 github.com/openstack-k8s-operators/lib-common/modules/common v0.5.1-0.20241216113837-d172b3ac0f4e/go.mod h1:YpNTuJhDWhbXM50O3qBkhO7M+OOyRmWkNVmJ4y3cyFs=
 github.com/openstack-k8s-operators/lib-common/modules/openstack v0.5.1-0.20241216113837-d172b3ac0f4e h1:HFo4OqPY0x4ZQeaWI2YGonTXAGTQFt+rOEJlfZVhS7s=
 github.com/openstack-k8s-operators/lib-common/modules/openstack v0.5.1-0.20241216113837-d172b3ac0f4e/go.mod h1:IASoGvp5QM/tBJUd/8i8uIjj4DBnI+64Ydh4r7pmnvA=
 github.com/openstack-k8s-operators/lib-common/modules/test v0.5.1-0.20241216113837-d172b3ac0f4e h1:/iWDp3j+ET3gE5IjKHtdZaPd4SQyLHB/4L5jB16cV3I=
 github.com/openstack-k8s-operators/lib-common/modules/test v0.5.1-0.20241216113837-d172b3ac0f4e/go.mod h1:LV0jo5etIsGyINpmB37i4oWR8zU6ApIuh7fsqGGA41o=
-=======
-github.com/openstack-k8s-operators/lib-common/modules/common v0.5.1-0.20241113144931-ff1fd2dcd04a h1:izLb1IVe6pXuQ6Y49CIAkN7yS9qe2fDptRlhxMHSYv4=
-github.com/openstack-k8s-operators/lib-common/modules/common v0.5.1-0.20241113144931-ff1fd2dcd04a/go.mod h1:YpNTuJhDWhbXM50O3qBkhO7M+OOyRmWkNVmJ4y3cyFs=
-github.com/openstack-k8s-operators/lib-common/modules/openstack v0.5.1-0.20241029151503-4878b3fa3333 h1:XWxFOmOYPC6V5KUDkzU20vQOsha1PPNQzzqkNv926mg=
-github.com/openstack-k8s-operators/lib-common/modules/openstack v0.5.1-0.20241029151503-4878b3fa3333/go.mod h1:IASoGvp5QM/tBJUd/8i8uIjj4DBnI+64Ydh4r7pmnvA=
-github.com/openstack-k8s-operators/lib-common/modules/test v0.5.1-0.20241029151503-4878b3fa3333 h1:zUlxLqucrLMNDp6dc3I7eYWZyGVE7tLrPyWR/n+VD9w=
-github.com/openstack-k8s-operators/lib-common/modules/test v0.5.1-0.20241029151503-4878b3fa3333/go.mod h1:LV0jo5etIsGyINpmB37i4oWR8zU6ApIuh7fsqGGA41o=
->>>>>>> bea7f45 (Update api go.mod to match main)
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
