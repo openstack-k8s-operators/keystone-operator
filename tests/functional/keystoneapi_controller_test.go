@@ -26,6 +26,7 @@ import (
 	. "github.com/onsi/ginkgo/v2" //revive:disable:dot-imports
 	. "github.com/onsi/gomega"    //revive:disable:dot-imports
 
+	"github.com/openstack-k8s-operators/lib-common/modules/common"
 	//revive:disable-next-line:dot-imports
 	. "github.com/openstack-k8s-operators/lib-common/modules/common/test/helpers"
 
@@ -1565,6 +1566,76 @@ var _ = Describe("Keystone controller", func() {
 				g.Expect(th.GetJob(dbSyncJobName).Spec.Template.Spec.NodeSelector).To(BeNil())
 				g.Expect(GetCronJob(cronJobName).Spec.JobTemplate.Spec.Template.Spec.NodeSelector).To(BeNil())
 			}, timeout, interval).Should(Succeed())
+		})
+	})
+
+	When("A KeystoneAPI is created with HttpdCustomization.OverrideSecret", func() {
+		BeforeEach(func() {
+			customServiceConfigSecretName := types.NamespacedName{Name: "foo", Namespace: namespace}
+			customConfig := []byte(`OIDCResponseType "id_token"
+OIDCMemCacheServers "{{ .MemcachedServers }}"
+OIDCRedirectURI "{{ .KeystoneEndpointPublic }}/v3/auth/OS-FEDERATION/websso/openid"`)
+			th.CreateSecret(
+				customServiceConfigSecretName,
+				map[string][]byte{
+					"bar.conf": customConfig,
+				},
+			)
+
+			spec := GetDefaultKeystoneAPISpec()
+			spec["httpdCustomization"] = map[string]interface{}{
+				"customConfigSecret": customServiceConfigSecretName.Name,
+			}
+
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			keystone := CreateKeystoneAPI(keystoneAPIName, spec)
+			DeferCleanup(th.DeleteInstance, keystone)
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
+				Namespace: namespace,
+			})
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+			th.SimulateDeploymentReplicaReady(deploymentName)
+		})
+
+		It("it renders the custom template and adds it to the keystone-config-data secret", func() {
+			scrt := th.GetSecret(keystoneAPIConfigDataName)
+			Expect(scrt).ShouldNot(BeNil())
+			Expect(scrt.Data).Should(HaveKey(common.TemplateParameters))
+			configData := string(scrt.Data[common.TemplateParameters])
+			memcachedServers := fmt.Sprintf("memcached-0.memcached.%s.svc:11211,memcached-1.memcached.%s.svc:11211,memcached-2.memcached.%s.svc:11211",
+				namespace, namespace, namespace)
+			Expect(configData).Should(ContainSubstring(fmt.Sprintf("MemcachedServers: %s", memcachedServers)))
+
+			for _, cfg := range []string{"httpd_custom_internal_bar.conf", "httpd_custom_public_bar.conf"} {
+				Expect(scrt.Data).Should(HaveKey(cfg))
+				configData := string(scrt.Data[cfg])
+				Expect(configData).Should(ContainSubstring("OIDCResponseType \"id_token\""))
+				Expect(configData).Should(ContainSubstring(fmt.Sprintf("OIDCMemCacheServers \"%s\"", memcachedServers)))
+				Expect(configData).Should(ContainSubstring(
+					fmt.Sprintf("OIDCRedirectURI \"http://keystone-public.%s.svc:5000/v3/auth/OS-FEDERATION/websso/openid\"", namespace)))
+			}
 		})
 	})
 
