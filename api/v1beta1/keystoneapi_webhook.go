@@ -38,6 +38,7 @@ import (
 // KeystoneAPIDefaults -
 type KeystoneAPIDefaults struct {
 	ContainerImageURL string
+	APITimeout        int
 }
 
 var keystoneAPIDefaults KeystoneAPIDefaults
@@ -48,6 +49,7 @@ var keystoneapilog = logf.Log.WithName("keystoneapi-resource")
 // SetupKeystoneAPIDefaults - initialize KeystoneAPI spec defaults for use with either internal or external webhooks
 func SetupKeystoneAPIDefaults(defaults KeystoneAPIDefaults) {
 	keystoneAPIDefaults = defaults
+
 	keystoneapilog.Info("KeystoneAPI defaults initialized", "defaults", defaults)
 }
 
@@ -81,7 +83,9 @@ func (spec *KeystoneAPISpec) Default() {
 // Default - set defaults for this KeystoneAPI core spec
 // NOTE: only this version is used by OpenStackOperators webhook
 func (spec *KeystoneAPISpecCore) Default() {
-	// no defaults to set yet
+	if spec.APITimeout == 0 {
+		spec.APITimeout = keystoneAPIDefaults.APITimeout
+	}
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
@@ -166,4 +170,26 @@ func (r *KeystoneAPI) ValidateDelete() (admission.Warnings, error) {
 
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil, nil
+}
+
+// SetDefaultRouteAnnotations sets HAProxy timeout values of the route
+func (spec *KeystoneAPISpecCore) SetDefaultRouteAnnotations(annotations map[string]string) {
+	const haProxyAnno = "haproxy.router.openshift.io/timeout"
+	// Use a custom annotation to flag when the operator has set the default HAProxy timeout
+	// With the annotation func determines when to overwrite existing HAProxy timeout with the APITimeout
+	const keystoneAnno = "api.keystone.openstack.org/timeout"
+	valKeystoneAPI, okKeystoneAPI := annotations[keystoneAnno]
+	valHAProxy, okHAProxy := annotations[haProxyAnno]
+	// Human operator set the HAProxy timeout manually
+	if !okKeystoneAPI && okHAProxy {
+		return
+	}
+	// Human operator modified the HAProxy timeout manually without removing the Keystone flag
+	if okKeystoneAPI && okHAProxy && valKeystoneAPI != valHAProxy {
+		delete(annotations, keystoneAnno)
+		return
+	}
+	timeout := fmt.Sprintf("%ds", spec.APITimeout)
+	annotations[keystoneAnno] = timeout
+	annotations[haProxyAnno] = timeout
 }
