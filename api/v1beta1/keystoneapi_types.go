@@ -217,6 +217,16 @@ type HttpdCustomization struct {
 	// +kubebuilder:validation:Minimum=1
 	// ProcessNumber - Number of processes running in keystone API
 	ProcessNumber *int32 `json:"processNumber"`
+
+	// +kubebuilder:validation:Optional
+	// CustomConfigSecret - customize the httpd vhost config using this parameter to specify
+	// a secret that contains service config data. The content of each provided snippet gets
+	// rendered as a go template and placed into /etc/httpd/conf/httpd_custom_<key> .
+	// In the default httpd template at the end of the vhost those custom configs get
+	// included using `Include conf/httpd_custom_<endpoint>_*`.
+	// For information on how sections in httpd configuration get merged, check section
+	// "How the sections are merged" in https://httpd.apache.org/docs/current/sections.html#merging
+	CustomConfigSecret *string `json:"customConfigSecret,omitempty"`
 }
 
 // KeystoneAPIStatus defines the observed state of KeystoneAPI

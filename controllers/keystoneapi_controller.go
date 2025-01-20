@@ -233,10 +233,11 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 // fields to index to reconcile when change
 const (
-	passwordSecretField     = ".spec.secret"
-	caBundleSecretNameField = ".spec.tls.caBundleSecretName"
-	tlsAPIInternalField     = ".spec.tls.api.internal.secretName"
-	tlsAPIPublicField       = ".spec.tls.api.public.secretName"
+	passwordSecretField                 = ".spec.secret"
+	caBundleSecretNameField             = ".spec.tls.caBundleSecretName"
+	tlsAPIInternalField                 = ".spec.tls.api.internal.secretName"
+	tlsAPIPublicField                   = ".spec.tls.api.public.secretName"
+	httpdCustomServiceConfigSecretField = ".spec.httpdCustomization.customServiceConfigSecret"
 )
 
 var allWatchFields = []string{
@@ -244,6 +245,7 @@ var allWatchFields = []string{
 	caBundleSecretNameField,
 	tlsAPIInternalField,
 	tlsAPIPublicField,
+	httpdCustomServiceConfigSecretField,
 }
 
 // SetupWithManager -
@@ -294,6 +296,18 @@ func (r *KeystoneAPIReconciler) SetupWithManager(ctx context.Context, mgr ctrl.M
 			return nil
 		}
 		return []string{*cr.Spec.TLS.API.Public.SecretName}
+	}); err != nil {
+		return err
+	}
+
+	// index httpdOverrideSecretField
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &keystonev1.KeystoneAPI{}, httpdCustomServiceConfigSecretField, func(rawObj client.Object) []string {
+		// Extract the secret name from the spec, if one is provided
+		cr := rawObj.(*keystonev1.KeystoneAPI)
+		if cr.Spec.HttpdCustomization.CustomConfigSecret == nil {
+			return nil
+		}
+		return []string{*cr.Spec.HttpdCustomization.CustomConfigSecret}
 	}); err != nil {
 		return err
 	}
@@ -1186,9 +1200,9 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	dbSecret := db.GetSecret()
 
 	templateParameters := map[string]interface{}{
-		"memcachedServers":         mc.GetMemcachedServerListString(),
-		"memcachedServersWithInet": mc.GetMemcachedServerListWithInetString(),
-		"memcachedTLS":             mc.GetMemcachedTLSSupport(),
+		"MemcachedServers":         mc.GetMemcachedServerListString(),
+		"MemcachedServersWithInet": mc.GetMemcachedServerListWithInetString(),
+		"MemcachedTLS":             mc.GetMemcachedTLSSupport(),
 		"TransportURL":             string(transportURLSecret.Data["transport_url"]),
 		"DatabaseConnection": fmt.Sprintf("mysql+pymysql://%s:%s@%s/%s?read_default_file=/etc/my.cnf",
 			databaseAccount.Spec.UserName,
@@ -1197,11 +1211,23 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			keystone.DatabaseName,
 		),
 		"ProcessNumber":       instance.Spec.HttpdCustomization.ProcessNumber,
-		"enableSecureRBAC":    instance.Spec.EnableSecureRBAC,
-		"fernetMaxActiveKeys": instance.Spec.FernetMaxActiveKeys,
+		"EnableSecureRBAC":    instance.Spec.EnableSecureRBAC,
+		"FernetMaxActiveKeys": instance.Spec.FernetMaxActiveKeys,
+	}
+
+	templateParameters["KeystoneEndpointPublic"], _ = instance.GetEndpoint(endpoint.EndpointPublic)
+	templateParameters["KeystoneEndpointInternal"], _ = instance.GetEndpoint(endpoint.EndpointInternal)
+
+	httpdOverrideSecret := &corev1.Secret{}
+	if instance.Spec.HttpdCustomization.CustomConfigSecret != nil && *instance.Spec.HttpdCustomization.CustomConfigSecret != "" {
+		httpdOverrideSecret, _, err = oko_secret.GetSecret(ctx, h, *instance.Spec.HttpdCustomization.CustomConfigSecret, instance.Namespace)
+		if err != nil {
+			return err
+		}
 	}
 
 	// create httpd  vhost template parameters
+	customTemplates := map[string]string{}
 	httpdVhostConfig := map[string]interface{}{}
 	for _, endpt := range []service.Endpoint{service.EndpointInternal, service.EndpointPublic} {
 		endptConfig := map[string]interface{}{}
@@ -1212,10 +1238,27 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			endptConfig["SSLCertificateFile"] = fmt.Sprintf("/etc/pki/tls/certs/%s.crt", endpt.String())
 			endptConfig["SSLCertificateKeyFile"] = fmt.Sprintf("/etc/pki/tls/private/%s.key", endpt.String())
 		}
+
+		endptConfig["Override"] = false
+		if len(httpdOverrideSecret.Data) > 0 {
+			endptConfig["Override"] = true
+			for key, data := range httpdOverrideSecret.Data {
+				if len(data) > 0 {
+					customTemplates["httpd_custom_"+endpt.String()+"_"+key] = string(data)
+				}
+			}
+		}
 		httpdVhostConfig[endpt.String()] = endptConfig
 	}
 	templateParameters["VHosts"] = httpdVhostConfig
 	templateParameters["TimeOut"] = instance.Spec.APITimeout
+
+	// Marshal the templateParameters map to YAML
+	yamlData, err := yaml.Marshal(templateParameters)
+	if err != nil {
+		return fmt.Errorf("Error marshalling to YAML: %w", err)
+	}
+	customData[common.TemplateParameters] = string(yamlData)
 
 	tmpl := []util.Template{
 		// Scripts
@@ -1228,13 +1271,14 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		},
 		// Configs
 		{
-			Name:          fmt.Sprintf("%s-config-data", instance.Name),
-			Namespace:     instance.Namespace,
-			Type:          util.TemplateTypeConfig,
-			InstanceType:  instance.Kind,
-			CustomData:    customData,
-			ConfigOptions: templateParameters,
-			Labels:        cmLabels,
+			Name:           fmt.Sprintf("%s-config-data", instance.Name),
+			Namespace:      instance.Namespace,
+			Type:           util.TemplateTypeConfig,
+			InstanceType:   instance.Kind,
+			StringTemplate: customTemplates,
+			CustomData:     customData,
+			ConfigOptions:  templateParameters,
+			Labels:         cmLabels,
 		},
 	}
 	return oko_secret.EnsureSecrets(ctx, h, instance, tmpl, envVars)
@@ -1294,7 +1338,7 @@ func (r *KeystoneAPIReconciler) reconcileCloudConfig(
 			Name:      instance.Spec.Secret,
 			Namespace: instance.Namespace,
 		},
-		Type: "Opaque",
+		Type: corev1.SecretTypeOpaque,
 	}
 
 	err = r.Client.Get(ctx, types.NamespacedName{Name: keystoneSecret.Name, Namespace: instance.Namespace}, keystoneSecret)

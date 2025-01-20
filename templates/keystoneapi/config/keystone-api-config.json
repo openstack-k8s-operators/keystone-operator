@@ -16,13 +16,13 @@
         {
             "source": "/var/lib/config-data/default/httpd.conf",
             "dest": "/etc/httpd/conf/httpd.conf",
-            "owner": "root",
+            "owner": "apache",
             "perm": "0644"
         },
         {
             "source": "/var/lib/config-data/default/ssl.conf",
             "dest": "/etc/httpd/conf.d/ssl.conf",
-            "owner": "root",
+            "owner": "apache",
             "perm": "0644"
         },
         {
@@ -58,6 +58,13 @@
             "dest": "/etc/my.cnf",
             "owner": "keystone",
             "perm": "0644"
+        },
+        {
+            "source": "/var/lib/config-data/default/httpd_custom_*",
+            "dest": "/etc/httpd/conf/",
+            "owner": "apache",
+            "perm": "0444",
+            "optional": true
         }
     ]
 }
