@@ -65,7 +65,11 @@ func (th *TestHelper) CreateKeystoneAPI(namespace string) types.NamespacedName {
 			Name:      "keystone-" + uuid.New().String(),
 			Namespace: namespace,
 		},
-		Spec: keystonev1.KeystoneAPISpec{},
+		Spec: keystonev1.KeystoneAPISpec{
+			KeystoneAPISpecCore: keystonev1.KeystoneAPISpecCore{
+				APITimeout: 60,
+			},
+		},
 	}
 
 	gomega.Expect(th.K8sClient.Create(th.Ctx, keystone.DeepCopy())).Should(gomega.Succeed())
