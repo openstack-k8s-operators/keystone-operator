@@ -120,6 +120,7 @@ func (th *TestHelper) CreateKeystoneAPIWithFixture(
 				PasswordSelectors: keystonev1.PasswordSelector{
 					Admin: "admin-password",
 				},
+				APITimeout: 60,
 			},
 		},
 	}
