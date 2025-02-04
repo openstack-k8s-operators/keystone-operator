@@ -7,5 +7,15 @@ linters:
     - ginkgolinter
     - gofmt
     - govet
+    - gosec
+    - errname
+    - err113
 run:
   timeout: 5m
+
+issues:
+  exclude-rules:
+  - path: tests
+    text: "G101: Potential hardcoded credentials"
+    linters:
+      - gosec

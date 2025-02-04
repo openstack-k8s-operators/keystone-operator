@@ -241,11 +241,11 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 // fields to index to reconcile when change
 const (
 	passwordSecretField                 = ".spec.secret"
-	caBundleSecretNameField             = ".spec.tls.caBundleSecretName"
+	caBundleSecretNameField             = ".spec.tls.caBundleSecretName" // #nosec G101
 	tlsAPIInternalField                 = ".spec.tls.api.internal.secretName"
 	tlsAPIPublicField                   = ".spec.tls.api.public.secretName"
-	httpdCustomServiceConfigSecretField = ".spec.httpdCustomization.customServiceConfigSecret"
 	topologyField                       = ".spec.topologyRef.Name"
+	httpdCustomServiceConfigSecretField = ".spec.httpdCustomization.customServiceConfigSecret" // #nosec G101
 )
 
 var allWatchFields = []string{
@@ -1134,7 +1134,9 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	instance.Status.ReadyCount = depl.GetDeployment().Status.ReadyReplicas
 
 	// verify if network attachment matches expectations
-	networkReady, networkAttachmentStatus, err := nad.VerifyNetworkStatusFromAnnotation(ctx, helper, instance.Spec.NetworkAttachments, serviceLabels, instance.Status.ReadyCount)
+	networkReady, networkAttachmentStatus, err := nad.VerifyNetworkStatusFromAnnotation(
+		ctx, helper, instance.Spec.NetworkAttachments, serviceLabels, instance.Status.ReadyCount,
+	)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -1143,14 +1145,15 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	if networkReady {
 		instance.Status.Conditions.MarkTrue(condition.NetworkAttachmentsReadyCondition, condition.NetworkAttachmentsReadyMessage)
 	} else {
-		err := fmt.Errorf("not all pods have interfaces with ips as configured in NetworkAttachments: %s", instance.Spec.NetworkAttachments)
-		instance.Status.Conditions.Set(condition.FalseCondition(
-			condition.NetworkAttachmentsReadyCondition,
-			condition.ErrorReason,
-			condition.SeverityWarning,
-			condition.NetworkAttachmentsReadyErrorMessage,
-			err.Error()))
-
+		instance.Status.Conditions.Set(
+			condition.FalseCondition(
+				condition.NetworkAttachmentsReadyCondition,
+				condition.ErrorReason,
+				condition.SeverityWarning,
+				condition.NetworkAttachmentsErrorMessage,
+				instance.Spec.NetworkAttachments,
+			),
+		)
 		return ctrl.Result{}, err
 	}
 
@@ -1453,6 +1456,7 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 	helper *helper.Helper,
 	envVars *map[string]env.Setter,
 ) error {
+	logger := r.GetLogger(ctx)
 	fernetAnnotation := labels.GetGroupLabel(keystone.ServiceName) + "/rotatedat"
 	labels := labels.GetLabels(instance, labels.GetGroupLabel(keystone.ServiceName), map[string]string{})
 	now := time.Now().UTC()
@@ -1474,12 +1478,12 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 		return err
 	} else if k8s_errors.IsNotFound(err) {
 		fernetKeys := map[string]string{
-			"CredentialKeys0": keystone.GenerateFernetKey(),
-			"CredentialKeys1": keystone.GenerateFernetKey(),
+			"CredentialKeys0": keystone.GenerateFernetKey(logger),
+			"CredentialKeys1": keystone.GenerateFernetKey(logger),
 		}
 
 		for i := 0; i < numberKeys; i++ {
-			fernetKeys[fmt.Sprintf("FernetKeys%d", i)] = keystone.GenerateFernetKey()
+			fernetKeys[fmt.Sprintf("FernetKeys%d", i)] = keystone.GenerateFernetKey(logger)
 		}
 
 		annotations := map[string]string{
@@ -1526,7 +1530,7 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 			changedKeys = true
 		} else if rotatedAt.AddDate(0, 0, duration).Before(now) {
 			secret.Data[extraKey] = secret.Data["FernetKeys0"]
-			secret.Data["FernetKeys0"] = []byte(keystone.GenerateFernetKey())
+			secret.Data["FernetKeys0"] = []byte(keystone.GenerateFernetKey(logger))
 		}
 
 		//
@@ -1563,7 +1567,7 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 			}
 			changedKeys = true
 			i := 1
-			nextKeyValue := []byte(keystone.GenerateFernetKey())
+			nextKeyValue := []byte(keystone.GenerateFernetKey(logger))
 			for {
 				key := fmt.Sprintf("FernetKeys%d", i)
 				i++
