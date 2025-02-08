@@ -200,4 +200,29 @@ var _ = Describe("KeystoneAPI Webhook", func() {
 			)
 		})
 	})
+	It("rejects a wrong TopologyRef on a different namespace", func() {
+		keystoneSpec := GetDefaultKeystoneAPISpec()
+		// Inject a topologyRef that points to a different namespace
+		keystoneSpec["topologyRef"] = map[string]interface{}{
+			"name":      "foo",
+			"namespace": "bar",
+		}
+		raw := map[string]interface{}{
+			"apiVersion": "keystone.openstack.org/v1beta1",
+			"kind":       "KeystoneAPI",
+			"metadata": map[string]interface{}{
+				"name":      "keystoneapi",
+				"namespace": namespace,
+			},
+			"spec": keystoneSpec,
+		}
+		unstructuredObj := &unstructured.Unstructured{Object: raw}
+		_, err := controllerutil.CreateOrPatch(
+			th.Ctx, th.K8sClient, unstructuredObj, func() error { return nil })
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(
+			ContainSubstring(
+				"Invalid value: \"namespace\": Customizing namespace field is not supported"),
+		)
+	})
 })
