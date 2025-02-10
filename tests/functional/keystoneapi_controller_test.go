@@ -55,6 +55,7 @@ var _ = Describe("Keystone controller", func() {
 	var publicCertSecretName types.NamespacedName
 	var memcachedSpec memcachedv1.MemcachedSpec
 	var cronJobName types.NamespacedName
+	var keystoneAPITopologies []types.NamespacedName
 
 	BeforeEach(func() {
 
@@ -106,6 +107,16 @@ var _ = Describe("Keystone controller", func() {
 		cronJobName = types.NamespacedName{
 			Namespace: keystoneAPIName.Namespace,
 			Name:      "keystone-cron",
+		}
+		keystoneAPITopologies = []types.NamespacedName{
+			{
+				Namespace: namespace,
+				Name:      fmt.Sprintf("%s-topology", keystoneAPIName.Name),
+			},
+			{
+				Namespace: namespace,
+				Name:      fmt.Sprintf("%s-topology-alt", keystoneAPIName.Name),
+			},
 		}
 
 		err := os.Setenv("OPERATOR_TEMPLATES", "../../templates")
@@ -1439,6 +1450,94 @@ var _ = Describe("Keystone controller", func() {
 				}
 			}, timeout, interval).Should(Succeed())
 
+		})
+	})
+
+	When("Topology is referenced", func() {
+		BeforeEach(func() {
+			// Build the topology Spec
+			topologySpec := GetSampleTopologySpec()
+			// Create Test Topologies
+			for _, t := range keystoneAPITopologies {
+				CreateTopology(t, topologySpec)
+			}
+			spec := GetDefaultKeystoneAPISpec()
+			spec["topologyRef"] = map[string]interface{}{
+				"name": keystoneAPITopologies[0].Name,
+			}
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			keystone := CreateKeystoneAPI(keystoneAPIName, spec)
+			DeferCleanup(th.DeleteInstance, keystone)
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
+				Namespace: namespace,
+			})
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+			th.SimulateDeploymentReplicaReady(deploymentName)
+		})
+
+		It("check topology has been applied", func() {
+			Eventually(func(g Gomega) {
+				keystoneAPI := GetKeystoneAPI(keystoneAPIName)
+				g.Expect(keystoneAPI.Status.LastAppliedTopology).To(Equal(keystoneAPITopologies[0].Name))
+			}, timeout, interval).Should(Succeed())
+		})
+		It("sets topology in resource specs", func() {
+			Eventually(func(g Gomega) {
+				g.Expect(th.GetDeployment(deploymentName).Spec.Template.Spec.TopologySpreadConstraints).ToNot(BeNil())
+				g.Expect(th.GetDeployment(deploymentName).Spec.Template.Spec.Affinity).To(BeNil())
+			}, timeout, interval).Should(Succeed())
+		})
+		It("updates topology when the reference changes", func() {
+			Eventually(func(g Gomega) {
+				keystoneAPI := GetKeystoneAPI(keystoneAPIName)
+				keystoneAPI.Spec.TopologyRef.Name = keystoneAPITopologies[1].Name
+				g.Expect(k8sClient.Update(ctx, keystoneAPI)).To(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				keystoneAPI := GetKeystoneAPI(keystoneAPIName)
+				g.Expect(keystoneAPI.Status.LastAppliedTopology).To(Equal(keystoneAPITopologies[1].Name))
+			}, timeout, interval).Should(Succeed())
+		})
+		It("removes topologyRef from the spec", func() {
+			Eventually(func(g Gomega) {
+				keystoneAPI := GetKeystoneAPI(keystoneAPIName)
+				// Remove the TopologyRef from the existing KeystoneAPI .Spec
+				keystoneAPI.Spec.TopologyRef = nil
+				g.Expect(k8sClient.Update(ctx, keystoneAPI)).To(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				keystoneAPI := GetKeystoneAPI(keystoneAPIName)
+				g.Expect(keystoneAPI.Status.LastAppliedTopology).Should(BeEmpty())
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				g.Expect(th.GetDeployment(deploymentName).Spec.Template.Spec.TopologySpreadConstraints).To(BeNil())
+				g.Expect(th.GetDeployment(deploymentName).Spec.Template.Spec.Affinity).ToNot(BeNil())
+			}, timeout, interval).Should(Succeed())
 		})
 	})
 

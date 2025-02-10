@@ -290,3 +290,12 @@ rules:
   - securitycontextconstraints
   verbs:
   - use
+- apiGroups:
+  - topology.openstack.org
+  resources:
+  - topologies
+  verbs:
+  - get
+  - list
+  - update
+  - watch

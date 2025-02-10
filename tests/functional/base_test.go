@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
+	keystone_base "github.com/openstack-k8s-operators/keystone-operator/pkg/keystone"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 )
 
@@ -117,4 +118,45 @@ func CreateKeystoneMessageBusSecret(namespace string, name string) *corev1.Secre
 	)
 	logger.Info("Secret created", "name", name)
 	return s
+}
+
+// GetSampleTopologySpec - A sample (and opinionated) Topology Spec used to
+// test Keystone
+// Note this is just an example that should not be used in production for
+// multiple reasons:
+// 1. It uses ScheduleAnyway as strategy, which is something we might
+// want to avoid by default
+// 2. Usually a topologySpreadConstraints is used to take care about
+// multi AZ, which is not applicable in this context
+func GetSampleTopologySpec() map[string]interface{} {
+	// Build the topology Spec
+	topologySpec := map[string]interface{}{
+		"topologySpreadConstraints": []map[string]interface{}{
+			{
+				"maxSkew":           1,
+				"topologyKey":       corev1.LabelHostname,
+				"whenUnsatisfiable": "ScheduleAnyway",
+				"labelSelector": map[string]interface{}{
+					"matchLabels": map[string]interface{}{
+						"service": keystone_base.ServiceName,
+					},
+				},
+			},
+		},
+	}
+	return topologySpec
+}
+
+// CreateTopology - Creates a Topology CR based on the spec passed as input
+func CreateTopology(topology types.NamespacedName, spec map[string]interface{}) client.Object {
+	raw := map[string]interface{}{
+		"apiVersion": "topology.openstack.org/v1beta1",
+		"kind":       "Topology",
+		"metadata": map[string]interface{}{
+			"name":      topology.Name,
+			"namespace": topology.Namespace,
+		},
+		"spec": spec,
+	}
+	return th.CreateUnstructured(raw)
 }
