@@ -9,8 +9,8 @@ require (
 	github.com/onsi/gomega v1.34.1
 	github.com/openstack-k8s-operators/infra-operator/apis v0.5.1-0.20250204091142-ae8379c31edb
 	github.com/openstack-k8s-operators/lib-common/modules/common v0.5.1-0.20250205143454-43504d7ad19a
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.5.1-0.20250124131400-f604bec9afd2
-	github.com/openstack-k8s-operators/lib-common/modules/test v0.5.1-0.20250124131400-f604bec9afd2
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.5.1-0.20250205143454-43504d7ad19a
+	github.com/openstack-k8s-operators/lib-common/modules/test v0.5.1-0.20250205143454-43504d7ad19a
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
 	k8s.io/api v0.29.13
 	k8s.io/apimachinery v0.29.13
