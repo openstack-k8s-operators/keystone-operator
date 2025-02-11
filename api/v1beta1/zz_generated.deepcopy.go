@@ -21,9 +21,9 @@ limitations under the License.
 package v1beta1
 
 import (
+	topologyv1beta1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
-	"github.com/openstack-k8s-operators/lib-common/modules/common/topology"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -212,7 +212,7 @@ func (in *KeystoneAPISpecCore) DeepCopyInto(out *KeystoneAPISpecCore) {
 	in.TLS.DeepCopyInto(&out.TLS)
 	if in.TopologyRef != nil {
 		in, out := &in.TopologyRef, &out.TopologyRef
-		*out = new(topology.TopoRef)
+		*out = new(topologyv1beta1.TopoRef)
 		**out = **in
 	}
 }
