@@ -42,6 +42,22 @@
             "merge": true
         },
         {
+            "source": "/var/lib/config-data/mtls/certs/*",
+            "dest": "/etc/pki/tls/certs/",
+            "owner": "root:keystone",
+            "perm": "0640",
+            "optional": true,
+            "merge": true
+        },
+        {
+            "source": "/var/lib/config-data/mtls/private/*",
+            "dest": "/etc/pki/tls/private/",
+            "owner": "root:keystone",
+            "perm": "0640",
+            "optional": true,
+            "merge": true
+        },
+        {
             "source": "/var/lib/credential-keys",
             "dest": "/etc/keystone/",
             "owner": "keystone:keystone",
