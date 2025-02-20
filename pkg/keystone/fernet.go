@@ -16,15 +16,22 @@ limitations under the License.
 package keystone
 
 import (
+	"crypto/rand"
 	"encoding/base64"
-	"math/rand"
+
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-// GenerateFernetKey -
+// GenerateFernetKey - returns a base64-encoded, 32-byte key using cryptographically secure random generation
 func GenerateFernetKey() string {
+	logger := log.Log.WithName("GenerateFernetKey")
+
 	data := make([]byte, 32)
-	for i := 0; i < 32; i++ {
-		data[i] = byte(rand.Intn(10))
+	_, err := rand.Read(data)
+	if err != nil {
+		logger.Error(err, "failed to read random bytes for Fernet key generation")
+		return ""
 	}
+
 	return base64.StdEncoding.EncodeToString(data)
 }

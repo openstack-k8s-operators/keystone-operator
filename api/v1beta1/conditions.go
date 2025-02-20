@@ -111,4 +111,7 @@ const (
 
 	// KeystoneServiceOSUserReadyErrorMessage
 	KeystoneServiceOSUserReadyErrorMessage = "Keystone Service user error occured %s"
+
+	// KeystoneNetworkAttachmentsReadyErrorMessage
+	KeystoneNetworkAttachmentsReadyErrorMessage = "NetworkAttachments error occurred; not all pods have interfaces with IPs as configured in NetworkAttachments: %s"
 )
