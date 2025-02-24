@@ -109,7 +109,7 @@ func (r *KeystoneAPI) ValidateCreate() (admission.Warnings, error) {
 		}
 	}
 
-	if err := r.Spec.ValidateCreate(basePath); err != nil {
+	if err := r.Spec.ValidateCreate(basePath, r.Namespace); err != nil {
 		allErrs = append(allErrs, err...)
 	}
 
@@ -122,16 +122,23 @@ func (r *KeystoneAPI) ValidateCreate() (admission.Warnings, error) {
 
 // ValidateCreate - Exported function wrapping non-exported validate functions,
 // this function can be called externally to validate an KeystoneAPI spec.
-func (spec *KeystoneAPISpec) ValidateCreate(basePath *field.Path) field.ErrorList {
-	return spec.KeystoneAPISpecCore.ValidateCreate(basePath)
+func (spec *KeystoneAPISpec) ValidateCreate(basePath *field.Path, namespace string) field.ErrorList {
+	return spec.KeystoneAPISpecCore.ValidateCreate(basePath, namespace)
 }
 
-func (spec *KeystoneAPISpecCore) ValidateCreate(basePath *field.Path) field.ErrorList {
+func (spec *KeystoneAPISpecCore) ValidateCreate(basePath *field.Path, namespace string) field.ErrorList {
 	var allErrs field.ErrorList
 
 	// validate the service override key is valid
 	allErrs = append(allErrs, service.ValidateRoutedOverrides(basePath.Child("override").Child("service"), spec.Override.Service)...)
 
+	// When a TopologyRef CR is referenced, fail if a different Namespace is
+	// referenced because is not supported
+	if spec.TopologyRef != nil {
+		if err := topologyv1.ValidateTopologyNamespace(spec.TopologyRef.Namespace, *basePath, namespace); err != nil {
+			allErrs = append(allErrs, err)
+		}
+	}
 	return allErrs
 }
 
@@ -147,15 +154,7 @@ func (r *KeystoneAPI) ValidateUpdate(old runtime.Object) (admission.Warnings, er
 	allErrs := field.ErrorList{}
 	basePath := field.NewPath("spec")
 
-	// When a TopologyRef CR is referenced, fail if a different Namespace is
-	// referenced because is not supported
-	if r.Spec.TopologyRef != nil {
-		if err := topologyv1.ValidateTopologyNamespace(r.Spec.TopologyRef.Namespace, *basePath, r.Namespace); err != nil {
-			allErrs = append(allErrs, err)
-		}
-	}
-
-	if err := r.Spec.ValidateUpdate(oldKeystoneAPI.Spec, basePath); err != nil {
+	if err := r.Spec.ValidateUpdate(oldKeystoneAPI.Spec, basePath, r.Namespace); err != nil {
 		allErrs = append(allErrs, err...)
 	}
 
@@ -168,15 +167,23 @@ func (r *KeystoneAPI) ValidateUpdate(old runtime.Object) (admission.Warnings, er
 
 // ValidateUpdate - Exported function wrapping non-exported validate functions,
 // this function can be called externally to validate an ironic spec.
-func (spec *KeystoneAPISpec) ValidateUpdate(old KeystoneAPISpec, basePath *field.Path) field.ErrorList {
-	return spec.KeystoneAPISpecCore.ValidateUpdate(old.KeystoneAPISpecCore, basePath)
+func (spec *KeystoneAPISpec) ValidateUpdate(old KeystoneAPISpec, basePath *field.Path, namespace string) field.ErrorList {
+	return spec.KeystoneAPISpecCore.ValidateUpdate(old.KeystoneAPISpecCore, basePath, namespace)
 }
 
-func (spec *KeystoneAPISpecCore) ValidateUpdate(_ KeystoneAPISpecCore, basePath *field.Path) field.ErrorList {
+func (spec *KeystoneAPISpecCore) ValidateUpdate(_ KeystoneAPISpecCore, basePath *field.Path, namespace string) field.ErrorList {
 	var allErrs field.ErrorList
 
 	// validate the service override key is valid
 	allErrs = append(allErrs, service.ValidateRoutedOverrides(basePath.Child("override").Child("service"), spec.Override.Service)...)
+
+	// When a TopologyRef CR is referenced, fail if a different Namespace is
+	// referenced because is not supported
+	if spec.TopologyRef != nil {
+		if err := topologyv1.ValidateTopologyNamespace(spec.TopologyRef.Namespace, *basePath, namespace); err != nil {
+			allErrs = append(allErrs, err)
+		}
+	}
 
 	return allErrs
 }
