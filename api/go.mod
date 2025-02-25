@@ -8,7 +8,7 @@ require (
 	github.com/gophercloud/gophercloud v1.14.1
 	github.com/onsi/gomega v1.34.1
 	github.com/openstack-k8s-operators/infra-operator/apis v0.5.1-0.20250218115938-ae95bdfefded
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.5.1-0.20250211124440-b44f6585b825
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.5.1-0.20250224130558-eb5a5d85bfdb
 	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.5.1-0.20250211124440-b44f6585b825
 	github.com/openstack-k8s-operators/lib-common/modules/test v0.5.1-0.20250211124440-b44f6585b825
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
