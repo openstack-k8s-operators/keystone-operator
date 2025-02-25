@@ -1,0 +1,14 @@
+---
+- project:
+    name: openstack-k8s-operators/keystone-operator
+    github-check:
+      jobs:
+        - openstack-k8s-operators-content-provider
+        - keystone-operator-kuttl:
+            dependencies:
+              - openstack-k8s-operators-content-provider
+            voting: false
+        - keystone-operator-tempest:
+            dependencies:
+              - openstack-k8s-operators-content-provider
+            voting: false
