@@ -1066,10 +1066,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 		instance.Spec.TopologyRef,
 		instance.GetLastAppliedTopologyRef(),
 		instance.Name,
-		labels.GetSingleLabelSelector(
-			common.ComponentSelector,
-			keystone.ServiceName,
-		),
+		labels.GetLabelSelector(serviceLabels),
 	)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
