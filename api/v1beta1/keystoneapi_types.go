@@ -19,8 +19,8 @@ package v1beta1
 import (
 	"fmt"
 
-	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
+	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/tls"
@@ -162,8 +162,9 @@ type KeystoneAPISpecCore struct {
 	DefaultConfigOverwrite map[string]string `json:"defaultConfigOverwrite,omitempty"`
 
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default={processNumber: 3}
 	// HttpdCustomization - customize the httpd service
-	HttpdCustomization HttpdCustomization `json:"httpdCustomization,omitempty"`
+	HttpdCustomization HttpdCustomization `json:"httpdCustomization"`
 
 	// +kubebuilder:validation:Optional
 	// Resources - Compute Resources required by this service (Limits/Requests).
