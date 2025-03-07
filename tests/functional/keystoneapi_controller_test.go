@@ -1500,6 +1500,7 @@ var _ = Describe("Keystone controller", func() {
 		It("check topology has been applied", func() {
 			Eventually(func(g Gomega) {
 				keystoneAPI := GetKeystoneAPI(keystoneAPIName)
+				g.Expect(keystoneAPI.Status.LastAppliedTopology).ToNot(BeNil())
 				g.Expect(keystoneAPI.Status.LastAppliedTopology.Name).To(Equal(keystoneAPITopologies[0].Name))
 			}, timeout, interval).Should(Succeed())
 		})
@@ -1518,6 +1519,7 @@ var _ = Describe("Keystone controller", func() {
 
 			Eventually(func(g Gomega) {
 				keystoneAPI := GetKeystoneAPI(keystoneAPIName)
+				g.Expect(keystoneAPI.Status.LastAppliedTopology).ToNot(BeNil())
 				g.Expect(keystoneAPI.Status.LastAppliedTopology.Name).To(Equal(keystoneAPITopologies[1].Name))
 			}, timeout, interval).Should(Succeed())
 		})
