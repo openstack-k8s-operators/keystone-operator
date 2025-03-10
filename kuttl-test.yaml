@@ -6,16 +6,14 @@
 # ASSUMPTIONS:
 #
 # 1. Latest version of kuttl is installed at /usr/local/bin/kubectl-kuttl
-#    - wget https://github.com/kudobuilder/kuttl/releases/download/v0.11.1/kubectl-kuttl_0.11.1_linux_x86_64
-#    - mv kubectl-kuttl_0.11.1_linux_x86_64 /usr/local/bin/kubectl-kuttl
-#    - chmod 755 /usr/local/bin/kubectl-kuttl
 # 2. An OCP 4.10+ CRC cluster with Podified Operators has been deployed
 # 3. CLI user has access to $KUBECONFIG
 
 apiVersion: kuttl.dev/v1beta1
 kind: TestSuite
-reportFormat: JSON
-reportName: kuttl-test-keystone
+reportFormat: xml
+reportName: kuttl-report-keystone
+reportGranularity: test
 timeout: 800
 namespace: keystone-kuttl-tests
 parallel: 1
