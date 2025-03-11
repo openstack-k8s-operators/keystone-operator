@@ -80,12 +80,8 @@ github.com/openshift/api v0.0.0-20240830023148-b7d0481c9094 h1:J1wuGhVxpsHykZBa6
 github.com/openshift/api v0.0.0-20240830023148-b7d0481c9094/go.mod h1:CxgbWAlvu2iQB0UmKTtRu1YfepRg1/vJ64n2DlIEVz4=
 github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20250328101744-699b0b8f418d h1:uOzodTDSnTlh2tIHxnkX55LEWb7fQfW1Ad5oqJVbe94=
 github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20250328101744-699b0b8f418d/go.mod h1:n5DV/lGE9DHryAJ+JLJSgUXI2QHTj+aN4KoeSNC3PfU=
-github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20250324161140-e9964a1b2266 h1:wOX6iYBspx1vc9eXfW65ynDLh8oBwwwRfEfZ7G8xyR4=
-github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20250324161140-e9964a1b2266/go.mod h1:1CtBP0MQffdjE6buOv5jP2rB3+h7WH0a11lcyrpmxOk=
 github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20250324161140-e9964a1b2266 h1:YpJtUjf/CX48D1qteG33EQCe0o5wXae2FtSn/H/Mi28=
 github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20250324161140-e9964a1b2266/go.mod h1:fesgTbs2j30Fhw2hebXkPgbeAIqG0Yk2oaeOklAInZg=
-github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20250324161140-e9964a1b2266 h1:TIkLc7L4NaByud0qnlVGouRgDoVQgwxufayPKduzcJ0=
-github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20250324161140-e9964a1b2266/go.mod h1:oKvVb28i6wwBR5uQO2B2KMzZnCFTPCUCj31c5Zvz2lo=
 github.com/openstack-k8s-operators/mariadb-operator/api v0.5.0 h1:XBx1TuyKhgtWAigYVcdqTUzIwWRYHN63pfa0zxHB12M=
 github.com/openstack-k8s-operators/mariadb-operator/api v0.5.0/go.mod h1:Uyc8m+72l3rVm6jKb8FRUrQbjMWyifc5m0K+Ge0QV80=
 github.com/openstack-k8s-operators/rabbitmq-cluster-operator/v2 v2.6.1-0.20241017142550-a3524acedd49 h1:/7SnnHfGCH/dwuZFNUx54zw4cnwv2w6hjONq16aoowM=
@@ -110,6 +106,10 @@ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
+github.com/stuggi/lib-common/modules/common v0.0.0-20250401094632-305e4285fb97 h1:VML4j+pVZ8/k+ZaxnL2sDAOfxkL8Y4/CtQRO1d4QVIs=
+github.com/stuggi/lib-common/modules/common v0.0.0-20250401094632-305e4285fb97/go.mod h1:1CtBP0MQffdjE6buOv5jP2rB3+h7WH0a11lcyrpmxOk=
+github.com/stuggi/lib-common/modules/test v0.0.0-20250401094632-305e4285fb97 h1:F649MpMcOztNhoDNtxpKFT8vx5bNVbdT3o0dlvlG6wI=
+github.com/stuggi/lib-common/modules/test v0.0.0-20250401094632-305e4285fb97/go.mod h1:oKvVb28i6wwBR5uQO2B2KMzZnCFTPCUCj31c5Zvz2lo=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=

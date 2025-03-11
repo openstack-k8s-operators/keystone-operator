@@ -60,7 +60,7 @@ var (
 )
 
 const (
-	timeout = time.Second * 2
+	timeout = time.Second * 25 // must be > deployment DefaultPollTimeout
 
 	SecretName = "test-osp-secret"
 

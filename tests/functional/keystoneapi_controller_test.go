@@ -699,6 +699,140 @@ var _ = Describe("Keystone controller", func() {
 		})
 	})
 
+	When("Deployment rollout is progressing", func() {
+		BeforeEach(func() {
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, GetDefaultKeystoneAPISpec()))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
+				Namespace: namespace,
+			})
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+			th.SimulateDeploymentProgressing(deploymentName)
+		})
+
+		It("shows the deployment progressing in DeploymentReadyCondition", func() {
+			th.ExpectConditionWithDetails(
+				keystoneAPIName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.DeploymentReadyCondition,
+				corev1.ConditionFalse,
+				condition.RequestedReason,
+				fmt.Sprintf("%s - 1/2 replicas updated", keystoneAPIName.Name),
+			)
+			th.ExpectCondition(
+				keystoneAPIName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionFalse,
+			)
+		})
+
+		It("reaches Ready when deployment rollout finished", func() {
+			th.ExpectConditionWithDetails(
+				keystoneAPIName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.DeploymentReadyCondition,
+				corev1.ConditionFalse,
+				condition.RequestedReason,
+				fmt.Sprintf("%s - 1/2 replicas updated", keystoneAPIName.Name),
+			)
+			th.ExpectCondition(
+				keystoneAPIName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionFalse,
+			)
+
+			th.SimulateDeploymentReplicaReady(deploymentName)
+			th.ExpectCondition(
+				keystoneAPIName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.DeploymentReadyCondition,
+				corev1.ConditionTrue,
+			)
+
+			th.ExpectCondition(
+				keystoneAPIName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionTrue,
+			)
+		})
+	})
+
+	When("Deployment rollout hits ProgressDeadlineExceeded", func() {
+		BeforeEach(func() {
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, GetDefaultKeystoneAPISpec()))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
+				Namespace: namespace,
+			})
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+			th.SimulateDeploymentProgressDeadlineExceeded(deploymentName)
+		})
+
+		It("shows the deployment ProgressDeadlineExceeded in DeploymentReadyCondition", func() {
+			th.ExpectConditionWithDetails(
+				keystoneAPIName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.DeploymentReadyCondition,
+				corev1.ConditionFalse,
+				condition.ErrorReason,
+				fmt.Sprintf("%s ProgressDeadlineExceeded - ReplicaSet \"keystone-869cb5d44c\" has timed out progressing.", keystoneAPIName.Name),
+			)
+			th.ExpectCondition(
+				keystoneAPIName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionFalse,
+			)
+		})
+	})
+
 	When("A KeystoneAPI is created with service override", func() {
 		BeforeEach(func() {
 			spec := GetDefaultKeystoneAPISpec()
@@ -1864,7 +1998,27 @@ OIDCRedirectURI "{{ .KeystoneEndpointPublic }}/v3/auth/OS-FEDERATION/websso/open
 				keystoneapi.Spec.DatabaseAccount = newAccountName.Name
 				g.Expect(th.K8sClient.Update(ctx, keystoneapi)).Should(Succeed())
 			}, timeout, interval).Should(Succeed())
-
+			th.SimulateDeploymentReplicaReady(deploymentName)
+			th.ExpectCondition(
+				keystoneAPIName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.DeploymentReadyCondition,
+				corev1.ConditionTrue,
+			)
+		},
+		SwitchToNewAccount: func() {
+			Eventually(func(g Gomega) {
+				th.SimulateDeploymentReplicaReady(deploymentName)
+				keystoneapi := GetKeystoneAPI(keystoneAPIName)
+				g.Expect(keystoneapi.Status.Conditions.Get(condition.DeploymentReadyCondition).Status).To(
+					Equal(corev1.ConditionTrue))
+			}, timeout, interval).Should(Succeed())
+			th.ExpectCondition(
+				keystoneAPIName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionTrue,
+			)
 		},
 		// delete the keystone instance to exercise finalizer removal
 		DeleteCR: func() {
