@@ -12,8 +12,8 @@ require (
 	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.5.1-0.20250228124213-cd63da392f97
 	github.com/openstack-k8s-operators/lib-common/modules/test v0.5.1-0.20250228124213-cd63da392f97
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
-	k8s.io/api v0.29.14
-	k8s.io/apimachinery v0.29.14
+	k8s.io/api v0.29.15
+	k8s.io/apimachinery v0.29.15
 	sigs.k8s.io/controller-runtime v0.17.6
 )
 
@@ -60,9 +60,9 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.29.14 // indirect
-	k8s.io/client-go v0.29.14 // indirect
-	k8s.io/component-base v0.29.14 // indirect
+	k8s.io/apiextensions-apiserver v0.29.15 // indirect
+	k8s.io/client-go v0.29.15 // indirect
+	k8s.io/component-base v0.29.15 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240322212309-b815d8309940 // indirect
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8 // indirect
