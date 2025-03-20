@@ -34,6 +34,7 @@ import (
 
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
+	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	mariadb_test "github.com/openstack-k8s-operators/mariadb-operator/api/test/helpers"
 	mariadbv1 "github.com/openstack-k8s-operators/mariadb-operator/api/v1beta1"
@@ -59,6 +60,8 @@ var _ = Describe("Keystone controller", func() {
 	var memcachedSpec memcachedv1.MemcachedSpec
 	var cronJobName types.NamespacedName
 	var keystoneAPITopologies []types.NamespacedName
+	var acName types.NamespacedName
+	var serviceUserSecret types.NamespacedName
 
 	BeforeEach(func() {
 
@@ -2126,6 +2129,54 @@ OIDCRedirectURI "{{ .KeystoneEndpointPublic }}/v3/auth/OS-FEDERATION/websso/open
 	mariadbSuite.RunConfigHashSuite(func() string {
 		deployment := th.GetDeployment(deploymentName)
 		return GetEnvVarValue(deployment.Spec.Template.Spec.Containers[0].Env, "CONFIG_HASH", "")
+	})
+
+	When("an ApplicationCredential CR is created", func() {
+		BeforeEach(func() {
+			acName = types.NamespacedName{Name: "ac-barbican", Namespace: namespace}
+			serviceUserSecret = types.NamespacedName{Name: "osp-secret", Namespace: namespace}
+
+			th.CreateSecret(serviceUserSecret,
+				map[string][]byte{"BarbicanPassword": []byte("s3cr3t!")})
+
+			raw := map[string]interface{}{
+				"apiVersion": "keystone.openstack.org/v1beta1",
+				"kind":       "KeystoneApplicationCredential",
+				"metadata": map[string]interface{}{
+					"name":      acName.Name,
+					"namespace": acName.Namespace,
+				},
+				"spec": map[string]interface{}{
+					"userName":         "barbican",
+					"secret":           serviceUserSecret.Name,
+					"passwordSelector": "BarbicanPassword",
+					"expirationDays":   14,
+					"gracePeriodDays":  7,
+					"roles":            []string{"admin", "service"},
+					"unrestricted":     false,
+				},
+			}
+			th.CreateUnstructured(raw)
+		})
+
+		It("should be recognized by the controller, add a finalizer and initialize Conditions", func() {
+			Eventually(func(g Gomega) {
+				ac := &keystonev1.KeystoneApplicationCredential{}
+				g.Expect(k8sClient.Get(ctx, acName, ac)).To(Succeed())
+
+				g.Expect(ac.Finalizers).To(ContainElement("openstack.org/applicationcredential"))
+
+				g.Expect(ac.Status.Conditions).NotTo(BeNil())
+				found := false
+				for _, c := range ac.Status.Conditions {
+					if c.Type == keystonev1.KeystoneAPIReadyCondition {
+						found = true
+						break
+					}
+				}
+				g.Expect(found).To(BeTrue())
+			}, timeout, interval).Should(Succeed())
+		})
 	})
 
 })
