@@ -181,6 +181,14 @@ var _ = BeforeSuite(func() {
 	}).SetupWithManager(context.Background(), k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
+	err = (&controller.ApplicationCredentialReconciler{
+		Client:  k8sManager.GetClient(),
+		Scheme:  k8sManager.GetScheme(),
+		Kclient: kclient,
+		Log:     logger.WithName("ApplicationCredentialReconciler"),
+	}).SetupWithManager(k8sManager)
+	Expect(err).NotTo(HaveOccurred())
+
 	go func() {
 		defer GinkgoRecover()
 		err = k8sManager.Start(ctx)

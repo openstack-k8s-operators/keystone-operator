@@ -5,6 +5,7 @@ resources:
 - bases/keystone.openstack.org_keystoneapis.yaml
 - bases/keystone.openstack.org_keystoneservices.yaml
 - bases/keystone.openstack.org_keystoneendpoints.yaml
+- bases/keystone.openstack.org_keystoneapplicationcredentials.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patches:

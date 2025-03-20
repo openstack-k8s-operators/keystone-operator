@@ -5,6 +5,7 @@ go 1.24.4
 require (
 	github.com/go-logr/logr v1.4.3
 	github.com/google/uuid v1.6.0
+	github.com/gophercloud/gophercloud/v2 v2.8.0
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.7.7
 	github.com/onsi/ginkgo/v2 v2.27.3
 	github.com/onsi/gomega v1.39.0
@@ -52,7 +53,6 @@ require (
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20250403155104-27863c87afa6 // indirect
-	github.com/gophercloud/gophercloud/v2 v2.8.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect

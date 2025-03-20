@@ -34,12 +34,14 @@ import (
 
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
+	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	mariadb_test "github.com/openstack-k8s-operators/mariadb-operator/api/test/helpers"
 	mariadbv1 "github.com/openstack-k8s-operators/mariadb-operator/api/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -61,6 +63,8 @@ var _ = Describe("Keystone controller", func() {
 	var memcachedSpec memcachedv1.MemcachedSpec
 	var cronJobName types.NamespacedName
 	var keystoneAPITopologies []types.NamespacedName
+	var acName types.NamespacedName
+	var serviceUserSecret types.NamespacedName
 
 	BeforeEach(func() {
 
@@ -2449,6 +2453,226 @@ OIDCRedirectURI "{{ .KeystoneEndpointPublic }}/v3/auth/OS-FEDERATION/websso/open
 				err := k8sClient.Get(ctx, deploymentName, &appsv1.Deployment{})
 				return k8s_errors.IsNotFound(err)
 			}, timeout, interval).Should(BeTrue())
+		})
+	})
+
+	When("an ApplicationCredential CR is created", func() {
+		BeforeEach(func() {
+			acName = types.NamespacedName{Name: "ac-test-service", Namespace: namespace}
+			serviceUserSecret = types.NamespacedName{Name: "osp-secret", Namespace: namespace}
+
+			th.CreateSecret(serviceUserSecret,
+				map[string][]byte{"ServicePassword": []byte("service-password")})
+
+			raw := map[string]interface{}{
+				"apiVersion": "keystone.openstack.org/v1beta1",
+				"kind":       "KeystoneApplicationCredential",
+				"metadata": map[string]interface{}{
+					"name":      acName.Name,
+					"namespace": acName.Namespace,
+				},
+				"spec": map[string]interface{}{
+					"userName":         "test-service",
+					"secret":           serviceUserSecret.Name,
+					"passwordSelector": "ServicePassword",
+					"expirationDays":   14,
+					"gracePeriodDays":  7,
+					"roles":            []string{"admin", "service"},
+					"unrestricted":     false,
+				},
+			}
+			th.CreateUnstructured(raw)
+		})
+
+		It("should be recognized by the controller, add a finalizer and initialize Conditions", func() {
+			Eventually(func(g Gomega) {
+				ac := &keystonev1.KeystoneApplicationCredential{}
+				g.Expect(k8sClient.Get(ctx, acName, ac)).To(Succeed())
+
+				g.Expect(ac.Finalizers).To(ContainElement("openstack.org/applicationcredential"))
+
+				g.Expect(ac.Status.Conditions).NotTo(BeNil())
+				found := false
+				for _, c := range ac.Status.Conditions {
+					if c.Type == keystonev1.KeystoneAPIReadyCondition {
+						found = true
+						break
+					}
+				}
+				g.Expect(found).To(BeTrue())
+			}, timeout, interval).Should(Succeed())
+		})
+	})
+
+	When("a multiple ApplicationCredential CRs are created", func() {
+		It("should initialize properly with various configurations and handle missing KeystoneAPI", func() {
+			serviceUserSecret := types.NamespacedName{Name: "osp-secret", Namespace: namespace}
+			th.CreateSecret(serviceUserSecret, map[string][]byte{
+				"ServicePassword": []byte("service-password"),
+			})
+
+			basicACName := types.NamespacedName{Name: "ac-basic-config", Namespace: namespace}
+			CreateACWithSpec(basicACName, map[string]interface{}{
+				"userName":         "test-service",
+				"secret":           serviceUserSecret.Name,
+				"passwordSelector": "ServicePassword",
+				"expirationDays":   30,
+				"gracePeriodDays":  7,
+				"roles":            []string{"service"},
+				"unrestricted":     false,
+			})
+
+			rulesACName := types.NamespacedName{Name: "ac-with-rules", Namespace: namespace}
+			CreateACWithSpec(rulesACName, map[string]interface{}{
+				"userName":         "test-service",
+				"secret":           serviceUserSecret.Name,
+				"passwordSelector": "ServicePassword",
+				"expirationDays":   60,
+				"gracePeriodDays":  14,
+				"roles":            []string{"admin", "service"},
+				"unrestricted":     false,
+				"accessRules": []map[string]interface{}{
+					{
+						"service": "compute",
+						"path":    "/servers",
+						"method":  "GET",
+					},
+					{
+						"service": "image",
+						"path":    "/images",
+						"method":  "GET",
+					},
+				},
+			})
+
+			unrestrictedACName := types.NamespacedName{Name: "ac-unrestricted", Namespace: namespace}
+			CreateACWithSpec(unrestrictedACName, map[string]interface{}{
+				"userName":         "test-service",
+				"secret":           serviceUserSecret.Name,
+				"passwordSelector": "ServicePassword",
+				"expirationDays":   90,
+				"gracePeriodDays":  30,
+				"roles":            []string{"admin"},
+				"unrestricted":     true,
+			})
+
+			Eventually(func(g Gomega) {
+				basicAC := GetApplicationCredential(basicACName)
+				g.Expect(basicAC.Finalizers).To(ContainElement("openstack.org/applicationcredential"))
+				g.Expect(basicAC.Status.Conditions).NotTo(BeNil())
+				g.Expect(basicAC.Spec.ExpirationDays).To(Equal(30))
+				g.Expect(basicAC.Spec.GracePeriodDays).To(Equal(7))
+				g.Expect(basicAC.Spec.Roles).To(Equal([]string{"service"}))
+				g.Expect(basicAC.Spec.Unrestricted).To(BeFalse())
+
+				rulesAC := GetApplicationCredential(rulesACName)
+				g.Expect(rulesAC.Finalizers).To(ContainElement("openstack.org/applicationcredential"))
+				g.Expect(rulesAC.Status.Conditions).NotTo(BeNil())
+				g.Expect(rulesAC.Spec.AccessRules).To(HaveLen(2))
+				g.Expect(rulesAC.Spec.AccessRules[0].Service).To(Equal("compute"))
+				g.Expect(rulesAC.Spec.AccessRules[1].Service).To(Equal("image"))
+				g.Expect(rulesAC.Spec.Roles).To(ContainElements("admin", "service"))
+
+				unrestrictedAC := GetApplicationCredential(unrestrictedACName)
+				g.Expect(unrestrictedAC.Finalizers).To(ContainElement("openstack.org/applicationcredential"))
+				g.Expect(unrestrictedAC.Status.Conditions).NotTo(BeNil())
+				g.Expect(unrestrictedAC.Spec.Unrestricted).To(BeTrue())
+				g.Expect(unrestrictedAC.Spec.ExpirationDays).To(Equal(90))
+				g.Expect(unrestrictedAC.Spec.GracePeriodDays).To(Equal(30))
+
+				for _, acName := range []types.NamespacedName{basicACName, rulesACName, unrestrictedACName} {
+					ac := GetApplicationCredential(acName)
+					keystoneCondition := ac.Status.Conditions.Get(keystonev1.KeystoneAPIReadyCondition)
+					g.Expect(keystoneCondition).NotTo(BeNil())
+					g.Expect(keystoneCondition.Status).NotTo(Equal(corev1.ConditionTrue), "Should wait for KeystoneAPI")
+				}
+			}, timeout, interval).Should(Succeed())
+		})
+
+		It("should handle deletion with finalizer cleanup", func() {
+			serviceUserSecret := types.NamespacedName{Name: "osp-secret", Namespace: namespace}
+			th.CreateSecret(serviceUserSecret, map[string][]byte{
+				"ServicePassword": []byte("service-password"),
+			})
+
+			deleteACName := types.NamespacedName{Name: "ac-delete-test", Namespace: namespace}
+			CreateACWithSpec(deleteACName, map[string]interface{}{
+				"userName":         "test-service",
+				"secret":           serviceUserSecret.Name,
+				"passwordSelector": "ServicePassword",
+				"expirationDays":   30,
+				"gracePeriodDays":  7,
+				"roles":            []string{"service"},
+			})
+
+			Eventually(func(g Gomega) {
+				ac := GetApplicationCredential(deleteACName)
+				g.Expect(ac.Finalizers).To(ContainElement("openstack.org/applicationcredential"))
+			}, timeout, interval).Should(Succeed())
+
+			acInstance := GetApplicationCredential(deleteACName)
+			err := k8sClient.Delete(ctx, acInstance)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(func(g Gomega) {
+				ac := &keystonev1.KeystoneApplicationCredential{}
+				err := k8sClient.Get(ctx, deleteACName, ac)
+				if k8s_errors.IsNotFound(err) {
+					return
+				}
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(ac.DeletionTimestamp).NotTo(BeNil())
+			}, timeout, interval).Should(Succeed())
+		})
+
+		It("should validate expiration vs grace period constraints", func() {
+			serviceUserSecret := types.NamespacedName{Name: "osp-secret", Namespace: namespace}
+			th.CreateSecret(serviceUserSecret, map[string][]byte{
+				"ServicePassword": []byte("service-password"),
+			})
+
+			validACName := types.NamespacedName{Name: "ac-valid-periods", Namespace: namespace}
+			CreateACWithSpec(validACName, map[string]interface{}{
+				"userName":         "test-service",
+				"secret":           serviceUserSecret.Name,
+				"passwordSelector": "ServicePassword",
+				"expirationDays":   30,
+				"gracePeriodDays":  7,
+				"roles":            []string{"service"},
+			})
+
+			Eventually(func(g Gomega) {
+				ac := GetApplicationCredential(validACName)
+				g.Expect(ac.Spec.ExpirationDays).To(Equal(30))
+				g.Expect(ac.Spec.GracePeriodDays).To(Equal(7))
+				g.Expect(ac.Finalizers).To(ContainElement("openstack.org/applicationcredential"))
+			}, timeout, interval).Should(Succeed())
+
+			invalidACName := types.NamespacedName{Name: "ac-invalid-periods", Namespace: namespace}
+			invalidSpec := map[string]interface{}{
+				"userName":         "test-service",
+				"secret":           serviceUserSecret.Name,
+				"passwordSelector": "ServicePassword",
+				"expirationDays":   7,
+				"gracePeriodDays":  10,
+				"roles":            []string{"service"},
+			}
+
+			raw := map[string]interface{}{
+				"apiVersion": "keystone.openstack.org/v1beta1",
+				"kind":       "KeystoneApplicationCredential",
+				"metadata": map[string]interface{}{
+					"name":      invalidACName.Name,
+					"namespace": invalidACName.Namespace,
+				},
+				"spec": invalidSpec,
+			}
+
+			obj := &unstructured.Unstructured{}
+			obj.SetUnstructuredContent(raw)
+			err := k8sClient.Create(ctx, obj)
+			Expect(err).To(HaveOccurred(), "Expected creation to fail due to validation constraint")
+			Expect(err.Error()).To(ContainSubstring("gracePeriodDays must be smaller than expirationDays"))
 		})
 	})
 
