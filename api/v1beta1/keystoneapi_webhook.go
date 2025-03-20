@@ -33,7 +33,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
 )
 
 // KeystoneAPIDefaults -
@@ -101,14 +100,6 @@ func (r *KeystoneAPI) ValidateCreate() (admission.Warnings, error) {
 	allErrs := field.ErrorList{}
 	basePath := field.NewPath("spec")
 
-	// When a TopologyRef CR is referenced, fail if a different Namespace is
-	// referenced because is not supported
-	if r.Spec.TopologyRef != nil {
-		if err := topologyv1.ValidateTopologyNamespace(r.Spec.TopologyRef.Namespace, *basePath, r.Namespace); err != nil {
-			allErrs = append(allErrs, err)
-		}
-	}
-
 	if err := r.Spec.ValidateCreate(basePath, r.Namespace); err != nil {
 		allErrs = append(allErrs, err...)
 	}
@@ -134,11 +125,8 @@ func (spec *KeystoneAPISpecCore) ValidateCreate(basePath *field.Path, namespace 
 
 	// When a TopologyRef CR is referenced, fail if a different Namespace is
 	// referenced because is not supported
-	if spec.TopologyRef != nil {
-		if err := topologyv1.ValidateTopologyNamespace(spec.TopologyRef.Namespace, *basePath, namespace); err != nil {
-			allErrs = append(allErrs, err)
-		}
-	}
+	allErrs = append(allErrs, spec.ValidateTopology(basePath, namespace)...)
+
 	return allErrs
 }
 
@@ -179,11 +167,7 @@ func (spec *KeystoneAPISpecCore) ValidateUpdate(_ KeystoneAPISpecCore, basePath 
 
 	// When a TopologyRef CR is referenced, fail if a different Namespace is
 	// referenced because is not supported
-	if spec.TopologyRef != nil {
-		if err := topologyv1.ValidateTopologyNamespace(spec.TopologyRef.Namespace, *basePath, namespace); err != nil {
-			allErrs = append(allErrs, err)
-		}
-	}
+	allErrs = append(allErrs, spec.ValidateTopology(basePath, namespace)...)
 
 	return allErrs
 }
