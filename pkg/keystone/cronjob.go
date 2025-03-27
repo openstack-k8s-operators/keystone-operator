@@ -26,7 +26,7 @@ import (
 
 const (
 	// TrustFlushCommand -
-	TrustFlushCommand = "/usr/local/bin/kolla_set_configs && keystone-manage trust_flush"
+	TrustFlushCommand = "keystone-manage trust_flush"
 )
 
 // CronJob func
@@ -35,7 +35,6 @@ func CronJob(
 	labels map[string]string,
 	annotations map[string]string,
 ) *batchv1.CronJob {
-	runAsUser := int64(0)
 
 	args := []string{"-c", TrustFlushCommand + instance.Spec.TrustFlushArgs}
 
@@ -47,12 +46,12 @@ func CronJob(
 
 	// create Volume and VolumeMounts
 	volumes := getVolumes(instance)
-	volumeMounts := getVolumeMounts()
+	volumeMounts := getCronJobVolumeMounts()
 
 	// add CA cert if defined
 	if instance.Spec.TLS.CaBundleSecretName != "" {
 		volumes = append(getVolumes(instance), instance.Spec.TLS.CreateVolume())
-		volumeMounts = append(getVolumeMounts(), instance.Spec.TLS.CreateVolumeMounts(nil)...)
+		volumeMounts = append(getCronJobVolumeMounts(), instance.Spec.TLS.CreateVolumeMounts(nil)...)
 	}
 
 	cronjob := &batchv1.CronJob{
@@ -81,12 +80,10 @@ func CronJob(
 									Command: []string{
 										"/bin/bash",
 									},
-									Args:         args,
-									Env:          env.MergeEnvs([]corev1.EnvVar{}, envVars),
-									VolumeMounts: volumeMounts,
-									SecurityContext: &corev1.SecurityContext{
-										RunAsUser: &runAsUser,
-									},
+									Args:            args,
+									Env:             env.MergeEnvs([]corev1.EnvVar{}, envVars),
+									VolumeMounts:    volumeMounts,
+									SecurityContext: BaseSecurityContext(),
 								},
 							},
 							Volumes:            volumes,
