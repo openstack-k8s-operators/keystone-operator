@@ -16,19 +16,19 @@
         {
             "source": "/var/lib/config-data/default/httpd.conf",
             "dest": "/etc/httpd/conf/httpd.conf",
-            "owner": "apache",
+            "owner": "keystone:apache",
             "perm": "0644"
         },
         {
             "source": "/var/lib/config-data/default/ssl.conf",
             "dest": "/etc/httpd/conf.d/ssl.conf",
-            "owner": "apache",
+            "owner": "keystone:apache",
             "perm": "0644"
         },
         {
             "source": "/var/lib/config-data/tls/certs/*",
             "dest": "/etc/pki/tls/certs/",
-            "owner": "root",
+            "owner": "keystone:apache",
             "perm": "0640",
             "optional": true,
             "merge": true
@@ -36,7 +36,7 @@
         {
             "source": "/var/lib/config-data/tls/private/*",
             "dest": "/etc/pki/tls/private/",
-            "owner": "root",
+            "owner": "keystone:apache",
             "perm": "0600",
             "optional": true,
             "merge": true
@@ -62,9 +62,21 @@
         {
             "source": "/var/lib/config-data/default/httpd_custom_*",
             "dest": "/etc/httpd/conf/",
-            "owner": "apache",
+            "owner": "keystone:apache",
             "perm": "0444",
             "optional": true
+        }
+    ],
+    "permissions": [
+        {
+            "path": "/etc/httpd",
+            "owner": "keystone:apache",
+            "recurse": true
+        },
+        {
+            "path": "/var/log/keystone",
+            "owner": "keystone:apache",
+            "recurse": true
         }
     ]
 }

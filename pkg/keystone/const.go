@@ -28,7 +28,9 @@ const (
 	KeystonePublicPort int32 = 5000
 	// KeystoneInternalPort -
 	KeystoneInternalPort int32 = 5000
-
+	// Keystone UID based on kolla
+	// https://github.com/openstack/kolla/blob/master/kolla/common/users.py
+	KeystoneUID = 42425
 	// DefaultFernetMaxActiveKeys -
 	DefaultFernetMaxActiveKeys = 5
 	// DefaultFernetRotationDays -
