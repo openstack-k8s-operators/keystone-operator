@@ -93,6 +93,12 @@ spec:
                   But can also be used to add additional files. Those get added to the service config dir in /etc/<service> .
                   TODO: -> implement
                 type: object
+              domainConfigSecret:
+                default: ""
+                description: |-
+                  The OpenShift secret that stores the domain configuration.
+                  These will be mounted to /etc/keystone/domains
+                type: string
               enableSecureRBAC:
                 default: true
                 description: EnableSecureRBAC - Enable Consistent and Secure RBAC

@@ -21,11 +21,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+var (
+	scriptsVolumeDefaultMode int32 = 0755
+	config0640AccessMode     int32 = 0640
+)
+
 // getVolumes - service volumes
 func getVolumes(instance *keystonev1.KeystoneAPI) []corev1.Volume {
 	name := instance.Name
-	var scriptsVolumeDefaultMode int32 = 0755
-	var config0640AccessMode int32 = 0640
 
 	fernetKeys := []corev1.KeyToPath{}
 	numberKeys := int(*instance.Spec.FernetMaxActiveKeys)
@@ -40,7 +43,7 @@ func getVolumes(instance *keystonev1.KeystoneAPI) []corev1.Volume {
 		)
 	}
 
-	return []corev1.Volume{
+	vm := []corev1.Volume{
 		{
 			Name: "scripts",
 			VolumeSource: corev1.VolumeSource{
@@ -88,11 +91,14 @@ func getVolumes(instance *keystonev1.KeystoneAPI) []corev1.Volume {
 		},
 	}
 
+	domainConfig, _ := GetDomainSecretVolumes(instance.Spec.DomainConfigSecret)
+	vm = append(vm, domainConfig...)
+	return vm
 }
 
 // getVolumeMounts - general VolumeMounts
-func getVolumeMounts() []corev1.VolumeMount {
-	return []corev1.VolumeMount{
+func getVolumeMounts(instance *keystonev1.KeystoneAPI) []corev1.VolumeMount {
+	vm := []corev1.VolumeMount{
 		{
 			Name:      "scripts",
 			MountPath: "/usr/local/bin/container-scripts",
@@ -120,4 +126,35 @@ func getVolumeMounts() []corev1.VolumeMount {
 			Name:      "credential-keys",
 		},
 	}
+
+	_, domainConfig := GetDomainSecretVolumes(instance.Spec.DomainConfigSecret)
+	vm = append(vm, domainConfig...)
+	return vm
+}
+
+// GetDomainSecretVolumes - Returns a potentially empty list, with a volume containing domain configuration which can be used for domain-specific LDAP backends
+func GetDomainSecretVolumes(secretName string) ([]corev1.Volume, []corev1.VolumeMount) {
+	secretVolumes := []corev1.Volume{}
+	secretMounts := []corev1.VolumeMount{}
+
+	if secretName != "" {
+		secretVol := corev1.Volume{
+			Name: secretName,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName:  secretName,
+					DefaultMode: &config0640AccessMode,
+				},
+			},
+		}
+		secretMount := corev1.VolumeMount{
+			Name:      secretName,
+			MountPath: "/etc/keystone/domains",
+			ReadOnly:  true,
+		}
+		secretVolumes = append(secretVolumes, secretVol)
+		secretMounts = append(secretMounts, secretMount)
+	}
+
+	return secretVolumes, secretMounts
 }
