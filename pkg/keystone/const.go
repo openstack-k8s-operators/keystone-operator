@@ -35,4 +35,6 @@ const (
 	DefaultFernetMaxActiveKeys = 5
 	// DefaultFernetRotationDays -
 	DefaultFernetRotationDays = 1
+	// DBSyncCommand -
+	DBSyncCommand = "keystone-manage db_sync"
 )

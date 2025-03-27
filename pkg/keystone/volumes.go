@@ -144,3 +144,21 @@ func getCronJobVolumeMounts() []corev1.VolumeMount {
 		},
 	}
 }
+
+// getDBSyncVolumeMounts - cronjob volumeMounts
+func getDBSyncVolumeMounts() []corev1.VolumeMount {
+	return []corev1.VolumeMount{
+		{
+			Name:      "config-data",
+			MountPath: "/etc/keystone/keystone.conf",
+			SubPath:   "keystone.conf",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "config-data",
+			MountPath: "/etc/my.cnf",
+			SubPath:   "my.cnf",
+			ReadOnly:  true,
+		},
+	}
+}

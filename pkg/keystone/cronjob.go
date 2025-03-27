@@ -83,7 +83,7 @@ func CronJob(
 									Args:            args,
 									Env:             env.MergeEnvs([]corev1.EnvVar{}, envVars),
 									VolumeMounts:    volumeMounts,
-									SecurityContext: BaseSecurityContext(),
+									SecurityContext: baseSecurityContext(),
 								},
 							},
 							Volumes:            volumes,

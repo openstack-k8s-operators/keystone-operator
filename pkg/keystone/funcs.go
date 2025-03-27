@@ -5,9 +5,9 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-// BaseSecurityContext - currently used to make sure we don't run cronJob and Log
+// baseSecurityContext - currently used to make sure we don't run cronJob and Log
 // Pods as root user, and we drop privileges and Capabilities we don't need
-func BaseSecurityContext() *corev1.SecurityContext {
+func baseSecurityContext() *corev1.SecurityContext {
 	return &corev1.SecurityContext{
 		RunAsUser:                ptr.To(KeystoneUID),
 		RunAsGroup:               ptr.To(KeystoneUID),
@@ -16,6 +16,20 @@ func BaseSecurityContext() *corev1.SecurityContext {
 		Capabilities: &corev1.Capabilities{
 			Drop: []corev1.Capability{
 				"ALL",
+			},
+		},
+	}
+}
+
+// dbSyncSecurityContext - currently used to make sure we don't run db-sync as
+// root user
+func dbSyncSecurityContext() *corev1.SecurityContext {
+	return &corev1.SecurityContext{
+		RunAsUser:  ptr.To(KeystoneUID),
+		RunAsGroup: ptr.To(KeystoneUID),
+		Capabilities: &corev1.Capabilities{
+			Drop: []corev1.Capability{
+				"MKNOD",
 			},
 		},
 	}

@@ -25,18 +25,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	// DBSyncCommand -
-	DBSyncCommand = "/usr/local/bin/kolla_set_configs && /usr/local/bin/kolla_start"
-)
-
 // DbSyncJob func
 func DbSyncJob(
 	instance *keystonev1.KeystoneAPI,
 	labels map[string]string,
 	annotations map[string]string,
 ) *batchv1.Job {
-	runAsUser := int64(0)
 
 	args := []string{"-c", DBSyncCommand}
 
@@ -46,13 +40,13 @@ func DbSyncJob(
 
 	// create Volume and VolumeMounts
 	volumes := getVolumes(instance)
-	volumeMounts := getVolumeMounts()
+	volumeMounts := getDBSyncVolumeMounts()
 
 	// add CA cert if defined
 	if instance.Spec.TLS.CaBundleSecretName != "" {
 		//TODO(afaranha): Why not reuse the 'volumes'?
 		volumes = append(getVolumes(instance), instance.Spec.TLS.CreateVolume())
-		volumeMounts = append(getVolumeMounts(), instance.Spec.TLS.CreateVolumeMounts(nil)...)
+		volumeMounts = append(getDBSyncVolumeMounts(), instance.Spec.TLS.CreateVolumeMounts(nil)...)
 	}
 
 	job := &batchv1.Job{
@@ -75,13 +69,11 @@ func DbSyncJob(
 							Command: []string{
 								"/bin/bash",
 							},
-							Args:  args,
-							Image: instance.Spec.ContainerImage,
-							SecurityContext: &corev1.SecurityContext{
-								RunAsUser: &runAsUser,
-							},
-							Env:          env.MergeEnvs([]corev1.EnvVar{}, envVars),
-							VolumeMounts: volumeMounts,
+							Args:            args,
+							Image:           instance.Spec.ContainerImage,
+							SecurityContext: dbSyncSecurityContext(),
+							Env:             env.MergeEnvs([]corev1.EnvVar{}, envVars),
+							VolumeMounts:    volumeMounts,
 						},
 					},
 					Volumes: volumes,
