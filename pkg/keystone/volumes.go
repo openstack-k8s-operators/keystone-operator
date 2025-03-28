@@ -25,7 +25,7 @@ import (
 func getVolumes(instance *keystonev1.KeystoneAPI) []corev1.Volume {
 	name := instance.Name
 	var scriptsVolumeDefaultMode int32 = 0755
-	var config0640AccessMode int32 = 0640
+	var config0640AccessMode int32 = 0644
 
 	fernetKeys := []corev1.KeyToPath{}
 	numberKeys := int(*instance.Spec.FernetMaxActiveKeys)
@@ -118,6 +118,47 @@ func getVolumeMounts() []corev1.VolumeMount {
 			MountPath: "/var/lib/credential-keys",
 			ReadOnly:  true,
 			Name:      "credential-keys",
+		},
+	}
+}
+
+// getCronJobVolumeMounts - cronjob volumeMounts
+func getCronJobVolumeMounts() []corev1.VolumeMount {
+	return []corev1.VolumeMount{
+		{
+			Name:      "config-data",
+			MountPath: "/etc/keystone/keystone.conf",
+			SubPath:   "keystone.conf",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "config-data",
+			MountPath: "/etc/my.cnf",
+			SubPath:   "my.cnf",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "fernet-keys",
+			MountPath: "/etc/keystone/fernet-keys",
+			ReadOnly:  true,
+		},
+	}
+}
+
+// getDBSyncVolumeMounts - cronjob volumeMounts
+func getDBSyncVolumeMounts() []corev1.VolumeMount {
+	return []corev1.VolumeMount{
+		{
+			Name:      "config-data",
+			MountPath: "/etc/keystone/keystone.conf",
+			SubPath:   "keystone.conf",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "config-data",
+			MountPath: "/etc/my.cnf",
+			SubPath:   "my.cnf",
+			ReadOnly:  true,
 		},
 	}
 }

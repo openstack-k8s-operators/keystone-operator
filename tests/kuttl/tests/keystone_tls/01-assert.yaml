@@ -34,7 +34,7 @@ spec:
       containers:
       - args:
         - -c
-        - /usr/local/bin/kolla_set_configs && /usr/local/bin/kolla_start
+        - /usr/local/bin/kolla_start
         volumeMounts:
         - mountPath: /usr/local/bin/container-scripts
           name: scripts
@@ -78,7 +78,7 @@ spec:
           secretName: keystone-scripts
       - name: config-data
         secret:
-          defaultMode: 416
+          defaultMode: 420
           secretName: keystone-config-data
       - name: fernet-keys
         secret:
