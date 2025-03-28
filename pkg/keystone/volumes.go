@@ -25,7 +25,7 @@ import (
 func getVolumes(instance *keystonev1.KeystoneAPI) []corev1.Volume {
 	name := instance.Name
 	var scriptsVolumeDefaultMode int32 = 0755
-	var config0640AccessMode int32 = 0640
+	var config0640AccessMode int32 = 0644
 
 	fernetKeys := []corev1.KeyToPath{}
 	numberKeys := int(*instance.Spec.FernetMaxActiveKeys)

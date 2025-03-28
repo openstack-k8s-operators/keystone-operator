@@ -78,7 +78,7 @@ spec:
           secretName: keystone-scripts
       - name: config-data
         secret:
-          defaultMode: 416
+          defaultMode: 420
           secretName: keystone-config-data
       - name: fernet-keys
         secret:

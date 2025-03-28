@@ -34,3 +34,16 @@ func dbSyncSecurityContext() *corev1.SecurityContext {
 		},
 	}
 }
+
+// httpdSecurityContext -
+func httpdSecurityContext() *corev1.SecurityContext {
+	return &corev1.SecurityContext{
+		Capabilities: &corev1.Capabilities{
+			Drop: []corev1.Capability{
+				"MKNOD",
+			},
+		},
+		RunAsUser:  ptr.To(KeystoneUID),
+		RunAsGroup: ptr.To(KeystoneUID),
+	}
+}
