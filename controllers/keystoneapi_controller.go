@@ -1128,6 +1128,28 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 			condition.DeploymentReadyRunningMessage))
 		return ctrlResult, nil
 	}
+
+	// Check the rollout status and reflect condition in case of
+	// an ongoing deployment update
+	if !depl.RolloutComplete() && depl.GetRolloutStatus() != nil {
+		switch *depl.GetRolloutStatus() {
+		case deployment.DeploymentPollProgressing:
+			instance.Status.Conditions.Set(condition.FalseCondition(
+				condition.DeploymentReadyCondition,
+				condition.RequestedReason,
+				condition.SeverityInfo,
+				depl.GetRolloutMessage()))
+		case deployment.DeploymentPollProgressDeadlineExceeded:
+			instance.Status.Conditions.Set(condition.FalseCondition(
+				condition.DeploymentReadyCondition,
+				condition.ErrorReason,
+				condition.SeverityWarning,
+				depl.GetRolloutMessage()))
+		}
+
+		return ctrl.Result{}, nil
+	}
+
 	instance.Status.ReadyCount = depl.GetDeployment().Status.ReadyReplicas
 
 	// verify if network attachment matches expectations
