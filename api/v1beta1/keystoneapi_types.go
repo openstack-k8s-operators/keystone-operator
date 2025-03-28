@@ -167,6 +167,12 @@ type KeystoneAPISpecCore struct {
 	// HttpdCustomization - customize the httpd service
 	HttpdCustomization HttpdCustomization `json:"httpdCustomization"`
 
+        // +kubebuilder:validation:Optional
+	// +kubebuilder:default=""
+        // The OpenShift secret that stores the domain configuration.
+        // These will be mounted to /etc/keystone/domains
+        DomainConfigSecret string `json:"domainConfigSecret"`
+
 	// +kubebuilder:validation:Optional
 	// Resources - Compute Resources required by this service (Limits/Requests).
 	// https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
