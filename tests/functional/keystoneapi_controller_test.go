@@ -31,6 +31,7 @@ import (
 	. "github.com/openstack-k8s-operators/lib-common/modules/common/test/helpers"
 
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
+	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	mariadb_test "github.com/openstack-k8s-operators/mariadb-operator/api/test/helpers"
 	mariadbv1 "github.com/openstack-k8s-operators/mariadb-operator/api/v1beta1"
@@ -1454,16 +1455,28 @@ var _ = Describe("Keystone controller", func() {
 	})
 
 	When("Topology is referenced", func() {
+		var topologyRef, topologyRefAlt *topologyv1.TopoRef
 		BeforeEach(func() {
-			// Build the topology Spec
-			topologySpec := GetSampleTopologySpec()
+
+			// Define the two topology references used in this test
+			topologyRef = &topologyv1.TopoRef{
+				Name:      keystoneAPITopologies[0].Name,
+				Namespace: keystoneAPITopologies[0].Namespace,
+			}
+			topologyRefAlt = &topologyv1.TopoRef{
+				Name:      keystoneAPITopologies[1].Name,
+				Namespace: keystoneAPITopologies[1].Namespace,
+			}
+
 			// Create Test Topologies
 			for _, t := range keystoneAPITopologies {
+				// Build the topology Spec
+				topologySpec, _ := GetSampleTopologySpec(t.Name)
 				CreateTopology(t, topologySpec)
 			}
 			spec := GetDefaultKeystoneAPISpec()
 			spec["topologyRef"] = map[string]interface{}{
-				"name": keystoneAPITopologies[0].Name,
+				"name": topologyRef.Name,
 			}
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
@@ -1499,28 +1512,55 @@ var _ = Describe("Keystone controller", func() {
 
 		It("check topology has been applied", func() {
 			Eventually(func(g Gomega) {
+				tp := GetTopology(types.NamespacedName{
+					Name:      topologyRef.Name,
+					Namespace: topologyRef.Namespace,
+				})
+				finalizers := tp.GetFinalizers()
+				g.Expect(finalizers).To(HaveLen(1))
 				keystoneAPI := GetKeystoneAPI(keystoneAPIName)
 				g.Expect(keystoneAPI.Status.LastAppliedTopology).ToNot(BeNil())
-				g.Expect(keystoneAPI.Status.LastAppliedTopology.Name).To(Equal(keystoneAPITopologies[0].Name))
+				g.Expect(keystoneAPI.Status.LastAppliedTopology).To(Equal(topologyRef))
+				g.Expect(finalizers).To(ContainElement(
+					fmt.Sprintf("openstack.org/keystoneapi-%s", keystoneAPIName.Name)))
 			}, timeout, interval).Should(Succeed())
 		})
 		It("sets topology in resource specs", func() {
 			Eventually(func(g Gomega) {
-				g.Expect(th.GetDeployment(deploymentName).Spec.Template.Spec.TopologySpreadConstraints).ToNot(BeNil())
+				_, topologySpecObj := GetSampleTopologySpec(topologyRef.Name)
 				g.Expect(th.GetDeployment(deploymentName).Spec.Template.Spec.Affinity).To(BeNil())
+				g.Expect(th.GetDeployment(deploymentName).Spec.Template.Spec.TopologySpreadConstraints).ToNot(BeNil())
+				g.Expect(th.GetDeployment(deploymentName).Spec.Template.Spec.TopologySpreadConstraints).To(Equal(topologySpecObj))
 			}, timeout, interval).Should(Succeed())
 		})
 		It("updates topology when the reference changes", func() {
 			Eventually(func(g Gomega) {
 				keystoneAPI := GetKeystoneAPI(keystoneAPIName)
-				keystoneAPI.Spec.TopologyRef.Name = keystoneAPITopologies[1].Name
+				keystoneAPI.Spec.TopologyRef.Name = topologyRefAlt.Name
 				g.Expect(k8sClient.Update(ctx, keystoneAPI)).To(Succeed())
 			}, timeout, interval).Should(Succeed())
 
 			Eventually(func(g Gomega) {
+				tp := GetTopology(types.NamespacedName{
+					Name:      topologyRefAlt.Name,
+					Namespace: topologyRefAlt.Namespace,
+				})
+				finalizers := tp.GetFinalizers()
+				g.Expect(finalizers).To(HaveLen(1))
+
 				keystoneAPI := GetKeystoneAPI(keystoneAPIName)
 				g.Expect(keystoneAPI.Status.LastAppliedTopology).ToNot(BeNil())
-				g.Expect(keystoneAPI.Status.LastAppliedTopology.Name).To(Equal(keystoneAPITopologies[1].Name))
+				g.Expect(keystoneAPI.Status.LastAppliedTopology).To(Equal(topologyRefAlt))
+				g.Expect(finalizers).To(ContainElement(
+					fmt.Sprintf("openstack.org/keystoneapi-%s", keystoneAPIName.Name)))
+
+				// Verify the previous referenced topology has no finalizers
+				tp = GetTopology(types.NamespacedName{
+					Name:      topologyRef.Name,
+					Namespace: topologyRef.Namespace,
+				})
+				finalizers = tp.GetFinalizers()
+				g.Expect(finalizers).To(BeEmpty())
 			}, timeout, interval).Should(Succeed())
 		})
 		It("removes topologyRef from the spec", func() {
@@ -1539,6 +1579,18 @@ var _ = Describe("Keystone controller", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(th.GetDeployment(deploymentName).Spec.Template.Spec.TopologySpreadConstraints).To(BeNil())
 				g.Expect(th.GetDeployment(deploymentName).Spec.Template.Spec.Affinity).ToNot(BeNil())
+			}, timeout, interval).Should(Succeed())
+
+			// Verify the existing topologies have no finalizer anymore
+			Eventually(func(g Gomega) {
+				for _, topology := range keystoneAPITopologies {
+					tp := GetTopology(types.NamespacedName{
+						Name:      topology.Name,
+						Namespace: topology.Namespace,
+					})
+					finalizers := tp.GetFinalizers()
+					g.Expect(finalizers).To(BeEmpty())
+				}
 			}, timeout, interval).Should(Succeed())
 		})
 	})

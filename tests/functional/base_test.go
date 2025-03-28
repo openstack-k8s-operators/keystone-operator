@@ -26,9 +26,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	keystone_base "github.com/openstack-k8s-operators/keystone-operator/pkg/keystone"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func GetKeystoneAPISpec(fernetMaxKeys int32) map[string]interface{} {
@@ -121,14 +123,14 @@ func CreateKeystoneMessageBusSecret(namespace string, name string) *corev1.Secre
 }
 
 // GetSampleTopologySpec - A sample (and opinionated) Topology Spec used to
-// test Keystone
+// test KeystoneAPI
 // Note this is just an example that should not be used in production for
 // multiple reasons:
 // 1. It uses ScheduleAnyway as strategy, which is something we might
 // want to avoid by default
 // 2. Usually a topologySpreadConstraints is used to take care about
 // multi AZ, which is not applicable in this context
-func GetSampleTopologySpec() map[string]interface{} {
+func GetSampleTopologySpec(label string) (map[string]interface{}, []corev1.TopologySpreadConstraint) {
 	// Build the topology Spec
 	topologySpec := map[string]interface{}{
 		"topologySpreadConstraints": []map[string]interface{}{
@@ -138,17 +140,35 @@ func GetSampleTopologySpec() map[string]interface{} {
 				"whenUnsatisfiable": "ScheduleAnyway",
 				"labelSelector": map[string]interface{}{
 					"matchLabels": map[string]interface{}{
-						"service": keystone_base.ServiceName,
+						"service":   keystone_base.ServiceName,
+						"component": label,
 					},
 				},
 			},
 		},
 	}
-	return topologySpec
+	// Build the topologyObj representation
+	topologySpecObj := []corev1.TopologySpreadConstraint{
+		{
+			MaxSkew:           1,
+			TopologyKey:       corev1.LabelHostname,
+			WhenUnsatisfiable: corev1.ScheduleAnyway,
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"service":   keystone_base.ServiceName,
+					"component": label,
+				},
+			},
+		},
+	}
+	return topologySpec, topologySpecObj
 }
 
 // CreateTopology - Creates a Topology CR based on the spec passed as input
-func CreateTopology(topology types.NamespacedName, spec map[string]interface{}) client.Object {
+func CreateTopology(
+	topology types.NamespacedName,
+	spec map[string]interface{},
+) (client.Object, topologyv1.TopoRef) {
 	raw := map[string]interface{}{
 		"apiVersion": "topology.openstack.org/v1beta1",
 		"kind":       "Topology",
@@ -158,5 +178,20 @@ func CreateTopology(topology types.NamespacedName, spec map[string]interface{}) 
 		},
 		"spec": spec,
 	}
-	return th.CreateUnstructured(raw)
+	// other than creating the topology based on the raw spec, we return the
+	// TopoRef that can be referenced
+	topologyRef := topologyv1.TopoRef{
+		Name:      topology.Name,
+		Namespace: topology.Namespace,
+	}
+	return th.CreateUnstructured(raw), topologyRef
+}
+
+// GetTopology - Returns the referenced Topology
+func GetTopology(name types.NamespacedName) *topologyv1.Topology {
+	instance := &topologyv1.Topology{}
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, name, instance)).Should(Succeed())
+	}, timeout, interval).Should(Succeed())
+	return instance
 }
