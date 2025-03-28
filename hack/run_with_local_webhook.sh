@@ -119,6 +119,17 @@ if [ -n "${CSV_NAME}" ]; then
 
     oc patch "${CSV_NAME}" -n openstack-operators --type=json -p="[{'op': 'replace', 'path': '/spec/install/spec/deployments/0/spec/replicas', 'value': 0}]"
     oc patch "${CSV_NAME}" -n openstack-operators --type=json -p="[{'op': 'replace', 'path': '/spec/webhookdefinitions', 'value': []}]"
+else
+    # Handle operator deployed by Openstack Initialization resource
+    CSV_NAME="$(oc get csv -n openstack-operators -l operators.coreos.com/openstack-operator.openstack-operators -o name)"
+
+    printf \
+    "\n\tNow patching openstack operator CSV to scale down deployment resource.
+    To restore it, use:
+    oc patch "${CSV_NAME}" -n openstack-operators --type=json -p=\"[{'op': 'replace', 'path': '/spec/install/spec/deployments/0/spec/replicas', 'value': 1}]\""
+
+    oc patch "${CSV_NAME}" -n openstack-operators --type=json -p="[{'op': 'replace', 'path': '/spec/install/spec/deployments/0/spec/replicas', 'value': 0}]"
+    oc scale --replicas=0 -n openstack-operators deploy/keystone-operator-controller-manager
 fi
 
 go run ./main.go -metrics-bind-address ":${METRICS_PORT}" -health-probe-bind-address ":${HEALTH_PORT}"
