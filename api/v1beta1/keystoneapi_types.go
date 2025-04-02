@@ -360,19 +360,6 @@ func (c *KeystoneExtraMounts) Propagate(svc []storage.PropagationType) []storage
 	return vl
 }
 
-// GetLastTopologyRef - Returns a TopoRef object that can be passed to the
-// Handle topology logic
-func (instance KeystoneAPI) GetLastAppliedTopologyRef() *topologyv1.TopoRef {
-	lastAppliedTopologyName := ""
-	if instance.Status.LastAppliedTopology != nil {
-		lastAppliedTopologyName = instance.Status.LastAppliedTopology.Name
-	}
-	return &topologyv1.TopoRef{
-		Name:      lastAppliedTopologyName,
-		Namespace: instance.Namespace,
-	}
-}
-
 // ValidateTopology -
 func (instance *KeystoneAPISpecCore) ValidateTopology(
 	basePath *field.Path,

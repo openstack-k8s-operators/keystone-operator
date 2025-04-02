@@ -1573,7 +1573,7 @@ var _ = Describe("Keystone controller", func() {
 			for _, t := range keystoneAPITopologies {
 				// Build the topology Spec
 				topologySpec, _ := GetSampleTopologySpec(t.Name)
-				CreateTopology(t, topologySpec)
+				infra.CreateTopology(t, topologySpec)
 			}
 			spec := GetDefaultKeystoneAPISpec()
 			spec["topologyRef"] = map[string]interface{}{
@@ -1613,7 +1613,7 @@ var _ = Describe("Keystone controller", func() {
 
 		It("check topology has been applied", func() {
 			Eventually(func(g Gomega) {
-				tp := GetTopology(types.NamespacedName{
+				tp := infra.GetTopology(types.NamespacedName{
 					Name:      topologyRef.Name,
 					Namespace: topologyRef.Namespace,
 				})
@@ -1642,7 +1642,7 @@ var _ = Describe("Keystone controller", func() {
 			}, timeout, interval).Should(Succeed())
 
 			Eventually(func(g Gomega) {
-				tp := GetTopology(types.NamespacedName{
+				tp := infra.GetTopology(types.NamespacedName{
 					Name:      topologyRefAlt.Name,
 					Namespace: topologyRefAlt.Namespace,
 				})
@@ -1656,7 +1656,7 @@ var _ = Describe("Keystone controller", func() {
 					fmt.Sprintf("openstack.org/keystoneapi-%s", keystoneAPIName.Name)))
 
 				// Verify the previous referenced topology has no finalizers
-				tp = GetTopology(types.NamespacedName{
+				tp = infra.GetTopology(types.NamespacedName{
 					Name:      topologyRef.Name,
 					Namespace: topologyRef.Namespace,
 				})
@@ -1685,7 +1685,7 @@ var _ = Describe("Keystone controller", func() {
 			// Verify the existing topologies have no finalizer anymore
 			Eventually(func(g Gomega) {
 				for _, topology := range keystoneAPITopologies {
-					tp := GetTopology(types.NamespacedName{
+					tp := infra.GetTopology(types.NamespacedName{
 						Name:      topology.Name,
 						Namespace: topology.Namespace,
 					})
