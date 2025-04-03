@@ -45,12 +45,13 @@ func CronJob(
 	completions := int32(1)
 
 	// create Volume and VolumeMounts
-	volumes := getVolumes(instance)
+	keystoneCronJobExtraMounts := []keystonev1.KeystoneExtraMounts{}
+	volumes := getVolumes(instance, keystoneCronJobExtraMounts, KeystoneCronJobPropagation)
 	volumeMounts := getCronJobVolumeMounts()
 
 	// add CA cert if defined
 	if instance.Spec.TLS.CaBundleSecretName != "" {
-		volumes = append(getVolumes(instance), instance.Spec.TLS.CreateVolume())
+		volumes = append(volumes, instance.Spec.TLS.CreateVolume())
 		volumeMounts = append(getCronJobVolumeMounts(), instance.Spec.TLS.CreateVolumeMounts(nil)...)
 	}
 

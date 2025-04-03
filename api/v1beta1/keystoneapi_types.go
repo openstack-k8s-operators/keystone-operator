@@ -25,6 +25,7 @@ import (
 	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/tls"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
+	"github.com/openstack-k8s-operators/lib-common/modules/storage"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -201,6 +202,10 @@ type KeystoneAPISpecCore struct {
 	// TopologyRef to apply the Topology defined by the associated CR referenced
 	// by name
 	TopologyRef *topologyv1.TopoRef `json:"topologyRef,omitempty"`
+
+	// ExtraMounts containing conf files
+	// +kubebuilder:default={}
+	ExtraMounts []KeystoneExtraMounts `json:"extraMounts,omitempty"`
 }
 
 // APIOverrideSpec to override the generated manifest of several child resources.
@@ -332,6 +337,27 @@ func SetupDefaults() {
 	}
 
 	SetupKeystoneAPIDefaults(keystoneDefaults)
+}
+
+// KeystoneExtraVolMounts exposes additional parameters processed by keystone-operator
+// and defines the common VolMounts structure provided by the main storage module
+type KeystoneExtraMounts struct {
+	// +kubebuilder:validation:Optional
+	Name string `json:"name,omitempty"`
+	// +kubebuilder:validation:Optional
+	Region string `json:"region,omitempty"`
+	// +kubebuilder:validation:Required
+	VolMounts []storage.VolMounts `json:"extraVol"`
+}
+
+// Propagate is a function used to filter VolMounts according to the specified
+// PropagationType array
+func (c *KeystoneExtraMounts) Propagate(svc []storage.PropagationType) []storage.VolMounts {
+	var vl []storage.VolMounts
+	for _, gv := range c.VolMounts {
+		vl = append(vl, gv.Propagate(svc)...)
+	}
+	return vl
 }
 
 // GetLastTopologyRef - Returns a TopoRef object that can be passed to the

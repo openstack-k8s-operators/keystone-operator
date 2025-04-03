@@ -18,11 +18,16 @@ package keystone
 import (
 	"fmt"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
+	"github.com/openstack-k8s-operators/lib-common/modules/storage"
 	corev1 "k8s.io/api/core/v1"
 )
 
 // getVolumes - service volumes
-func getVolumes(instance *keystonev1.KeystoneAPI) []corev1.Volume {
+func getVolumes(
+	instance *keystonev1.KeystoneAPI,
+	extraVol []keystonev1.KeystoneExtraMounts,
+	svc []storage.PropagationType,
+) []corev1.Volume {
 	name := instance.Name
 	var scriptsVolumeDefaultMode int32 = 0755
 	var config0640AccessMode int32 = 0644
@@ -40,7 +45,7 @@ func getVolumes(instance *keystonev1.KeystoneAPI) []corev1.Volume {
 		)
 	}
 
-	return []corev1.Volume{
+	res := []corev1.Volume{
 		{
 			Name: "scripts",
 			VolumeSource: corev1.VolumeSource{
@@ -87,12 +92,27 @@ func getVolumes(instance *keystonev1.KeystoneAPI) []corev1.Volume {
 			},
 		},
 	}
-
+	for _, exv := range extraVol {
+		for _, vol := range exv.Propagate(svc) {
+			for _, v := range vol.Volumes {
+				volumeSource, _ := v.ToCoreVolumeSource()
+				convertedVolume := corev1.Volume{
+					Name:         v.Name,
+					VolumeSource: *volumeSource,
+				}
+				res = append(res, convertedVolume)
+			}
+		}
+	}
+	return res
 }
 
 // getVolumeMounts - general VolumeMounts
-func getVolumeMounts() []corev1.VolumeMount {
-	return []corev1.VolumeMount{
+func getVolumeMounts(
+	extraVol []keystonev1.KeystoneExtraMounts,
+	svc []storage.PropagationType,
+) []corev1.VolumeMount {
+	vm := []corev1.VolumeMount{
 		{
 			Name:      "scripts",
 			MountPath: "/usr/local/bin/container-scripts",
@@ -120,6 +140,12 @@ func getVolumeMounts() []corev1.VolumeMount {
 			Name:      "credential-keys",
 		},
 	}
+	for _, exv := range extraVol {
+		for _, vol := range exv.Propagate(svc) {
+			vm = append(vm, vol.Mounts...)
+		}
+	}
+	return vm
 }
 
 // getCronJobVolumeMounts - cronjob volumeMounts
