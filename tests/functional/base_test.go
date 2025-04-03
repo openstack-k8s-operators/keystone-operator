@@ -195,3 +195,37 @@ func GetTopology(name types.NamespacedName) *topologyv1.Topology {
 	}, timeout, interval).Should(Succeed())
 	return instance
 }
+
+// GetExtraMounts - Utility function that simulates extraMounts pointing
+// to a  secret
+func GetExtraMounts(kemName string, kemPath string) []map[string]interface{} {
+	return []map[string]interface{}{
+		{
+			"name":   kemName,
+			"region": "az0",
+			"extraVol": []map[string]interface{}{
+				{
+					"extraVolType": kemName,
+					"propagation": []string{
+						"Keystone",
+					},
+					"volumes": []map[string]interface{}{
+						{
+							"name": kemName,
+							"secret": map[string]interface{}{
+								"secretName": kemName,
+							},
+						},
+					},
+					"mounts": []map[string]interface{}{
+						{
+							"name":      kemName,
+							"mountPath": kemPath,
+							"readOnly":  true,
+						},
+					},
+				},
+			},
+		},
+	}
+}

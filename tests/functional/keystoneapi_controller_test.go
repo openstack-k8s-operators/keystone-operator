@@ -1791,7 +1791,66 @@ OIDCRedirectURI "{{ .KeystoneEndpointPublic }}/v3/auth/OS-FEDERATION/websso/open
 			}
 		})
 	})
-
+	When("Keystone CR is built with ExtraMounts", func() {
+		var keystoneExtraMountsSecretName, keystoneExtraMountsPath string
+		BeforeEach(func() {
+			spec := GetDefaultKeystoneAPISpec()
+			keystoneExtraMountsPath = "/var/log/foo"
+			keystoneExtraMountsSecretName = "foo"
+			spec["extraMounts"] = GetExtraMounts(keystoneExtraMountsSecretName, keystoneExtraMountsPath)
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			keystone := CreateKeystoneAPI(keystoneAPIName, spec)
+			DeferCleanup(th.DeleteInstance, keystone)
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
+				Namespace: namespace,
+			})
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+			th.SimulateDeploymentReplicaReady(deploymentName)
+		})
+		It("Check extraMounts of the resulting Deployment", func() {
+			th.SimulateDeploymentReplicaReady(deploymentName)
+			// Get Keystone Deployment
+			dp := th.GetDeployment(deploymentName)
+			// Check the resulting deployment fields
+			Expect(dp.Spec.Template.Spec.Volumes).To(HaveLen(5))
+			Expect(dp.Spec.Template.Spec.Containers).To(HaveLen(1))
+			// Get the keystone-api container
+			container := dp.Spec.Template.Spec.Containers[0]
+			// Fail if keystone-api doesn't have the right number of VolumeMounts
+			// entries
+			Expect(container.VolumeMounts).To(HaveLen(6))
+			// Inspect VolumeMounts and make sure we have the Foo MountPath
+			// provided through extraMounts
+			for _, vm := range container.VolumeMounts {
+				if vm.Name == "foo" {
+					Expect(vm.MountPath).To(
+						ContainSubstring(keystoneExtraMountsPath))
+				}
+			}
+		})
+	})
 	// Run MariaDBAccount suite tests.  these are pre-packaged ginkgo tests
 	// that exercise standard account create / update patterns that should be
 	// common to all controllers that ensure MariaDBAccount CRs.
