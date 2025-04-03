@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/go-logr/logr v1.4.2
 	github.com/google/uuid v1.6.0
-	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.7.5
+	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.7.6
 	github.com/onsi/ginkgo/v2 v2.20.1
 	github.com/onsi/gomega v1.34.1
 	github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20250328101744-699b0b8f418d
@@ -91,3 +91,5 @@ replace github.com/openshift/api => github.com/openshift/api v0.0.0-202408300231
 
 // custom RabbitmqClusterSpecCore for OpenStackControlplane (v2.6.0_patches_tag)
 replace github.com/rabbitmq/cluster-operator/v2 => github.com/openstack-k8s-operators/rabbitmq-cluster-operator/v2 v2.6.1-0.20241017142550-a3524acedd49 //allow-merging
+
+replace github.com/openstack-k8s-operators/lib-common/modules/common => github.com/stuggi/lib-common/modules/common v0.0.0-20250404130940-ddf9e62c0399

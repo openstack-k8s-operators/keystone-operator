@@ -1128,7 +1128,10 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 			condition.DeploymentReadyRunningMessage))
 		return ctrlResult, nil
 	}
-	instance.Status.ReadyCount = depl.GetDeployment().Status.ReadyReplicas
+
+	if depl.GetDeployment().Generation == depl.GetDeployment().Status.ObservedGeneration {
+		instance.Status.ReadyCount = depl.GetDeployment().Status.ReadyReplicas
+	}
 
 	// verify if network attachment matches expectations
 	networkReady, networkAttachmentStatus, err := nad.VerifyNetworkStatusFromAnnotation(
@@ -1154,7 +1157,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 		return ctrl.Result{}, err
 	}
 
-	if instance.Status.ReadyCount > 0 {
+	if deployment.IsReady(depl.GetDeployment()) {
 		instance.Status.Conditions.MarkTrue(condition.DeploymentReadyCondition, condition.DeploymentReadyMessage)
 	} else {
 		instance.Status.Conditions.Set(condition.FalseCondition(
