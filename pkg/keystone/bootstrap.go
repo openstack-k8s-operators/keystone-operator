@@ -60,13 +60,14 @@ func BootstrapJob(
 	}
 
 	// create Volume and VolumeMounts
-	volumes := getVolumes(instance)
-	volumeMounts := getVolumeMounts()
+	bootstrapExtraMounts := []keystonev1.KeystoneExtraMounts{}
+	volumes := getVolumes(instance, bootstrapExtraMounts, BootstrapPropagation)
+	volumeMounts := getVolumeMounts(bootstrapExtraMounts, BootstrapPropagation)
 
 	// add CA cert if defined
 	if instance.Spec.TLS.CaBundleSecretName != "" {
-		volumes = append(getVolumes(instance), instance.Spec.TLS.CreateVolume())
-		volumeMounts = append(getVolumeMounts(), instance.Spec.TLS.CreateVolumeMounts(nil)...)
+		volumes = append(volumes, instance.Spec.TLS.CreateVolume())
+		volumeMounts = append(volumeMounts, instance.Spec.TLS.CreateVolumeMounts(nil)...)
 	}
 
 	job := &batchv1.Job{

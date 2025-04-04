@@ -15,6 +15,10 @@ limitations under the License.
 
 package keystone
 
+import (
+	"github.com/openstack-k8s-operators/lib-common/modules/storage"
+)
+
 const (
 	// ServiceName -
 	ServiceName = "keystone"
@@ -37,4 +41,22 @@ const (
 	DefaultFernetRotationDays = 1
 	// DBSyncCommand -
 	DBSyncCommand = "keystone-manage db_sync"
+	// Keystone is the global ServiceType
+	Keystone storage.PropagationType = "Keystone"
+	// KeystoneCronJob is the CronJob ServiceType
+	KeystoneCronJob storage.PropagationType = "KeystoneCron"
+	// KeystoneBootstrap is the bootstrap service
+	KeystoneBootstrap storage.PropagationType = "KeystoneBootstrap"
 )
+
+// KeystoneAPIPropagation is the  definition of the Horizon propagation service
+var KeystonePropagation = []storage.PropagationType{Keystone}
+
+// DBSyncPropagation keeps track of the DBSync Service Propagation Type
+var DBSyncPropagation = []storage.PropagationType{storage.DBSync}
+
+// BootstrapPropagation keeps track of the KeystoneBootstrap Propagation Type
+var BootstrapPropagation = []storage.PropagationType{KeystoneBootstrap}
+
+// KeystoneCronJobPropagation keeps track of the KeystoneBootstrap Propagation Type
+var KeystoneCronJobPropagation = []storage.PropagationType{KeystoneCronJob}

@@ -39,14 +39,14 @@ func DbSyncJob(
 	envVars["KOLLA_BOOTSTRAP"] = env.SetValue("true")
 
 	// create Volume and VolumeMounts
-	volumes := getVolumes(instance)
+	dbSyncExtraMounts := []keystonev1.KeystoneExtraMounts{}
+	volumes := getVolumes(instance, dbSyncExtraMounts, DBSyncPropagation)
 	volumeMounts := getDBSyncVolumeMounts()
 
 	// add CA cert if defined
 	if instance.Spec.TLS.CaBundleSecretName != "" {
-		//TODO(afaranha): Why not reuse the 'volumes'?
-		volumes = append(getVolumes(instance), instance.Spec.TLS.CreateVolume())
-		volumeMounts = append(getDBSyncVolumeMounts(), instance.Spec.TLS.CreateVolumeMounts(nil)...)
+		volumes = append(volumes, instance.Spec.TLS.CreateVolume())
+		volumeMounts = append(volumeMounts, instance.Spec.TLS.CreateVolumeMounts(nil)...)
 	}
 
 	job := &batchv1.Job{

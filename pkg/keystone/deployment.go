@@ -81,8 +81,8 @@ func Deployment(
 	envVars["CONFIG_HASH"] = env.SetValue(configHash)
 
 	// create Volume and VolumeMounts
-	volumes := getVolumes(instance)
-	volumeMounts := getVolumeMounts()
+	volumes := getVolumes(instance, instance.Spec.ExtraMounts, KeystonePropagation)
+	volumeMounts := getVolumeMounts(instance.Spec.ExtraMounts, KeystonePropagation)
 
 	// add CA cert if defined
 	if instance.Spec.TLS.CaBundleSecretName != "" {

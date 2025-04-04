@@ -86,6 +86,8 @@ github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.2025032416
 github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20250324161140-e9964a1b2266/go.mod h1:1CtBP0MQffdjE6buOv5jP2rB3+h7WH0a11lcyrpmxOk=
 github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20250324161140-e9964a1b2266 h1:YpJtUjf/CX48D1qteG33EQCe0o5wXae2FtSn/H/Mi28=
 github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20250324161140-e9964a1b2266/go.mod h1:fesgTbs2j30Fhw2hebXkPgbeAIqG0Yk2oaeOklAInZg=
+github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20250402133843-5a4c5f4fb4f1 h1:KcltUDbUA0sjtf6bV60L7GDpC0pmokhtdK3579yytS4=
+github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20250402133843-5a4c5f4fb4f1/go.mod h1:5+v92XC/PRATIiBrhNLEpJ+T4R9JpxBCgRP6QvbfwgE=
 github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20250324161140-e9964a1b2266 h1:TIkLc7L4NaByud0qnlVGouRgDoVQgwxufayPKduzcJ0=
 github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20250324161140-e9964a1b2266/go.mod h1:oKvVb28i6wwBR5uQO2B2KMzZnCFTPCUCj31c5Zvz2lo=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
