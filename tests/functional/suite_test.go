@@ -68,11 +68,11 @@ const (
 
 	DatabaseCRName = keystone_base.DatabaseCRName
 
-	PublicCertSecretName = "public-tls-certs"
+	PublicCertSecretName = "public-tls-certs" // #nosec G101
 
-	InternalCertSecretName = "internal-tls-certs"
+	InternalCertSecretName = "internal-tls-certs" // #nosec G101
 
-	CABundleSecretName = "combined-ca-bundle"
+	CABundleSecretName = "combined-ca-bundle" // #nosec G101
 
 	interval = time.Millisecond * 200
 )
@@ -193,7 +193,7 @@ var _ = BeforeSuite(func() {
 		if err != nil {
 			return err
 		}
-		conn.Close()
+		_ = conn.Close()
 		return nil
 	}).Should(Succeed())
 })
