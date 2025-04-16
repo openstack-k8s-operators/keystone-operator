@@ -55,7 +55,7 @@ const (
 	FederationDefaultMountPath = "/var/lib/config-data/default/multirealm-federation"
 )
 
-// KeystoneAPIPropagation is the  definition of the Horizon propagation service
+// KeystonePropagation is the definition of the Keystone propagation service
 var KeystonePropagation = []storage.PropagationType{Keystone}
 
 // DBSyncPropagation keeps track of the DBSync Service Propagation Type
