@@ -1048,7 +1048,7 @@ var _ = Describe("Keystone controller", func() {
 
 			j := th.GetJob(dbSyncJobName)
 			th.AssertVolumeExists(caBundleSecretName.Name, j.Spec.Template.Spec.Volumes)
-			th.AssertVolumeMountExists(caBundleSecretName.Name, "tls-ca-bundle.pem", j.Spec.Template.Spec.Containers[0].VolumeMounts)
+			th.AssertVolumeMountPathExists(caBundleSecretName.Name, "", "tls-ca-bundle.pem", j.Spec.Template.Spec.Containers[0].VolumeMounts)
 		})
 
 		It("it creates bootstrap job with CA certs mounted", func() {
@@ -1060,7 +1060,7 @@ var _ = Describe("Keystone controller", func() {
 
 			j := th.GetJob(bootstrapJobName)
 			th.AssertVolumeExists(caBundleSecretName.Name, j.Spec.Template.Spec.Volumes)
-			th.AssertVolumeMountExists(caBundleSecretName.Name, "tls-ca-bundle.pem", j.Spec.Template.Spec.Containers[0].VolumeMounts)
+			th.AssertVolumeMountPathExists(caBundleSecretName.Name, "", "tls-ca-bundle.pem", j.Spec.Template.Spec.Containers[0].VolumeMounts)
 		})
 
 		It("should create a Secret for keystone.conf and my.cnf", func() {
@@ -1099,15 +1099,15 @@ var _ = Describe("Keystone controller", func() {
 
 			// CA bundle
 			th.AssertVolumeExists(caBundleSecretName.Name, d.Spec.Template.Spec.Volumes)
-			th.AssertVolumeMountExists(caBundleSecretName.Name, "tls-ca-bundle.pem", container.VolumeMounts)
+			th.AssertVolumeMountPathExists(caBundleSecretName.Name, "", "tls-ca-bundle.pem", container.VolumeMounts)
 
 			// service certs
 			th.AssertVolumeExists(internalCertSecretName.Name, d.Spec.Template.Spec.Volumes)
 			th.AssertVolumeExists(publicCertSecretName.Name, d.Spec.Template.Spec.Volumes)
-			th.AssertVolumeMountExists(publicCertSecretName.Name, "tls.key", container.VolumeMounts)
-			th.AssertVolumeMountExists(publicCertSecretName.Name, "tls.crt", container.VolumeMounts)
-			th.AssertVolumeMountExists(internalCertSecretName.Name, "tls.key", container.VolumeMounts)
-			th.AssertVolumeMountExists(internalCertSecretName.Name, "tls.crt", container.VolumeMounts)
+			th.AssertVolumeMountPathExists(publicCertSecretName.Name, "", "tls.key", container.VolumeMounts)
+			th.AssertVolumeMountPathExists(publicCertSecretName.Name, "", "tls.crt", container.VolumeMounts)
+			th.AssertVolumeMountPathExists(internalCertSecretName.Name, "", "tls.key", container.VolumeMounts)
+			th.AssertVolumeMountPathExists(internalCertSecretName.Name, "", "tls.crt", container.VolumeMounts)
 
 			Expect(container.ReadinessProbe.HTTPGet.Scheme).To(Equal(corev1.URISchemeHTTPS))
 			Expect(container.LivenessProbe.HTTPGet.Scheme).To(Equal(corev1.URISchemeHTTPS))
@@ -1944,12 +1944,8 @@ OIDCRedirectURI "{{ .KeystoneEndpointPublic }}/v3/auth/OS-FEDERATION/websso/open
 			Expect(container.VolumeMounts).To(HaveLen(6))
 			// Inspect VolumeMounts and make sure we have the Foo MountPath
 			// provided through extraMounts
-			for _, vm := range container.VolumeMounts {
-				if vm.Name == "foo" {
-					Expect(vm.MountPath).To(
-						ContainSubstring(keystoneExtraMountsPath))
-				}
-			}
+			th.AssertVolumeMountPathExists("foo",
+				keystoneExtraMountsPath, "", container.VolumeMounts)
 		})
 	})
 	// Run MariaDBAccount suite tests.  these are pre-packaged ginkgo tests
