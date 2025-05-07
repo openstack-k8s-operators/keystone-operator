@@ -1,0 +1,27 @@
+---
+- job:
+    name: keystone-operator-kuttl
+    parent: cifmw-base-multinode-kuttl
+    attempts: 1
+    required-projects:
+      - github.com/openstack-k8s-operators/keystone-operator
+    irrelevant-files:
+      - .*/*.md
+      - ^\..*$
+      - ^LICENSE$
+      - ^OWNERS$
+      - ^OWNERS_ALIASES$
+      - ^PROJECT$
+      - ^README.md$
+      - tests?\/functional
+    vars:
+      cifmw_kuttl_tests_operator_list:
+        - keystone
+
+- job:
+    name: keystone-operator-tempest
+    parent: podified-multinode-edpm-deployment-crc-2comp
+    vars:
+      cifmw_test_operator_concurrency: 3
+      cifmw_test_operator_tempest_include_list: |
+        ^tempest.api.identity.
