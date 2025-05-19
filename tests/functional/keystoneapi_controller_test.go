@@ -1067,7 +1067,7 @@ var _ = Describe("Keystone controller", func() {
 			scrt := th.GetSecret(keystoneAPIConfigDataName)
 			configData := string(scrt.Data["keystone.conf"])
 			Expect(configData).To(
-				ContainSubstring("backend = dogpile.cache.pymemcache"))
+				ContainSubstring("backend = oslo_cache.memcache_pool"))
 			Expect(configData).To(
 				ContainSubstring(fmt.Sprintf("memcache_servers=memcached-0.memcached.%s.svc:11211,memcached-1.memcached.%s.svc:11211,memcached-2.memcached.%s.svc:11211",
 					keystoneAPIName.Namespace, keystoneAPIName.Namespace, keystoneAPIName.Namespace)))
