@@ -18,6 +18,7 @@ package v1beta1
 import (
 	"context"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/openstack-k8s-operators/lib-common/modules/common/condition"
@@ -238,6 +239,9 @@ func GetKeystoneEndpointUrls(
 			endpointurls = append(endpointurls, endpoint.Spec.Endpoints["admin"])
 		}
 	}
+
+	// make sure the list of endpoint urls is sorted
+	sort.Strings(endpointurls)
 
 	return endpointurls, nil
 }
