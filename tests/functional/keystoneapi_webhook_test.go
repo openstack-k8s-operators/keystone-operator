@@ -29,7 +29,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
@@ -74,11 +73,7 @@ var _ = Describe("KeystoneAPI Webhook", func() {
 			Name:      "keystone",
 			Namespace: namespace,
 		}
-		memcachedSpec = memcachedv1.MemcachedSpec{
-			MemcachedSpecCore: memcachedv1.MemcachedSpecCore{
-				Replicas: ptr.To(int32(3)),
-			},
-		}
+		memcachedSpec = infra.GetDefaultMemcachedSpec()
 
 		err := os.Setenv("OPERATOR_TEMPLATES", "../../templates")
 		Expect(err).NotTo(HaveOccurred())

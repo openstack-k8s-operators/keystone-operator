@@ -100,11 +100,7 @@ var _ = Describe("Keystone controller", func() {
 			Name:      PublicCertSecretName,
 			Namespace: namespace,
 		}
-		memcachedSpec = memcachedv1.MemcachedSpec{
-			MemcachedSpecCore: memcachedv1.MemcachedSpecCore{
-				Replicas: ptr.To(int32(3)),
-			},
-		}
+		memcachedSpec = infra.GetDefaultMemcachedSpec()
 		cronJobName = types.NamespacedName{
 			Namespace: keystoneAPIName.Namespace,
 			Name:      "keystone-cron",
