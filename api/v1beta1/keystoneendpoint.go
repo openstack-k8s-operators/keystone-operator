@@ -21,12 +21,14 @@ import (
 	"sort"
 	"time"
 
+	"github.com/openstack-k8s-operators/lib-common/modules/common"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/helper"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"golang.org/x/exp/slices"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -115,6 +117,11 @@ func (ke *KeystoneEndpointHelper) GetEndpointIDs() map[string]string {
 // GetConditions - returns the conditions of the keystone endpoint object
 func (ke *KeystoneEndpointHelper) GetConditions() *condition.Conditions {
 	return &ke.endpoint.Status.Conditions
+}
+
+// ValidateGeneration - returns true if metadata.generation matches status.observedgeneration
+func (ke *KeystoneEndpointHelper) ValidateGeneration() bool {
+	return ke.endpoint.Generation == ke.endpoint.Status.ObservedGeneration
 }
 
 // Delete - deletes a KeystoneEndpoint if it exists.
@@ -226,22 +233,142 @@ func GetKeystoneEndpointUrls(
 		return nil, err
 	}
 
-	var endpointurls []string
+	endpointurls := filterVisibility(ke.Items, visibility)
 
+	return endpointurls, nil
+}
+
+// GetKeystoneEndpointUrlsForServices returns all URLs currently registered. Visibility can be admin, public or internal.
+// If it is nil, all URLs are returned. Optional services parameter can be provided to only return the values for
+// those services matching the `service` (common.AppSelector) label key.
+func GetKeystoneEndpointUrlsForServices(
+	ctx context.Context,
+	h *helper.Helper,
+	namespace string,
+	visibility *string,
+	servicesToKeep []string,
+) ([]string, error) {
+	var keystoneEndpoints []KeystoneEndpoint
+
+	ke, err := GetKeystoneEndpointList(ctx, h, namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	if ke != nil {
+		keystoneEndpoints = ke.Items
+		if len(servicesToKeep) > 0 {
+			keystoneEndpoints = filterServices(keystoneEndpoints, servicesToKeep)
+		}
+	}
+
+	endpointurls := filterVisibility(keystoneEndpoints, visibility)
+
+	return endpointurls, nil
+}
+
+// GetHashforKeystoneEndpointUrlsForServices returns a hash for a list of endpoint URLs currently registered.
+// Visibility can be admin, public or internal. If it is nil, all URLs are returned.
+// Optional services parameter can be provided to only return the values for those services matching the
+// `service` (common.AppSelector) label key.
+func GetHashforKeystoneEndpointUrlsForServices(
+	ctx context.Context,
+	h *helper.Helper,
+	namespace string,
+	visibility *string,
+	servicesToKeep []string,
+) (string, error) {
+	var hash string
+	endpointUrls, err := GetKeystoneEndpointUrlsForServices(
+		ctx,
+		h,
+		namespace,
+		visibility,
+		servicesToKeep,
+	)
+	if err != nil {
+		return hash, err
+	}
+	if len(endpointUrls) > 0 {
+		hash, err = util.ObjectHash(endpointUrls)
+		if err != nil {
+			return hash, err
+		}
+	}
+
+	return hash, nil
+}
+
+// filterVisibility returns all URLs from an []KeystoneEndpoint list. Visibility can be used to
+// filter based on admin, public or internal. If it is nil, all URLs are returned.
+// The returning URLs list gets sorted.
+func filterVisibility(
+	keystoneEndpoints []KeystoneEndpoint,
+	visibility *string,
+) []string {
+	endpointurls := []string{}
 	if visibility != nil {
-		for _, endpoint := range ke.Items {
-			endpointurls = append(endpointurls, endpoint.Spec.Endpoints[*visibility])
+		for _, endpoint := range keystoneEndpoints {
+			if endpt, ok := getEndpointForVisibility(endpoint.Status.Endpoints, *visibility); ok {
+				endpointurls = append(endpointurls, endpt.URL)
+			}
 		}
 	} else {
-		for _, endpoint := range ke.Items {
-			endpointurls = append(endpointurls, endpoint.Spec.Endpoints["internal"])
-			endpointurls = append(endpointurls, endpoint.Spec.Endpoints["public"])
-			endpointurls = append(endpointurls, endpoint.Spec.Endpoints["admin"])
+		for _, endpoint := range keystoneEndpoints {
+			for _, e := range endpoint.Status.Endpoints {
+				endpointurls = append(endpointurls, e.URL)
+			}
 		}
 	}
 
 	// make sure the list of endpoint urls is sorted
 	sort.Strings(endpointurls)
 
-	return endpointurls, nil
+	return endpointurls
+}
+
+// filterServices returns a list of []KeystoneEndpoint based on that passed in filter for
+// the services to retain. Services get filtered based on the value in the common.AppSelector
+// label.
+func filterServices(
+	allKeystoneEndpoints []KeystoneEndpoint,
+	servicesToKeep []string,
+) []KeystoneEndpoint {
+	keystoneEndpoints := []KeystoneEndpoint{}
+	// Create a map from the 'servicesToKeep' slice for fast lookups.
+	// We only care about the keys.
+	toKeepSet := make(map[string]struct{}, len(servicesToKeep))
+	for _, svc := range servicesToKeep {
+		toKeepSet[svc] = struct{}{}
+	}
+
+	for _, endpt := range allKeystoneEndpoints {
+		if svc, found := endpt.Labels[common.AppSelector]; found {
+			// Check if the current value 'svc' is in our whitelist.
+			if _, found := toKeepSet[svc]; found {
+				keystoneEndpoints = append(keystoneEndpoints, endpt)
+			}
+		}
+	}
+
+	return keystoneEndpoints
+}
+
+// getEndpointForVisibility - returns the endpoint from the list of Endpoints
+// for the requested vislibility. If not found, returns false.
+func getEndpointForVisibility(
+	endpts []Endpoint,
+	visibility string,
+) (Endpoint, bool) {
+
+	// validate if endpoint is already in the endpoint status list
+	f := func(e Endpoint) bool {
+		return e.Interface == visibility
+	}
+	idx := slices.IndexFunc(endpts, f)
+	if idx >= 0 {
+		return endpts[idx], true
+	}
+
+	return Endpoint{}, false
 }

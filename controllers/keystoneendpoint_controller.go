@@ -34,6 +34,7 @@ import (
 	helper "github.com/openstack-k8s-operators/lib-common/modules/common/helper"
 	util "github.com/openstack-k8s-operators/lib-common/modules/common/util"
 	openstack "github.com/openstack-k8s-operators/lib-common/modules/openstack"
+	"golang.org/x/exp/slices"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 )
 
@@ -130,6 +131,15 @@ func (r *KeystoneEndpointReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		// Register overall status immediately to have an early feedback e.g. in the cli
 		return ctrl.Result{}, nil
 	}
+
+	if instance.Status.EndpointIDs == nil {
+		instance.Status.EndpointIDs = map[string]string{}
+	}
+	if instance.Status.Endpoints == nil {
+		instance.Status.Endpoints = []keystonev1.Endpoint{}
+	}
+
+	instance.Status.ObservedGeneration = instance.Generation
 
 	// If we're not deleting this and the service object doesn't have our finalizer, add it.
 	if instance.DeletionTimestamp.IsZero() && controllerutil.AddFinalizer(instance, helper.GetFinalizer()) {
@@ -474,6 +484,11 @@ func (r *KeystoneEndpointReconciler) reconcileEndpoints(
 
 				// remove endpoint reference from status
 				delete(instance.Status.EndpointIDs, endpointType)
+				idx := getEndpointIdx(endpointType, instance.Status.Endpoints)
+				if idx >= 0 {
+					instance.Status.Endpoints = append(instance.Status.Endpoints[:idx],
+						instance.Status.Endpoints[idx+1:]...)
+				}
 			}
 		}
 	}
@@ -514,6 +529,7 @@ func (r *KeystoneEndpointReconciler) reconcileEndpoints(
 		} else if len(allEndpoints) == 1 {
 			// Update the endpoint if URL changed
 			endpoint := allEndpoints[0]
+			endpointID = endpoint.ID
 			if endpointURL != endpoint.URL {
 				endpointID, err = os.UpdateEndpoint(
 					Log,
@@ -538,15 +554,39 @@ func (r *KeystoneEndpointReconciler) reconcileEndpoints(
 				instance, err)
 		}
 
-		if instance.Status.EndpointIDs == nil {
-			instance.Status.EndpointIDs = map[string]string{}
-		}
-		if _, ok := instance.Spec.Endpoints[endpointType]; ok && endpointID != "" {
-			instance.Status.EndpointIDs[endpointType] = endpointID
+		if endpointID != "" {
+			if _, ok := instance.Spec.Endpoints[endpointType]; ok {
+				instance.Status.EndpointIDs[endpointType] = endpointID
+			}
+			// validate if endpoint is already in the endpoint status list
+			idx := getEndpointIdx(endpointType, instance.Status.Endpoints)
+			if idx >= 0 {
+				instance.Status.Endpoints[idx].ID = endpointID
+				instance.Status.Endpoints[idx].URL = endpointURL
+			} else {
+				instance.Status.Endpoints = append(instance.Status.Endpoints,
+					keystonev1.Endpoint{
+						Interface: endpointType,
+						URL:       endpointURL,
+						ID:        endpointID,
+					})
+			}
 		}
 	}
 
 	Log.Info("Reconciled Endpoints successfully")
 
 	return nil
+}
+
+// getEndpointIdx - returns the index of the endpointType from a list of Endpoints
+// if not found -1 is returnd
+func getEndpointIdx(endpointType string, endpoints []keystonev1.Endpoint) int {
+	// validate if endpoint is already in the endpoint status list
+	f := func(e keystonev1.Endpoint) bool {
+		return e.Interface == endpointType
+	}
+	idx := slices.IndexFunc(endpoints, f)
+
+	return idx
 }
