@@ -105,6 +105,11 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	// Always patch the instance status when exiting this function so we can persist any changes.
 	defer func() {
+		// Don't update the status, if Reconciler Panics
+		if r := recover(); r != nil {
+			log.Info(fmt.Sprintf("Panic during reconcile %v\n", r))
+			panic(r)
+		}
 		// update the Ready condition based on the sub conditions
 		if instance.Status.Conditions.AllSubConditionIsTrue() {
 			instance.Status.Conditions.MarkTrue(
