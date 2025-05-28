@@ -80,7 +80,7 @@ func (ke *KeystoneEndpointHelper) CreateOrPatch(
 
 	op, err := controllerutil.CreateOrPatch(ctx, h.GetClient(), endpoint, func() error {
 		endpoint.Spec = ke.endpoint.Spec
-		endpoint.Labels = util.MergeStringMaps(endpoint.Labels, ke.endpoint.Labels)
+		endpoint.Labels = util.MergeStringMaps(endpoint.Labels, ke.labels)
 
 		return controllerutil.SetControllerReference(h.GetBeforeObject(), endpoint, h.GetScheme())
 	})
