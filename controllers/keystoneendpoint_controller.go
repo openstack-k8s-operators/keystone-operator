@@ -34,6 +34,7 @@ import (
 	helper "github.com/openstack-k8s-operators/lib-common/modules/common/helper"
 	util "github.com/openstack-k8s-operators/lib-common/modules/common/util"
 	openstack "github.com/openstack-k8s-operators/lib-common/modules/openstack"
+	"golang.org/x/exp/slices"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 )
 
@@ -436,6 +437,8 @@ func (r *KeystoneEndpointReconciler) reconcileNormal(
 		instance.Spec.Endpoints,
 	)
 
+	instance.Status.ObservedGeneration = instance.Generation
+
 	Log.Info("Reconciled Endpoint normal successfully")
 
 	return ctrl.Result{}, nil
@@ -543,6 +546,26 @@ func (r *KeystoneEndpointReconciler) reconcileEndpoints(
 		}
 		if _, ok := instance.Spec.Endpoints[endpointType]; ok && endpointID != "" {
 			instance.Status.EndpointIDs[endpointType] = endpointID
+		}
+
+		if instance.Status.Endpoints == nil {
+			instance.Status.Endpoints = []keystonev1.Endpoint{}
+		}
+
+		// validate if endpoint is already in the endpoint status list
+		f := func(e keystonev1.Endpoint) bool {
+			return e.Interface == endpointType
+		}
+		idx := slices.IndexFunc(instance.Status.Endpoints, f)
+		if idx >= 0 && instance.Status.Endpoints[idx].ID != endpointID {
+			instance.Status.Endpoints[idx].URL = endpointURL
+		} else {
+			instance.Status.Endpoints = append(instance.Status.Endpoints,
+				keystonev1.Endpoint{
+					Interface: endpointType,
+					URL:       endpointURL,
+					ID:        endpointID,
+				})
 		}
 	}
 

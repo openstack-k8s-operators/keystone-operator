@@ -37,6 +37,22 @@ type KeystoneEndpointStatus struct {
 	ServiceID   string            `json:"serviceID,omitempty"`
 	// Conditions
 	Conditions condition.Conditions `json:"conditions,omitempty" optional:"true"`
+
+	// Endpoints - current status of latest configured endpoints for the service
+	Endpoints []Endpoint `json:"endpoints,omitempty"`
+
+	//ObservedGeneration - the most recent generation observed for this service. If the observed generation is less than the spec generation, then the controller has not processed the latest changes.
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+}
+
+// Endpoint -
+type Endpoint struct {
+	// Interface - public, internal, admin
+	Interface string `json:"interface"`
+	// URL - endpoint url
+	URL string `json:"url"`
+	// ID - endpoint id
+	ID string `json:"id"`
 }
 
 //+kubebuilder:object:root=true

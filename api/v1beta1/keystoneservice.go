@@ -79,7 +79,7 @@ func (ks *KeystoneServiceHelper) CreateOrPatch(
 
 	op, err := controllerutil.CreateOrPatch(ctx, h.GetClient(), service, func() error {
 		service.Spec = ks.service.Spec
-		service.Labels = util.MergeStringMaps(service.Labels, ks.service.Labels)
+		service.Labels = util.MergeStringMaps(service.Labels, ks.labels)
 
 		return controllerutil.SetControllerReference(h.GetBeforeObject(), service, h.GetScheme())
 	})
