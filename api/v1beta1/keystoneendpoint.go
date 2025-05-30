@@ -18,6 +18,7 @@ package v1beta1
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"sort"
 	"time"
 
@@ -33,7 +34,35 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
+
+// KeystoneEndpointStatusChangedPredicate - primary purpose is to return true if
+// the KeystoneEndpoint status has changed.
+// In addition also returns true if it gets deleted. Used by service operators
+// to watch KeystoneEndpoints they depend on.
+var KeystoneEndpointStatusChangedPredicate = predicate.Funcs{
+	UpdateFunc: func(e event.UpdateEvent) bool {
+		if e.ObjectOld == nil || e.ObjectNew == nil {
+			return false
+		}
+		oldPod, okOld := e.ObjectOld.(*KeystoneEndpoint)
+		newPod, okNew := e.ObjectNew.(*KeystoneEndpoint)
+
+		if !okOld || !okNew {
+			return false // Not a keystonev1.KeystoneEndpoint, or cast error
+		}
+
+		// Compare the Status fields of the old and new keystonev1.KeystoneEndpoint.
+		statusIsDifferent := !reflect.DeepEqual(oldPod.Status, newPod.Status)
+		return statusIsDifferent
+	},
+	DeleteFunc: func(_ event.DeleteEvent) bool {
+		// By default, we might want to react to deletions of KeystoneEndpoints.
+		return true
+	},
+}
 
 // KeystoneEndpointHelper -
 type KeystoneEndpointHelper struct {
