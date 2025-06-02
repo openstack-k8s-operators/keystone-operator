@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"reflect"
 	"time"
 
 	"github.com/gophercloud/gophercloud"
@@ -27,12 +28,40 @@ import (
 	"github.com/openstack-k8s-operators/lib-common/modules/common/secret"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/tls"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	openstack "github.com/openstack-k8s-operators/lib-common/modules/openstack"
 	appsv1 "k8s.io/api/apps/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
+
+// KeystoneAPIStatusChangedPredicate - primary purpose is to return true if
+// the KeystoneAPI Status.APIEndpoints has changed.
+// In addition also returns true if it gets deleted. Used by service operators
+// to watch KeystoneAPI endpoint they depend on.
+var KeystoneAPIStatusChangedPredicate = predicate.Funcs{
+	UpdateFunc: func(e event.UpdateEvent) bool {
+		if e.ObjectOld == nil || e.ObjectNew == nil {
+			return false
+		}
+		oldPod, okOld := e.ObjectOld.(*KeystoneAPI)
+		newPod, okNew := e.ObjectNew.(*KeystoneAPI)
+
+		if !okOld || !okNew {
+			return false // Not a keystonev1.KeystoneEndpoint, or cast error
+		}
+
+		// Compare the Status fields of the old and new keystonev1.KeystoneAPI.Status.APIEndpoints.
+		statusIsDifferent := !reflect.DeepEqual(oldPod.Status.APIEndpoints, newPod.Status.APIEndpoints)
+		return statusIsDifferent
+	},
+	DeleteFunc: func(_ event.DeleteEvent) bool {
+		// By default, we might want to react to deletions of KeystoneAPI.
+		return true
+	},
+}
 
 // GetKeystoneAPI - get keystoneAPI object in namespace
 func GetKeystoneAPI(
