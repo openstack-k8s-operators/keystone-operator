@@ -142,6 +142,22 @@ func (th *TestHelper) CreateKeystoneAPIWithFixture(
 	return name
 }
 
+// UpdateKeystoneAPIEndpoint updates a KeystoneAPI resource from the Kubernetes cluster adds a key
+// or updates an existing key in the Spec.Endpoints with a value
+//
+// Example usage:
+//
+//	th.UpdateKeystoneAPIEndpoint(endpointName, key, value)
+func (th *TestHelper) UpdateKeystoneAPIEndpoint(name types.NamespacedName, key string, newValue string) {
+	gomega.Eventually(func(g gomega.Gomega) {
+		keystone := th.GetKeystoneAPI(name)
+
+		keystone.Status.APIEndpoints[key] = newValue
+		g.Expect(th.K8sClient.Status().Update(th.Ctx, keystone.DeepCopy())).Should(gomega.Succeed())
+	}, th.Timeout, th.Interval).Should(gomega.Succeed())
+	th.Logger.Info("KeystoneAPI Endpoint updated", "keystoneAPI", name.Name, "key", key)
+}
+
 // DeleteKeystoneAPI deletes a KeystoneAPI resource from the Kubernetes cluster.
 //
 // # After the deletion, the function checks again if the KeystoneAPI is successfully deleted
