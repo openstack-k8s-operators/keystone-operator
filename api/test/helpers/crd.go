@@ -15,12 +15,15 @@ package helpers
 
 import (
 	"context"
+	"fmt"
+	"slices"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	"github.com/onsi/gomega"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
+	"github.com/openstack-k8s-operators/lib-common/modules/common"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -273,7 +276,40 @@ func (th *TestHelper) GetKeystoneEndpoint(name types.NamespacedName) *keystonev1
 func (th *TestHelper) SimulateKeystoneEndpointReady(name types.NamespacedName) {
 	gomega.Eventually(func(g gomega.Gomega) {
 		endpoint := th.GetKeystoneEndpoint(name)
+
+		if endpoint.Status.Endpoints == nil {
+			endpoint.Status.Endpoints = []keystonev1.Endpoint{}
+		}
+		if endpoint.Status.EndpointIDs == nil {
+			endpoint.Status.EndpointIDs = map[string]string{}
+		}
+
+		for endpointType, endpointURL := range endpoint.Spec.Endpoints {
+			var endpointID string
+			var ok bool
+			if endpointID, ok = endpoint.Status.EndpointIDs[endpointType]; !ok {
+				endpoint.Status.EndpointIDs[endpointType] = uuid.New().String()
+			}
+
+			f := func(e keystonev1.Endpoint) bool {
+				return e.Interface == endpointType
+			}
+			idx := slices.IndexFunc(endpoint.Status.Endpoints, f)
+			if idx >= 0 {
+				endpoint.Status.Endpoints[idx].ID = endpointID
+				endpoint.Status.Endpoints[idx].URL = endpointURL
+			} else {
+				endpoint.Status.Endpoints = append(endpoint.Status.Endpoints,
+					keystonev1.Endpoint{
+						Interface: endpointType,
+						URL:       endpointURL,
+						ID:        endpointID,
+					})
+			}
+		}
+
 		endpoint.Status.Conditions.MarkTrue(condition.ReadyCondition, "Ready")
+		endpoint.Status.ObservedGeneration = endpoint.Generation
 		g.Expect(th.K8sClient.Status().Update(th.Ctx, endpoint)).To(gomega.Succeed())
 	}, th.Timeout, th.Interval).Should(gomega.Succeed())
 	th.Logger.Info("Simulated KeystoneEndpoint ready", "on", name)
@@ -286,4 +322,91 @@ func (th *TestHelper) AssertKeystoneEndpointDoesNotExist(name types.NamespacedNa
 		err := th.K8sClient.Get(th.Ctx, name, instance)
 		g.Expect(k8s_errors.IsNotFound(err)).To(gomega.BeTrue())
 	}, th.Timeout, th.Interval).Should(gomega.Succeed())
+}
+
+// CreateKeystoneEndpoint creates a new KeystoneEndpoint instance with the specified name in the Kubernetes cluster.
+//
+// Example usage:
+//
+//	endpoint := th.CreateKeystoneEndpoint(endpointName)
+//	DeferCleanup(th.DeleteKeystoneEndpoint, endpoint)
+func (th *TestHelper) CreateKeystoneEndpoint(name types.NamespacedName) types.NamespacedName {
+	endpoint := &keystonev1.KeystoneEndpoint{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "keystone.openstack.org/v1beta1",
+			Kind:       "KeystoneEndpoint",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name.Name,
+			Namespace: name.Namespace,
+			Labels: map[string]string{
+				common.AppSelector: name.Name,
+			},
+		},
+		Spec: keystonev1.KeystoneEndpointSpec{
+			ServiceName: name.Name,
+			Endpoints: map[string]string{
+				"internal": fmt.Sprintf("http://%s-internal", name.Name),
+				"public":   fmt.Sprintf("http://%s-public", name.Name),
+			},
+		},
+	}
+
+	gomega.Expect(th.K8sClient.Create(th.Ctx, endpoint.DeepCopy())).Should(gomega.Succeed())
+	th.Logger.Info("KeystoneEndpoint created", "KeystoneEndpoint", name.Name)
+	return name
+}
+
+// DeleteKeystoneEndpoint deletes a KeystoneEndpoint resource from the Kubernetes cluster.
+//
+// # After the deletion, the function checks again if the KeystoneEndpoint is successfully deleted
+//
+// Example usage:
+//
+//	endpoint := th.CreateKeystoneEndpoint(namespace)
+//	DeferCleanup(th.DeleteKeystoneEndpoint, endpoint)
+func (th *TestHelper) DeleteKeystoneEndpoint(name types.NamespacedName) {
+	gomega.Eventually(func(g gomega.Gomega) {
+		endpoint := &keystonev1.KeystoneEndpoint{}
+		err := th.K8sClient.Get(th.Ctx, name, endpoint)
+		// if it is already gone that is OK
+		if k8s_errors.IsNotFound(err) {
+			return
+		}
+		g.Expect(err).NotTo(gomega.HaveOccurred())
+
+		g.Expect(th.K8sClient.Delete(th.Ctx, endpoint)).Should(gomega.Succeed())
+
+		err = th.K8sClient.Get(th.Ctx, name, endpoint)
+		g.Expect(k8s_errors.IsNotFound(err)).To(gomega.BeTrue())
+	}, th.Timeout, th.Interval).Should(gomega.Succeed())
+}
+
+// UpdateKeystoneEndpoint updates a KeystoneEndpoint resource from the Kubernetes cluster adds a key
+// or updates an existing key in the Spec.Endpoints with a value
+//
+// Example usage:
+//
+//	th.UpdateKeystoneEndpoint(endpointName, key, value)
+func (th *TestHelper) UpdateKeystoneEndpoint(name types.NamespacedName, key string, newValue string) {
+	gomega.Eventually(func(g gomega.Gomega) {
+		endpoint := &keystonev1.KeystoneEndpoint{}
+		err := th.K8sClient.Get(th.Ctx, name, endpoint)
+		g.Expect(err).NotTo(gomega.HaveOccurred())
+
+		endpoint.Spec.Endpoints[key] = newValue
+		g.Expect(th.K8sClient.Update(th.Ctx, endpoint)).Should(gomega.Succeed())
+
+		// update the endpoint status
+		f := func(e keystonev1.Endpoint) bool {
+			return e.Interface == key
+		}
+		idx := slices.IndexFunc(endpoint.Status.Endpoints, f)
+		if idx >= 0 {
+			endpoint.Status.Endpoints[idx].URL = newValue
+		}
+		endpoint.Status.ObservedGeneration = endpoint.Generation
+		g.Expect(th.K8sClient.Status().Update(th.Ctx, endpoint.DeepCopy())).Should(gomega.Succeed())
+	}, th.Timeout, th.Interval).Should(gomega.Succeed())
+	th.Logger.Info("KeystoneEndpoint updated", "keystoneEndpoint", name.Name, "key", key)
 }
