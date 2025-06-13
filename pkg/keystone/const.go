@@ -47,6 +47,10 @@ const (
 	KeystoneCronJob storage.PropagationType = "KeystoneCron"
 	// KeystoneBootstrap is the bootstrap service
 	KeystoneBootstrap storage.PropagationType = "KeystoneBootstrap"
+	// FederationConfigKey - key for multi-realm federation config secret
+	FederationConfigKey = "federation-config.json"
+	// FederationMultiRealmSecret - secret to store processed multirealm data
+	FederationMultiRealmSecret = "keystone-multirealm-federation-secret"
 )
 
 // KeystoneAPIPropagation is the  definition of the Horizon propagation service
