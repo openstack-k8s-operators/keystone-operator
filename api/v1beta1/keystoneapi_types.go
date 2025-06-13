@@ -26,9 +26,9 @@ import (
 	"github.com/openstack-k8s-operators/lib-common/modules/common/tls"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
 	"github.com/openstack-k8s-operators/lib-common/modules/storage"
-	"k8s.io/apimachinery/pkg/util/validation/field"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 const (
@@ -206,6 +206,17 @@ type KeystoneAPISpecCore struct {
 	// ExtraMounts containing conf files
 	// +kubebuilder:default={}
 	ExtraMounts []KeystoneExtraMounts `json:"extraMounts,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// Secret containing the configuration for federated realms
+	// This is only needed when multiple realms are federated.
+	FederatedRealmConfig string `json:"federatedRealmConfig"`
+
+	// +kubebuilder:validation:Optional
+	// Mount path for federation config files
+	// This is only needed when multiple realms are federated.
+	// If not specified, "/etc/httpd/conf" is used
+	FederationMountPath string `json:"federationMountPath"`
 }
 
 // APIOverrideSpec to override the generated manifest of several child resources.
