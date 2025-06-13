@@ -206,6 +206,16 @@ type KeystoneAPISpecCore struct {
 	// ExtraMounts containing conf files
 	// +kubebuilder:default={}
 	ExtraMounts []KeystoneExtraMounts `json:"extraMounts,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// Secret containing the configuration for federated realms
+	// This is only needed when multiple realms are federated.
+	FederatedRealmConfig string `json:"federatedRealmConfig"`
+
+	// +kubebuilder:validation:Optional
+	// Mount path for federation config files
+	// This is only needed when multiple realms are federated.
+	FederationMountPath string `json:"federationMountPath"`
 }
 
 // APIOverrideSpec to override the generated manifest of several child resources.
