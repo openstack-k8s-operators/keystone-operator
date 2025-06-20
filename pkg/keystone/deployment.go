@@ -42,6 +42,7 @@ func Deployment(
 	labels map[string]string,
 	annotations map[string]string,
 	topology *topologyv1.Topology,
+	federationFilenames []string,
 ) (*appsv1.Deployment, error) {
 
 	livenessProbe := &corev1.Probe{
@@ -88,6 +89,12 @@ func Deployment(
 	if instance.Spec.TLS.CaBundleSecretName != "" {
 		volumes = append(volumes, instance.Spec.TLS.CreateVolume())
 		volumeMounts = append(volumeMounts, instance.Spec.TLS.CreateVolumeMounts(nil)...)
+	}
+
+	// add Federation volumes and volume mounts if needed
+	if instance.Spec.FederatedRealmConfig != "" {
+		volumes = append(volumes, getFederationVolumes(federationFilenames)...)
+		volumeMounts = append(volumeMounts, getFederationVolumeMounts(instance.Spec.FederationMountPath, federationFilenames)...)
 	}
 
 	for _, endpt := range []service.Endpoint{service.EndpointInternal, service.EndpointPublic} {
