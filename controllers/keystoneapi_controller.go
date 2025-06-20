@@ -1101,7 +1101,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	//
 
 	// Define a new Deployment object
-	deplDef, err := keystone.Deployment(instance, inputHash, serviceLabels, serviceAnnotations, topology)
+	deplDef, err := keystone.Deployment(instance, inputHash, serviceLabels, serviceAnnotations, topology, memcached)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.DeploymentReadyCondition,
@@ -1189,7 +1189,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	}
 
 	// create CronJob
-	cronjobDef := keystone.CronJob(instance, serviceLabels, serviceAnnotations)
+	cronjobDef := keystone.CronJob(instance, serviceLabels, serviceAnnotations, memcached)
 	cronjob := cronjob.NewCronJob(
 		cronjobDef,
 		5*time.Second,
@@ -1304,6 +1304,13 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 
 	templateParameters["KeystoneEndpointPublic"], _ = instance.GetEndpoint(endpoint.EndpointPublic)
 	templateParameters["KeystoneEndpointInternal"], _ = instance.GetEndpoint(endpoint.EndpointInternal)
+
+	// MTLS params
+	if mc.GetMemcachedMTLSSecret() != "" {
+		templateParameters["MemcachedAuthCert"] = fmt.Sprint(memcachedv1.CertMountPath())
+		templateParameters["MemcachedAuthKey"] = fmt.Sprint(memcachedv1.KeyMountPath())
+		templateParameters["MemcachedAuthCa"] = fmt.Sprint(memcachedv1.CaMountPath())
+	}
 
 	httpdOverrideSecret := &corev1.Secret{}
 	if instance.Spec.HttpdCustomization.CustomConfigSecret != nil && *instance.Spec.HttpdCustomization.CustomConfigSecret != "" {
