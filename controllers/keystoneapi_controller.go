@@ -17,7 +17,10 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"sort"
+	"strconv"
 	"time"
 
 	networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
@@ -923,6 +926,24 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	}
 
 	//
+	// Create secret holding federation realm config (for multiple realms)
+	//
+	// If the user has provided a multi-realm federation config but no mountPath, default it
+	if instance.Spec.FederatedRealmConfig != "" && instance.Spec.FederationMountPath == "" {
+		instance.Spec.FederationMountPath = keystone.FederationDefaultMountPath
+	}
+	federationFilenames, err := r.ensureFederationRealmConfig(ctx, instance, helper, &configMapVars)
+	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.ServiceConfigReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.ServiceConfigReadyErrorMessage,
+			err.Error()))
+		return ctrl.Result{}, err
+	}
+
+	//
 	// TLS input validation
 	//
 	// Validate the CA cert secret if provided
@@ -1101,7 +1122,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	//
 
 	// Define a new Deployment object
-	deplDef, err := keystone.Deployment(instance, inputHash, serviceLabels, serviceAnnotations, topology)
+	deplDef, err := keystone.Deployment(instance, inputHash, serviceLabels, serviceAnnotations, topology, federationFilenames)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.DeploymentReadyCondition,
@@ -1608,6 +1629,93 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 	}
 
 	return nil
+}
+
+// ensureFederationRealmConfig - create secret with federation realm config
+// only used for multiple realm configuration
+// returns the array of sorted filenames
+func (r *KeystoneAPIReconciler) ensureFederationRealmConfig(
+	ctx context.Context,
+	instance *keystonev1.KeystoneAPI,
+	helper *helper.Helper,
+	envVars *map[string]env.Setter,
+) ([]string, error) {
+	logger := r.GetLogger(ctx)
+
+	if instance.Spec.FederatedRealmConfig == "" {
+		return nil, nil
+	}
+
+	// get the data from the relevant secret
+	// we expect this to be a JSON dict
+	jsonData, _, err := oko_secret.GetDataFromSecret(
+		ctx,
+		helper,
+		instance.Spec.FederatedRealmConfig,
+		10*time.Second,
+		keystone.FederationConfigKey)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse the JSON content into a map
+	var rawConfigs map[string]json.RawMessage
+	err = json.Unmarshal([]byte(jsonData), &rawConfigs)
+	if err != nil {
+		logger.Error(err, "Failed to unmarshal nested JSON from 'federation-config.json'")
+		return nil, err
+	}
+
+	// Extract and Sort Filenames (Keys)
+	var sortedFilenames []string
+	for filename := range rawConfigs {
+		sortedFilenames = append(sortedFilenames, filename)
+	}
+	sort.Strings(sortedFilenames)
+
+	// Prepare data for the new Secret
+	newSecretData := make(map[string]string)
+
+	// Iterate through the *sorted* filenames to populate the new Secret
+	for index, filename := range sortedFilenames {
+		// Get the raw content for the current filename
+		content, ok := rawConfigs[filename]
+		if !ok {
+			// logger.Warning("Warning: Content for sorted filename '%s' not found in rawConfigs. Skipping.", filename)
+			continue
+		}
+
+		newSecretData[strconv.Itoa(index)] = string(content) // Use sorted index as key
+	}
+
+	// Store the *sorted* original filenames as a JSON array in a special key
+	filenamesJSON, err := json.Marshal(sortedFilenames)
+	if err != nil {
+		logger.Error(err, "Failed to marshal sorted filenames")
+		return nil, err
+	}
+	newSecretData["_filenames.json"] = string(filenamesJSON)
+
+	templateParameters := make(map[string]interface{})
+	cmLabels := labels.GetLabels(instance, labels.GetGroupLabel(keystone.ServiceName), map[string]string{})
+	newSecret := []util.Template{
+		{
+			Name:          keystone.FederationMultiRealmSecret,
+			Namespace:     instance.Namespace,
+			Type:          util.TemplateTypeNone,
+			InstanceType:  instance.Kind,
+			CustomData:    newSecretData,
+			ConfigOptions: templateParameters,
+			Labels:        cmLabels,
+		},
+	}
+
+	err = oko_secret.EnsureSecrets(ctx, helper, instance, newSecret, envVars)
+	if err != nil {
+		logger.Error(err, "Failed to create new secret")
+		return nil, err
+	}
+	return sortedFilenames, nil
 }
 
 // createHashOfInputHashes - creates a hash of hashes which gets added to the resources which requires a restart
