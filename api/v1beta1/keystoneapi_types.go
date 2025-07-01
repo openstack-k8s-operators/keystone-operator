@@ -210,13 +210,8 @@ type KeystoneAPISpecCore struct {
 	// +kubebuilder:validation:Optional
 	// Secret containing the configuration for federated realms
 	// This is only needed when multiple realms are federated.
+	// Config files mount path is set to /var/lib/httpd/metadata/
 	FederatedRealmConfig string `json:"federatedRealmConfig"`
-
-	// +kubebuilder:validation:Optional
-	// Mount path for federation config files
-	// This is only needed when multiple realms are federated.
-	// If not specified, "/etc/httpd/conf" is used
-	FederationMountPath string `json:"federationMountPath"`
 }
 
 // APIOverrideSpec to override the generated manifest of several child resources.

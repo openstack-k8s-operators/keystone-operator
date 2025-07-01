@@ -81,7 +81,16 @@
             "owner": "keystone:apache",
             "perm": "0444",
             "optional": true
+        },
+        {
+            "source": "/var/lib/config-data/default/multirealm-federation/*",
+            "dest": "/var/lib/httpd/metadata/",
+            "owner": "keystone:apache",
+            "perm": "0640",
+            "optional": true,
+            "merge": true
         }
+
     ],
     "permissions": [
         {
@@ -92,6 +101,12 @@
         {
             "path": "/var/log/keystone",
             "owner": "keystone:apache",
+            "recurse": true
+        },
+        {
+            "path": "/var/lib/httpd/metadata",
+            "owner": "keystone:apache",
+            "perm": "0775",
             "recurse": true
         }
     ]

@@ -928,10 +928,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	//
 	// Create secret holding federation realm config (for multiple realms)
 	//
-	// If the user has provided a multi-realm federation config but no mountPath, default it
-	if instance.Spec.FederatedRealmConfig != "" && instance.Spec.FederationMountPath == "" {
-		instance.Spec.FederationMountPath = keystone.FederationDefaultMountPath
-	}
+
 	federationFilenames, err := r.ensureFederationRealmConfig(ctx, instance, helper, &configMapVars)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(

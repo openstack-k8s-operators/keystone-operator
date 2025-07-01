@@ -16,9 +16,10 @@ limitations under the License.
 package keystone
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	"path/filepath"
 	"strconv"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 // getFederationVolumeMounts - get federation mountpoints
