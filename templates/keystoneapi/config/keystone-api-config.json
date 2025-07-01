@@ -65,7 +65,15 @@
             "owner": "keystone:apache",
             "perm": "0444",
             "optional": true
+        },
+        {
+            "source": "/var/lib/config-data/default/multirealm-federation/*",
+            "dest": "/etc/httpd/conf/",
+            "owner": "keystone:apache",
+            "perm": "0644",
+            "optional": true
         }
+
     ],
     "permissions": [
         {
