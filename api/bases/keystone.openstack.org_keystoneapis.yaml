@@ -1166,12 +1166,12 @@ spec:
                 description: |-
                   Secret containing the configuration for federated realms
                   This is only needed when multiple realms are federated.
+                  Config files mount path is set to /var/lib/httpd/metadata/
                 type: string
               federationMountPath:
                 description: |-
-                  Mount path for federation config files
-                  This is only needed when multiple realms are federated.
-                  If not specified, "/etc/httpd/conf" is used
+                  Deprecated: FederationMountPath is deprecated and will be removed in a future.
+                  The multirealm federation files are by default mounted to /var/lib/httpd/metadata/
                 type: string
               fernetMaxActiveKeys:
                 default: 5
