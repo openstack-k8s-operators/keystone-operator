@@ -1949,7 +1949,7 @@ OIDCRedirectURI "{{ .KeystoneEndpointPublic }}/v3/auth/OS-FEDERATION/websso/open
 	When("A KeystoneAPI is created with a federatedRealmConfig", func() {
 		const (
 			inputSecretName  = "federation-test-secret"
-			mountPath        = "/etc/keystone/federation"
+			mountPath        = "/var/lib/config-data/default/multirealm-federation"
 			multiRealmSecret = "keystone-multirealm-federation-secret"
 		)
 
@@ -2020,70 +2020,7 @@ OIDCRedirectURI "{{ .KeystoneEndpointPublic }}/v3/auth/OS-FEDERATION/websso/open
 			d := th.GetDeployment(deploymentName)
 			container := d.Spec.Template.Spec.Containers[0]
 			for idx, filename := range []string{"idp1.conf", "idp2.conf"} {
-				// volume name = "federation-realm-volume<idx>"
-				// mountPath = <mountPath>/<filename>
 				expectedPath := filepath.Join(mountPath, filename)
-				th.AssertVolumeMountPathExists(
-					fmt.Sprintf("federation-realm-volume%d", idx),
-					expectedPath, "", container.VolumeMounts,
-				)
-			}
-		})
-	})
-
-	When("A KeystoneAPI is created with federatedRealmConfig but no mountPath", func() {
-		const (
-			inputSecretName  = "federation-test-secret-no-mount"
-			multiRealmSecret = "keystone-multirealm-federation-secret"
-		)
-		BeforeEach(func() {
-			raw := `{
-          "idp1.conf": "CONTENT_%ONE%",
-          "idp2.conf": "CONTENT-TWO"
-        }`
-			th.CreateSecret(
-				types.NamespacedName{Namespace: namespace, Name: inputSecretName},
-				map[string][]byte{"federation-config.json": []byte(raw)},
-			)
-
-			spec := GetDefaultKeystoneAPISpec()
-			spec["federatedRealmConfig"] = inputSecretName
-
-			DeferCleanup(k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
-			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, spec))
-			DeferCleanup(k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
-			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
-			DeferCleanup(
-				mariadb.DeleteDBService,
-				mariadb.CreateDBService(
-					namespace,
-					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
-					corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 3306}}},
-				),
-			)
-
-			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
-			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
-			infra.SimulateTransportURLReady(types.NamespacedName{
-				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
-				Namespace: namespace,
-			})
-			infra.SimulateMemcachedReady(types.NamespacedName{
-				Name:      "memcached",
-				Namespace: namespace,
-			})
-			th.SimulateJobSuccess(dbSyncJobName)
-			th.SimulateJobSuccess(bootstrapJobName)
-			th.SimulateDeploymentReplicaReady(deploymentName)
-		})
-
-		It("should mount under the operator-default path", func() {
-			defaultMount := "/etc/httpd/conf"
-
-			d := th.GetDeployment(deploymentName)
-			container := d.Spec.Template.Spec.Containers[0]
-			for idx, filename := range []string{"idp1.conf", "idp2.conf"} {
-				expectedPath := filepath.Join(defaultMount, filename)
 				th.AssertVolumeMountPathExists(
 					fmt.Sprintf("federation-realm-volume%d", idx),
 					expectedPath, "", container.VolumeMounts,
