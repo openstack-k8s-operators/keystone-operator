@@ -3,7 +3,6 @@
 aliases:
   ci-approvers:
   - lewisdenny
-  - frenzyfriday
   - viroel
   openstack-approvers:
   - abays
