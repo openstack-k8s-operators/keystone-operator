@@ -28,11 +28,7 @@ for rotation in {1..5}; do
 
     sleep 100
 
-    # Wait for rollout to complete
-    if ! oc rollout status deployment/keystone -n $NAMESPACE --timeout=60s; then
-        echo "Rollout status check failed for rotation $rotation."
-        continue
-    fi
+    # Note: keystone is not being restarted
 
     echo "Rotation $rotation completed successfully."
 done
