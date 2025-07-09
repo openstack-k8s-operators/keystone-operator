@@ -45,10 +45,10 @@ spec:
           name: config-data
           readOnly: true
           subPath: keystone-api-config.json
-        - mountPath: /var/lib/fernet-keys
+        - mountPath: /etc/keystone/fernet-keys
           name: fernet-keys
           readOnly: true
-        - mountPath: /var/lib/credential-keys
+        - mountPath: /etc/keystone/credential-keys
           name: credential-keys
           readOnly: true
         - mountPath: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
