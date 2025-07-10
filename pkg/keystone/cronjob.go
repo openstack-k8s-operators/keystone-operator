@@ -16,6 +16,7 @@ limitations under the License.
 package keystone
 
 import (
+	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/env"
 
@@ -34,6 +35,7 @@ func CronJob(
 	instance *keystonev1.KeystoneAPI,
 	labels map[string]string,
 	annotations map[string]string,
+	memcached *memcachedv1.Memcached,
 ) *batchv1.CronJob {
 
 	args := []string{"-c", TrustFlushCommand + instance.Spec.TrustFlushArgs}
@@ -53,6 +55,12 @@ func CronJob(
 	if instance.Spec.TLS.CaBundleSecretName != "" {
 		volumes = append(volumes, instance.Spec.TLS.CreateVolume())
 		volumeMounts = append(getCronJobVolumeMounts(), instance.Spec.TLS.CreateVolumeMounts(nil)...)
+	}
+
+	// add MTLS cert if defined
+	if memcached.GetMemcachedMTLSSecret() != "" {
+		volumes = append(volumes, memcached.CreateMTLSVolume())
+		volumeMounts = append(volumeMounts, memcached.CreateMTLSVolumeMounts(nil, nil)...)
 	}
 
 	cronjob := &batchv1.CronJob{
