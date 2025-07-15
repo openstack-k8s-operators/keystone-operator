@@ -52,7 +52,7 @@ const (
 	// FederationMultiRealmSecret - secret to store processed multirealm data
 	FederationMultiRealmSecret = "keystone-multirealm-federation-secret"
 	// FederationDefaultMountPath - if user doesn't specify otherwise, this location is used
-	FederationDefaultMountPath = "/etc/httpd/conf"
+	FederationDefaultMountPath = "/var/lib/config-data/default/multirealm-federation"
 )
 
 // KeystoneAPIPropagation is the  definition of the Horizon propagation service
