@@ -58,18 +58,6 @@
             "merge": true
         },
         {
-            "source": "/var/lib/credential-keys",
-            "dest": "/etc/keystone/",
-            "owner": "keystone:keystone",
-            "perm": "0700"
-        },
-        {
-            "source": "/var/lib/fernet-keys",
-            "dest": "/etc/keystone/",
-            "owner": "keystone:keystone",
-            "perm": "0700"
-        },
-        {
             "source": "/var/lib/config-data/default/my.cnf",
             "dest": "/etc/my.cnf",
             "owner": "keystone",
