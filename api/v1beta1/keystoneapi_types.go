@@ -276,6 +276,9 @@ type KeystoneAPIStatus struct {
 
 	// LastAppliedTopology - the last applied Topology
 	LastAppliedTopology *topologyv1.TopoRef `json:"lastAppliedTopology,omitempty"`
+
+	// Region - optional region name for the keystone service
+	Region string `json:"region,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -376,4 +379,9 @@ func (instance *KeystoneAPISpecCore) ValidateTopology(
 		instance.TopologyRef,
 		*basePath.Child("topologyRef"), namespace)...)
 	return allErrs
+}
+
+// GetRegion -
+func (instance *KeystoneAPI) GetRegion() string {
+	return instance.Status.Region
 }

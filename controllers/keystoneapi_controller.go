@@ -1155,6 +1155,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	deploy := depl.GetDeployment()
 	if deploy.Generation == deploy.Status.ObservedGeneration {
 		instance.Status.ReadyCount = deploy.Status.ReadyReplicas
+		instance.Status.Region = instance.Spec.Region
 	}
 
 	// verify if network attachment matches expectations

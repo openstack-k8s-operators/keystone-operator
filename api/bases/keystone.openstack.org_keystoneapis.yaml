@@ -1633,6 +1633,9 @@ spec:
                 description: ReadyCount of keystone API instances
                 format: int32
                 type: integer
+              region:
+                description: Region - optional region name for the keystone service
+                type: string
               transportURLSecret:
                 description: TransportURLSecret - Secret containing RabbitMQ transportURL
                 type: string
