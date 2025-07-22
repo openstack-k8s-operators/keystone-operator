@@ -93,10 +93,21 @@ func Deployment(
 		volumeMounts = append(volumeMounts, instance.Spec.TLS.CreateVolumeMounts(nil)...)
 	}
 
-	// add Federation volumes and volume mounts if needed
+	// add Federation volumes and volume mounts
 	if instance.Spec.FederatedRealmConfig != "" {
+		volumes = append(volumes, corev1.Volume{
+			Name: "federation-realm-dir",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		})
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "federation-realm-dir",
+			MountPath: FederationDefaultMountPath,
+		})
+
 		volumes = append(volumes, getFederationVolumes(federationFilenames)...)
-		volumeMounts = append(volumeMounts, getFederationVolumeMounts(instance.Spec.FederationMountPath, federationFilenames)...)
+		volumeMounts = append(volumeMounts, getFederationVolumeMounts(FederationDefaultMountPath, federationFilenames)...)
 	}
 
 	// add MTLS cert if defined
