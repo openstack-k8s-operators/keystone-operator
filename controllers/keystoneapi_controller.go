@@ -254,6 +254,7 @@ const (
 	tlsAPIPublicField                   = ".spec.tls.api.public.secretName"
 	topologyField                       = ".spec.topologyRef.Name"
 	httpdCustomServiceConfigSecretField = ".spec.httpdCustomization.customServiceConfigSecret" // #nosec G101
+	federatedRealmConfigField           = ".spec.federatedRealmConfig"                         // #nosec G101
 )
 
 var allWatchFields = []string{
@@ -262,6 +263,7 @@ var allWatchFields = []string{
 	tlsAPIInternalField,
 	tlsAPIPublicField,
 	httpdCustomServiceConfigSecretField,
+	federatedRealmConfigField,
 	topologyField,
 }
 
@@ -325,6 +327,18 @@ func (r *KeystoneAPIReconciler) SetupWithManager(ctx context.Context, mgr ctrl.M
 			return nil
 		}
 		return []string{*cr.Spec.HttpdCustomization.CustomConfigSecret}
+	}); err != nil {
+		return err
+	}
+
+	// index federatedRealmConfigField
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &keystonev1.KeystoneAPI{}, federatedRealmConfigField, func(rawObj client.Object) []string {
+		// Extract the secret name from the spec, if one is provided
+		cr := rawObj.(*keystonev1.KeystoneAPI)
+		if cr.Spec.FederatedRealmConfig == "" {
+			return nil
+		}
+		return []string{cr.Spec.FederatedRealmConfig}
 	}); err != nil {
 		return err
 	}
@@ -1651,21 +1665,24 @@ func (r *KeystoneAPIReconciler) ensureFederationRealmConfig(
 		return nil, nil
 	}
 
-	// get the data from the relevant secret
-	// we expect this to be a JSON dict
-	jsonData, _, err := oko_secret.GetDataFromSecret(
-		ctx,
-		helper,
-		instance.Spec.FederatedRealmConfig,
-		10*time.Second,
-		keystone.FederationConfigKey)
+	// Verify that the federation secret object exists
+	federationSecret, hash, err := oko_secret.GetSecret(ctx, helper, instance.Spec.FederatedRealmConfig, instance.Namespace)
 	if err != nil {
 		return nil, err
 	}
 
+	// Add the secret hash to envVars for change detection
+	(*envVars)[instance.Spec.FederatedRealmConfig] = env.SetValue(hash)
+
+	// Get the data from the federation secret, we expect this to be a JSON dict
+	jsonData, ok := federationSecret.Data[keystone.FederationConfigKey]
+	if !ok {
+		return nil, fmt.Errorf("key %s not found in secret %s: %w", keystone.FederationConfigKey, instance.Spec.FederatedRealmConfig, util.ErrFieldNotFound)
+	}
+
 	// Parse the JSON content into a map
 	var rawConfigs map[string]json.RawMessage
-	err = json.Unmarshal([]byte(jsonData), &rawConfigs)
+	err = json.Unmarshal(jsonData, &rawConfigs)
 	if err != nil {
 		logger.Error(err, "Failed to unmarshal nested JSON from 'federation-config.json'")
 		return nil, err
