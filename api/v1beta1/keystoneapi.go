@@ -34,6 +34,7 @@ import (
 	openstack "github.com/openstack-k8s-operators/lib-common/modules/openstack"
 	appsv1 "k8s.io/api/apps/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -98,6 +99,22 @@ func GetKeystoneAPI(
 	}
 
 	return &keystoneList.Items[0], nil
+}
+
+// GetKeystoneAPIByName - get keystoneAPI object by name and namespace
+func GetKeystoneAPIByName(
+	ctx context.Context,
+	h *helper.Helper,
+	name string,
+	namespace string,
+) (*KeystoneAPI, error) {
+	keystoneAPI := &KeystoneAPI{}
+	err := h.GetClient().Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, keystoneAPI)
+	if err != nil {
+		return nil, err
+	}
+
+	return keystoneAPI, nil
 }
 
 // GetAdminServiceClient - get a system scoped admin serviceClient for the keystoneAPI instance
