@@ -2030,6 +2030,154 @@ OIDCRedirectURI "{{ .KeystoneEndpointPublic }}/v3/auth/OS-FEDERATION/websso/open
 		})
 	})
 
+	When("A KeystoneAPI is created with quorum queues disabled", func() {
+		BeforeEach(func() {
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, GetDefaultKeystoneAPISpec()))
+			DeferCleanup(
+				k8sClient.Delete, ctx, infra.CreateTransportURLSecret(namespace, "rabbitmq-secret", false))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
+				Namespace: namespace,
+			})
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+			th.SimulateDeploymentReplicaReady(deploymentName)
+		})
+
+		It("should not include quorum queue configuration in keystone.conf", func() {
+			scrt := th.GetSecret(keystoneAPIConfigDataName)
+			configData := string(scrt.Data["keystone.conf"])
+			Expect(configData).NotTo(ContainSubstring("rabbit_quorum_queue"))
+			Expect(configData).NotTo(ContainSubstring("rabbit_transient_quorum_queue"))
+			Expect(configData).NotTo(ContainSubstring("amqp_durable_queues"))
+		})
+	})
+
+	When("A KeystoneAPI is created with quorum queues enabled", func() {
+		BeforeEach(func() {
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, GetDefaultKeystoneAPISpec()))
+			DeferCleanup(
+				k8sClient.Delete, ctx, infra.CreateTransportURLSecret(namespace, "rabbitmq-secret", true))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
+				Namespace: namespace,
+			})
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+			th.SimulateDeploymentReplicaReady(deploymentName)
+		})
+
+		It("should include quorum queue configuration in keystone.conf", func() {
+			scrt := th.GetSecret(keystoneAPIConfigDataName)
+			configData := string(scrt.Data["keystone.conf"])
+			Expect(configData).To(ContainSubstring("rabbit_quorum_queue=true"))
+			Expect(configData).To(ContainSubstring("rabbit_transient_quorum_queue=true"))
+			Expect(configData).To(ContainSubstring("amqp_durable_queues=true"))
+		})
+	})
+
+	When("A KeystoneAPI is created with quorum queues disabled and then updated to enable them", func() {
+		BeforeEach(func() {
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, GetDefaultKeystoneAPISpec()))
+			DeferCleanup(
+				k8sClient.Delete, ctx, infra.CreateTransportURLSecret(namespace, "rabbitmq-secret", false))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
+				Namespace: namespace,
+			})
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+			th.SimulateDeploymentReplicaReady(deploymentName)
+		})
+
+		It("should correctly update keystone.conf when quorum queues are enabled", func() {
+			// First, verify the initial state - quorum queues disabled
+			scrt := th.GetSecret(keystoneAPIConfigDataName)
+			configData := string(scrt.Data["keystone.conf"])
+			Expect(configData).NotTo(ContainSubstring("rabbit_quorum_queue"))
+			Expect(configData).NotTo(ContainSubstring("rabbit_transient_quorum_queue"))
+			Expect(configData).NotTo(ContainSubstring("amqp_durable_queues"))
+
+			// Update the RabbitMQ secret to enable quorum queues
+			rabbitmqSecret := th.GetSecret(types.NamespacedName{
+				Name:      "rabbitmq-secret",
+				Namespace: namespace,
+			})
+
+			// Update the quorum queue setting in the secret
+			Eventually(func(g Gomega) {
+				rabbitmqSecret.Data["quorumqueues"] = []byte("true")
+				g.Expect(k8sClient.Update(ctx, &rabbitmqSecret)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			// Wait for the configuration to be updated in keystone.conf
+			Eventually(func(g Gomega) {
+				scrt = th.GetSecret(keystoneAPIConfigDataName)
+				configData = string(scrt.Data["keystone.conf"])
+				g.Expect(configData).To(ContainSubstring("rabbit_quorum_queue=true"))
+				g.Expect(configData).To(ContainSubstring("rabbit_transient_quorum_queue=true"))
+				g.Expect(configData).To(ContainSubstring("amqp_durable_queues=true"))
+			}, timeout, interval).Should(Succeed())
+		})
+	})
+
 	// Run MariaDBAccount suite tests.  these are pre-packaged ginkgo tests
 	// that exercise standard account create / update patterns that should be
 	// common to all controllers that ensure MariaDBAccount CRs.
