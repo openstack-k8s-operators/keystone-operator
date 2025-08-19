@@ -45,7 +45,7 @@ type KeystoneEndpointReconciler struct {
 	Scheme  *runtime.Scheme
 }
 
-// GetLog returns a logger object with a logging prefix of "controller.name" and additional controller context fields
+// GetLogger returns a logger object with a logging prefix of "controller.name" and additional controller context fields
 func (r *KeystoneEndpointReconciler) GetLogger(ctx context.Context) logr.Logger {
 	return log.FromContext(ctx).WithName("Controllers").WithName("KeystoneEndpoint")
 }
@@ -64,7 +64,7 @@ func (r *KeystoneEndpointReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// Fetch the KeystoneEndpoint instance
 	instance := &keystonev1.KeystoneEndpoint{}
-	err := r.Client.Get(ctx, req.NamespacedName, instance)
+	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.

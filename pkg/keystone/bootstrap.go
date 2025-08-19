@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package keystone contains keystone service bootstrap functionality.
 package keystone
 
 import (
