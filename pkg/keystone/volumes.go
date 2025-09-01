@@ -130,12 +130,12 @@ func getVolumeMounts(
 			ReadOnly:  true,
 		},
 		{
-			MountPath: "/var/lib/fernet-keys",
+			MountPath: "/etc/keystone/fernet-keys",
 			ReadOnly:  true,
 			Name:      "fernet-keys",
 		},
 		{
-			MountPath: "/var/lib/credential-keys",
+			MountPath: "/etc/keystone/credential-keys",
 			ReadOnly:  true,
 			Name:      "credential-keys",
 		},

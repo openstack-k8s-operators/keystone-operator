@@ -1524,7 +1524,8 @@ var _ = Describe("Keystone controller", func() {
 
 			Eventually(func(g Gomega) {
 				keystone = GetKeystoneAPI(keystoneAPIName)
-				g.Expect(keystone.Status.Hash["input"]).ToNot(Equal(currentHash))
+				// With the new direct mounting approach, the input hash should NOT change
+				g.Expect(keystone.Status.Hash["input"]).To(Equal(currentHash))
 
 				updatedSecret := th.GetSecret(types.NamespacedName{Namespace: keystoneAPIName.Namespace, Name: "keystone"})
 				g.Expect(updatedSecret).ToNot(BeNil())

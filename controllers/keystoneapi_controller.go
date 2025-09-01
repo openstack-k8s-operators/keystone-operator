@@ -1524,7 +1524,7 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 		numberKeys = int(*instance.Spec.FernetMaxActiveKeys)
 	}
 
-	secret, hash, err := oko_secret.GetSecret(ctx, helper, secretName, instance.Namespace)
+	secret, _, err := oko_secret.GetSecret(ctx, helper, secretName, instance.Namespace)
 
 	if err != nil && !k8s_errors.IsNotFound(err) {
 		return err
@@ -1556,8 +1556,9 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 			return err
 		}
 	} else {
-		// add hash to envVars
-		(*envVars)[secret.Name] = env.SetValue(hash)
+		// DON'T add hash to envVars to prevent pod restarts when keys rotate
+		// Keys are mounted directly to /etc/keystone/fernet-keys, so Kubernetes
+		// will propagate changes automatically without needing pod recreation
 
 		changedKeys := false
 

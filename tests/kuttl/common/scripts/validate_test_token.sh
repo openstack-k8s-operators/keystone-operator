@@ -11,9 +11,9 @@ while [ $seconds -le 30 ]; do
     seconds=$(( seconds + 1 ))
 done
 
-sleep 20 # make sure a rollout started
-
-oc rollout status deployment/keystone -n $NAMESPACE
+# Wait for secret propagation to pods instead of waiting for rollout
+# Since pods no longer restart during key rotation, keys are updated via Kubernetes secret propagation
+sleep 60
 
 export OS_TOKEN=$(cat /tmp/temporary_test_token)
 
