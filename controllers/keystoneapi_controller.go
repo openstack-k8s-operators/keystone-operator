@@ -514,6 +514,7 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	helper *helper.Helper,
 	serviceLabels map[string]string,
 	serviceAnnotations map[string]string,
+	memcached *memcachedv1.Memcached,
 ) (ctrl.Result, error) {
 	Log := r.GetLogger(ctx)
 	Log.Info("Reconciling Service init")
@@ -702,7 +703,7 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	//
 	// BootStrap Job
 	//
-	jobDef = keystone.BootstrapJob(instance, serviceLabels, serviceAnnotations, instance.Status.APIEndpoints)
+	jobDef = keystone.BootstrapJob(instance, serviceLabels, serviceAnnotations, instance.Status.APIEndpoints, memcached)
 	bootstrapjob := job.NewJob(
 		jobDef,
 		keystonev1.BootstrapHash,
@@ -1070,7 +1071,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	}
 
 	// Handle service init
-	ctrlResult, err := r.reconcileInit(ctx, instance, helper, serviceLabels, serviceAnnotations)
+	ctrlResult, err := r.reconcileInit(ctx, instance, helper, serviceLabels, serviceAnnotations, memcached)
 	if err != nil {
 		return ctrlResult, err
 	} else if (ctrlResult != ctrl.Result{}) {

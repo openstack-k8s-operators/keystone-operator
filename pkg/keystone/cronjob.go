@@ -19,6 +19,7 @@ import (
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/env"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/tls"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -59,8 +60,26 @@ func CronJob(
 
 	// add MTLS cert if defined
 	if memcached.GetMemcachedMTLSSecret() != "" {
-		volumes = append(volumes, memcached.CreateMTLSVolume())
-		volumeMounts = append(volumeMounts, memcached.CreateMTLSVolumeMounts(nil, nil)...)
+		mtlsVolume := memcached.CreateMTLSVolume()
+		// Set file permissions to 0440
+		mtlsVolume.Secret.DefaultMode = func() *int32 { mode := int32(0440); return &mode }()
+		volumes = append(volumes, mtlsVolume)
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      *memcached.Spec.TLS.MTLS.AuthCertSecret.SecretName,
+			MountPath: "/etc/pki/tls/certs/mtls.crt",
+			SubPath:   tls.CertKey,
+			ReadOnly:  true,
+		}, corev1.VolumeMount{
+			Name:      *memcached.Spec.TLS.MTLS.AuthCertSecret.SecretName,
+			MountPath: "/etc/pki/tls/private/mtls.key",
+			SubPath:   tls.PrivateKey,
+			ReadOnly:  true,
+		}, corev1.VolumeMount{
+			Name:      *memcached.Spec.TLS.MTLS.AuthCertSecret.SecretName,
+			MountPath: "/etc/pki/tls/certs/mtls-ca.crt",
+			SubPath:   tls.CAKey,
+			ReadOnly:  true,
+		})
 	}
 
 	cronjob := &batchv1.CronJob{
@@ -98,6 +117,9 @@ func CronJob(
 							Volumes:            volumes,
 							RestartPolicy:      corev1.RestartPolicyNever,
 							ServiceAccountName: instance.RbacResourceName(),
+							SecurityContext: &corev1.PodSecurityContext{
+								FSGroup: func() *int64 { gid := int64(42425); return &gid }(), // keystone group
+							},
 						},
 					},
 				},

@@ -16,9 +16,11 @@ limitations under the License.
 package keystone
 
 import (
+	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 
 	"github.com/openstack-k8s-operators/lib-common/modules/common/env"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/tls"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -36,6 +38,7 @@ func BootstrapJob(
 	labels map[string]string,
 	annotations map[string]string,
 	endpoints map[string]string,
+	memcached *memcachedv1.Memcached,
 ) *batchv1.Job {
 	runAsUser := int64(0)
 
@@ -68,6 +71,27 @@ func BootstrapJob(
 	if instance.Spec.TLS.CaBundleSecretName != "" {
 		volumes = append(volumes, instance.Spec.TLS.CreateVolume())
 		volumeMounts = append(volumeMounts, instance.Spec.TLS.CreateVolumeMounts(nil)...)
+	}
+
+	// add MTLS cert if defined
+	if memcached.GetMemcachedMTLSSecret() != "" {
+		volumes = append(volumes, memcached.CreateMTLSVolume())
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      *memcached.Spec.TLS.MTLS.AuthCertSecret.SecretName,
+			MountPath: "/etc/pki/tls/certs/mtls.crt",
+			SubPath:   tls.CertKey,
+			ReadOnly:  true,
+		}, corev1.VolumeMount{
+			Name:      *memcached.Spec.TLS.MTLS.AuthCertSecret.SecretName,
+			MountPath: "/etc/pki/tls/private/mtls.key",
+			SubPath:   tls.PrivateKey,
+			ReadOnly:  true,
+		}, corev1.VolumeMount{
+			Name:      *memcached.Spec.TLS.MTLS.AuthCertSecret.SecretName,
+			MountPath: "/etc/pki/tls/certs/mtls-ca.crt",
+			SubPath:   tls.CAKey,
+			ReadOnly:  true,
+		})
 	}
 
 	job := &batchv1.Job{
