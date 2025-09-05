@@ -71,6 +71,50 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+/*
+CONDITION SEVERITY GUIDELINES
+
+This file follows consistent severity guidelines for operator conditions to ensure
+proper hierarchy and consistency across all OpenStack operators. The severity
+levels are used to classify the impact of "False" conditions on reconciliation progress.
+
+SEVERITY HIERARCHY:
+
+1. SeverityError - Critical Issues
+   - Use for: Conditions that completely block reconciliation progress and require manual intervention
+   - Examples: Database connection failures, critical configuration errors, network attachment definition errors
+   - Reason: condition.ErrorReason
+   - Impact: Operator cannot proceed without manual intervention
+
+2. SeverityWarning - Recoverable Issues
+   - Use for: Conditions that indicate problems but may resolve in next reconciliation
+   - Examples: Missing dependencies being created, temporary resource unavailability, configuration issues that can be auto-corrected
+   - Reason: condition.ErrorReason
+   - Impact: Operator can retry and may succeed in subsequent reconciliations
+
+3. SeverityInfo - Informational Status
+   - Use for: Conditions that don't block progress but provide status updates
+   - Examples: Jobs running, waiting for dependencies, normal operational states not yet complete
+   - Reason: condition.RequestedReason
+   - Impact: No blocking, just informational status
+
+4. SeverityNone - Success/Unknown States
+   - Use for: Status=True or Status=Unknown conditions (as per CRD documentation)
+   - Examples: All MarkTrue() calls, UnknownCondition() calls
+   - Impact: No issues, normal operation
+
+CONSISTENCY RULES:
+- RequestedReason conditions should use SeverityInfo (waiting/processing states)
+- ErrorReason conditions should use SeverityWarning (recoverable) or SeverityError (critical)
+- Never use SeverityWarning with RequestedReason
+- Never use SeverityInfo with ErrorReason
+- "Not found" errors for dependencies should use SeverityInfo (waiting for creation)
+- Actual errors (not just missing resources) should use SeverityWarning or SeverityError
+
+This ensures consistent behavior across all OpenStack operators and proper
+classification of condition severity for monitoring and alerting systems.
+*/
+
 // GetClient -
 func (r *KeystoneAPIReconciler) GetClient() client.Client {
 	return r.Client
@@ -797,11 +841,13 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 			err.Error()))
 		return ctrl.Result{}, err
 	} else if (result != ctrl.Result{}) {
-		// This case is "secret not found".  VerifySecret already logs a message for it
+		// This case is "secret not found".  VerifySecret already logs a message for it.
+		// We treat this as a warning because it means that the service will not be able to start
+		// while we are waiting for the secret to be created manually by the user.
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.InputReadyCondition,
-			condition.RequestedReason,
-			condition.SeverityInfo,
+			condition.ErrorReason,
+			condition.SeverityWarning,
 			condition.InputReadyWaitingMessage))
 		return result, nil
 	}
@@ -842,6 +888,8 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	instance.Status.TransportURLSecret = transportURL.Status.SecretName
 
 	if instance.Status.TransportURLSecret == "" {
+		// Since the TransportURL secret is automatically created by the Infra operator,
+		// we treat this as an info (because the user is not responsible for manually creating it).
 		Log.Info(fmt.Sprintf("Waiting for TransportURL %s secret to be created", transportURL.Name))
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.RabbitMqTransportURLReadyCondition,
@@ -860,6 +908,9 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	memcached, err := memcachedv1.GetMemcachedByName(ctx, helper, instance.Spec.MemcachedInstance, instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
+			// Memcached should be automatically created by the encompassing OpenStackControlPlane,
+			// so if it is missing at this point, we treat it as an info (because the user is not
+			// responsible for manually creating it).
 			Log.Info(fmt.Sprintf("memcached %s not found", instance.Spec.MemcachedInstance))
 			instance.Status.Conditions.Set(condition.FalseCondition(
 				condition.MemcachedReadyCondition,
@@ -970,10 +1021,12 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 		)
 		if err != nil {
 			if k8s_errors.IsNotFound(err) {
+				// Since the CA cert secret should have been manually created by the user and provided in the spec,
+				// we treat this as a warning because it means that the service will not be able to start.
 				instance.Status.Conditions.Set(condition.FalseCondition(
 					condition.TLSInputReadyCondition,
-					condition.RequestedReason,
-					condition.SeverityInfo,
+					condition.ErrorReason,
+					condition.SeverityWarning,
 					condition.TLSInputReadyWaitingMessage,
 					instance.Spec.TLS.CaBundleSecretName))
 				return ctrl.Result{}, nil
@@ -996,6 +1049,8 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	certsHash, err := instance.Spec.TLS.API.ValidateCertSecrets(ctx, helper, instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
+			// Since the OpenStackControlPlane creates the API service certs secrets,
+			// we treat this as an info (because the user is not responsible for manually creating them).
 			instance.Status.Conditions.Set(condition.FalseCondition(
 				condition.TLSInputReadyCondition,
 				condition.RequestedReason,
@@ -1041,11 +1096,13 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 		nad, err := nad.GetNADWithName(ctx, helper, netAtt, instance.Namespace)
 		if err != nil {
 			if k8s_errors.IsNotFound(err) {
+				// Since the net-attach-def CR should have been manually created by the user and referenced in the spec,
+				// we treat this as a warning because it means that the service will not be able to start.
 				Log.Info(fmt.Sprintf("network-attachment-definition %s not found", netAtt))
 				instance.Status.Conditions.Set(condition.FalseCondition(
 					condition.NetworkAttachmentsReadyCondition,
-					condition.RequestedReason,
-					condition.SeverityInfo,
+					condition.ErrorReason,
+					condition.SeverityWarning,
 					condition.NetworkAttachmentsReadyWaitingMessage,
 					netAtt))
 				return ctrl.Result{RequeueAfter: time.Second * 10}, nil
