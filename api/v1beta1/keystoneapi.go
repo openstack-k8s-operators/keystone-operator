@@ -36,6 +36,13 @@ import (
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"strings"
+)
+
+var (
+	KeystoneOverridesLabelSelector = map[string]string{
+		"keystone-overrides": "true",
+	}
 )
 
 // KeystoneAPIStatusChangedPredicate - primary purpose is to return true if
@@ -211,4 +218,48 @@ func GetScopedAdminServiceClient(
 	}
 
 	return os, ctrl.Result{}, nil
+}
+
+// GetKeystoneOverrides - Get keystone override configuration from a secret by label.
+// Human operators can manually generate a secret to override most of the keystone
+// configuration to point to a central keystone instance.
+// Only a subset of supported keys present in the secret are extracted and returned,
+// any other information is currently ignored.
+func GetKeystoneOverrides(
+	ctx context.Context,
+	h *helper.Helper,
+	namespace string,
+	labelSelector map[string]string,
+) (map[string]string, error) {
+
+	// Process the overrides
+	overrides := map[string]string{}
+
+	secrets, err := secret.GetSecrets(ctx, h, namespace, labelSelector)
+	// Use direct label selector string for key existence check
+	if err != nil {
+		return overrides, fmt.Errorf("could not get secrets: %w", err)
+	}
+	// list is empty, return
+	if len(secrets.Items) == 0 {
+		h.GetLogger().Info("No keystone overrides, using default configuration")
+		return overrides, nil
+	}
+	// Invalid case: more than one secret with the same label is present in the
+	// same namespace. This is not allowed and an error must be returned
+	if len(secrets.Items) > 1 {
+		// only a single secret with the keystone-overrides label selector is allowed
+		return overrides, fmt.Errorf("multiple secrets found with the same labelSelector")
+	}
+
+	// Extract keystone override data from the secret
+	secretObj := &secrets.Items[0]
+
+	for _, key := range []string{"region", "auth_url", "www_authenticate_uri"} {
+		if v, ok := secretObj.Data[key]; ok {
+			overrides[key] = strings.TrimSpace(string(v))
+		}
+	}
+
+	return overrides, nil
 }
