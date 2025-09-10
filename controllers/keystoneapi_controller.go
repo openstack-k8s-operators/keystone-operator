@@ -397,6 +397,7 @@ func (r *KeystoneAPIReconciler) SetupWithManager(ctx context.Context, mgr ctrl.M
 		Owns(&corev1.ServiceAccount{}).
 		Owns(&rbacv1.Role{}).
 		Owns(&rbacv1.RoleBinding{}).
+		Owns(&rabbitmqv1.TransportURL{}).
 		Watches(&memcachedv1.Memcached{},
 			handler.EnqueueRequestsFromMapFunc(memcachedFn)).
 		Watches(
@@ -1358,6 +1359,9 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		templateParameters["MemcachedAuthKey"] = fmt.Sprint(memcachedv1.KeyMountPath())
 		templateParameters["MemcachedAuthCa"] = fmt.Sprint(memcachedv1.CaMountPath())
 	}
+
+	// Check if Quorum Queues are enabled
+	templateParameters["QuorumQueues"] = string(transportURLSecret.Data["quorumqueues"]) == "true"
 
 	httpdOverrideSecret := &corev1.Secret{}
 	if instance.Spec.HttpdCustomization.CustomConfigSecret != nil && *instance.Spec.HttpdCustomization.CustomConfigSecret != "" {
