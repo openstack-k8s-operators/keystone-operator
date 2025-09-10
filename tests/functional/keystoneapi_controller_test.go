@@ -2129,4 +2129,76 @@ OIDCRedirectURI "{{ .KeystoneEndpointPublic }}/v3/auth/OS-FEDERATION/websso/open
 		return GetEnvVarValue(deployment.Spec.Template.Spec.Containers[0].Env, "CONFIG_HASH", "")
 	})
 
+	When("Keystone is configured for MTLS memcached auth", func() {
+		BeforeEach(func() {
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, GetDefaultKeystoneAPISpec()))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
+				Namespace: namespace,
+			})
+
+			// Create Memcached with MTLS auth
+			memcachedSpec := infra.GetDefaultMemcachedSpec()
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMTLSMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMTLSMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+			th.SimulateDeploymentReplicaReady(deploymentName)
+		})
+
+		It("should complete dbsync, bootstrap and deployment with MTLS configuration", func() {
+			th.ExpectCondition(
+				keystoneAPIName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionTrue,
+			)
+			th.ExpectCondition(
+				keystoneAPIName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.DBSyncReadyCondition,
+				corev1.ConditionTrue,
+			)
+			th.ExpectCondition(
+				keystoneAPIName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.BootstrapReadyCondition,
+				corev1.ConditionTrue,
+			)
+			th.ExpectCondition(
+				keystoneAPIName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.DeploymentReadyCondition,
+				corev1.ConditionTrue,
+			)
+
+			// Verify keystone configuration contains MTLS certificate paths
+			scrt := th.GetSecret(keystoneAPIConfigDataName)
+			configData := string(scrt.Data["keystone.conf"])
+			Expect(configData).To(ContainSubstring("tls_certfile=/etc/pki/tls/certs/mtls.crt"))
+			Expect(configData).To(ContainSubstring("tls_keyfile=/etc/pki/tls/private/mtls.key"))
+			Expect(configData).To(ContainSubstring("tls_cafile=/etc/pki/tls/certs/mtls-ca.crt"))
+		})
+	})
+
 })
