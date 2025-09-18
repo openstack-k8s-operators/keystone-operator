@@ -45,7 +45,7 @@ type OpenStackConfigSecret struct {
 	}
 }
 
-// generateCloudrc - generate file contents of a cloudrc file for the clients
+// GenerateCloudrc generates file contents of a cloudrc file for the clients
 // until there is parity with openstackclient.
 func GenerateCloudrc(secret *OpenStackConfigSecret, config *OpenStackConfig) string {
 	auth := config.Clouds.Default.Auth

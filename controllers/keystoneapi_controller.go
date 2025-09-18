@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package controllers implements the keystone-operator Kubernetes controllers.
 package controllers
 
 import (
@@ -86,7 +87,7 @@ func (r *KeystoneAPIReconciler) GetScheme() *runtime.Scheme {
 	return r.Scheme
 }
 
-// GetLog returns a logger object with a logging prefix of "controller.name" and additional controller context fields
+// GetLogger returns a logger object with a logging prefix of "controller.name" and additional controller context fields
 func (r *KeystoneAPIReconciler) GetLogger(ctx context.Context) logr.Logger {
 	return log.FromContext(ctx).WithName("Controllers").WithName("KeystoneAPI")
 }
@@ -130,7 +131,7 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	Log := r.GetLogger(ctx)
 	// Fetch the KeystoneAPI instance
 	instance := &keystonev1.KeystoneAPI{}
-	err := r.Client.Get(ctx, req.NamespacedName, instance)
+	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -363,7 +364,7 @@ func (r *KeystoneAPIReconciler) SetupWithManager(ctx context.Context, mgr ctrl.M
 		listOpts := []client.ListOption{
 			client.InNamespace(o.GetNamespace()),
 		}
-		if err := r.Client.List(ctx, keystoneAPIs, listOpts...); err != nil {
+		if err := r.List(ctx, keystoneAPIs, listOpts...); err != nil {
 			Log.Error(err, "Unable to retrieve KeystoneAPI CRs %w")
 			return nil
 		}
@@ -1310,7 +1311,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	cmLabels := labels.GetLabels(instance, labels.GetGroupLabel(keystone.ServiceName), map[string]string{})
 
 	var tlsCfg *tls.Service
-	if instance.Spec.TLS.Ca.CaBundleSecretName != "" {
+	if instance.Spec.TLS.CaBundleSecretName != "" {
 		tlsCfg = &tls.Service{}
 	}
 
@@ -1401,7 +1402,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	// Marshal the templateParameters map to YAML
 	yamlData, err := yaml.Marshal(templateParameters)
 	if err != nil {
-		return fmt.Errorf("Error marshalling to YAML: %w", err)
+		return fmt.Errorf("error marshalling to YAML: %w", err)
 	}
 	customData[common.TemplateParameters] = string(yamlData)
 
@@ -1486,7 +1487,7 @@ func (r *KeystoneAPIReconciler) reconcileCloudConfig(
 		Type: corev1.SecretTypeOpaque,
 	}
 
-	err = r.Client.Get(ctx, types.NamespacedName{Name: keystoneSecret.Name, Namespace: instance.Namespace}, keystoneSecret)
+	err = r.Get(ctx, types.NamespacedName{Name: keystoneSecret.Name, Namespace: instance.Namespace}, keystoneSecret)
 	if err != nil {
 		return err
 	}
