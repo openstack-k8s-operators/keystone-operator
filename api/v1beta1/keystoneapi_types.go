@@ -356,6 +356,7 @@ type KeystoneExtraMounts struct {
 	// +kubebuilder:validation:Optional
 	Region string `json:"region,omitempty"`
 	// +kubebuilder:validation:Required
+	// +listType=atomic
 	VolMounts []storage.VolMounts `json:"extraVol"`
 }
 
