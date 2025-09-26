@@ -867,13 +867,15 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			// Memcached should be automatically created by the encompassing OpenStackControlPlane,
-			// so if it is missing at this point, we treat it as an info (because the user is not
-			// responsible for manually creating it).
+			// but we don't propagate its name into the "memcachedInstance" field of other sub-resources,
+			// so if it is missing at this point, it *could* be because there's a mismatch between the
+			// name of the Memcached CR and the name of the Memcached instance referenced by this CR.
+			// Since that situation would block further reconciliation, we treat it as a warning.
 			Log.Info(fmt.Sprintf("memcached %s not found", instance.Spec.MemcachedInstance))
 			instance.Status.Conditions.Set(condition.FalseCondition(
 				condition.MemcachedReadyCondition,
-				condition.RequestedReason,
-				condition.SeverityInfo,
+				condition.ErrorReason,
+				condition.SeverityWarning,
 				condition.MemcachedReadyWaitingMessage))
 			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 		}
