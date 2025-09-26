@@ -109,17 +109,17 @@ var _ = Describe("KeystoneAPI Webhook", func() {
 
 	It("rejects with wrong service override endpoint type", func() {
 		spec := GetDefaultKeystoneAPISpec()
-		spec["override"] = map[string]interface{}{
-			"service": map[string]interface{}{
-				"internal": map[string]interface{}{},
-				"wrooong":  map[string]interface{}{},
+		spec["override"] = map[string]any{
+			"service": map[string]any{
+				"internal": map[string]any{},
+				"wrooong":  map[string]any{},
 			},
 		}
 
-		raw := map[string]interface{}{
+		raw := map[string]any{
 			"apiVersion": "keystone.openstack.org/v1beta1",
 			"kind":       "KeystoneAPI",
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name":      keystoneAPIName.Name,
 				"namespace": keystoneAPIName.Namespace,
 			},
@@ -198,14 +198,14 @@ var _ = Describe("KeystoneAPI Webhook", func() {
 	It("rejects a wrong TopologyRef on a different namespace", func() {
 		keystoneSpec := GetDefaultKeystoneAPISpec()
 		// Inject a topologyRef that points to a different namespace
-		keystoneSpec["topologyRef"] = map[string]interface{}{
+		keystoneSpec["topologyRef"] = map[string]any{
 			"name":      "foo",
 			"namespace": "bar",
 		}
-		raw := map[string]interface{}{
+		raw := map[string]any{
 			"apiVersion": "keystone.openstack.org/v1beta1",
 			"kind":       "KeystoneAPI",
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name":      "keystoneapi",
 				"namespace": namespace,
 			},

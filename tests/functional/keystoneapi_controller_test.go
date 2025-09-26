@@ -801,8 +801,8 @@ var _ = Describe("Keystone controller", func() {
 	When("A KeystoneAPI is created with service override", func() {
 		BeforeEach(func() {
 			spec := GetDefaultKeystoneAPISpec()
-			serviceOverride := map[string]interface{}{}
-			serviceOverride["internal"] = map[string]interface{}{
+			serviceOverride := map[string]any{}
+			serviceOverride["internal"] = map[string]any{
 				"metadata": map[string]map[string]string{
 					"annotations": {
 						"dnsmasq.network.openstack.org/hostname": "keystone-internal.openstack.svc",
@@ -815,12 +815,12 @@ var _ = Describe("Keystone controller", func() {
 						"service":  "keystone",
 					},
 				},
-				"spec": map[string]interface{}{
+				"spec": map[string]any{
 					"type": "LoadBalancer",
 				},
 			}
 
-			spec["override"] = map[string]interface{}{
+			spec["override"] = map[string]any{
 				"service": serviceOverride,
 			}
 
@@ -889,12 +889,12 @@ var _ = Describe("Keystone controller", func() {
 	When("A KeystoneAPI is created with service override endpointURL set", func() {
 		BeforeEach(func() {
 			spec := GetDefaultKeystoneAPISpec()
-			serviceOverride := map[string]interface{}{}
-			serviceOverride["public"] = map[string]interface{}{
+			serviceOverride := map[string]any{}
+			serviceOverride["public"] = map[string]any{
 				"endpointURL": "http://keystone-openstack.apps-crc.testing",
 			}
 
-			spec["override"] = map[string]interface{}{
+			spec["override"] = map[string]any{
 				"service": serviceOverride,
 			}
 
@@ -1173,12 +1173,12 @@ var _ = Describe("Keystone controller", func() {
 	When("A KeystoneAPI is created with TLS and service override endpointURL set", func() {
 		BeforeEach(func() {
 			spec := GetTLSKeystoneAPISpec()
-			serviceOverride := map[string]interface{}{}
-			serviceOverride["public"] = map[string]interface{}{
+			serviceOverride := map[string]any{}
+			serviceOverride["public"] = map[string]any{
 				"endpointURL": "https://keystone-openstack.apps-crc.testing",
 			}
 
-			spec["override"] = map[string]interface{}{
+			spec["override"] = map[string]any{
 				"service": serviceOverride,
 			}
 
@@ -1287,7 +1287,7 @@ var _ = Describe("Keystone controller", func() {
 				}
 
 				g.Expect(numberFernetKeys).Should(BeNumerically("==", 3))
-				for i := 0; i < 3; i++ {
+				for i := range 3 {
 					g.Expect(secret.Data["FernetKeys"+strconv.Itoa(i)]).NotTo(BeNil())
 				}
 			}, timeout, interval).Should(Succeed())
@@ -1340,7 +1340,7 @@ var _ = Describe("Keystone controller", func() {
 				}
 
 				g.Expect(numberFernetKeys).Should(BeNumerically("==", 100))
-				for i := 0; i < 100; i++ {
+				for i := range 100 {
 					g.Expect(secret.Data["FernetKeys"+strconv.Itoa(i)]).NotTo(BeNil())
 				}
 			}, timeout, interval).Should(Succeed())
@@ -1403,7 +1403,7 @@ var _ = Describe("Keystone controller", func() {
 				}
 
 				g.Expect(numberFernetKeys).Should(BeNumerically("==", 4))
-				for i := 0; i < 4; i++ {
+				for i := range 4 {
 					g.Expect(secret.Data["FernetKeys"+strconv.Itoa(i)]).NotTo(BeNil())
 				}
 			}, timeout, interval).Should(Succeed())
@@ -1466,7 +1466,7 @@ var _ = Describe("Keystone controller", func() {
 				}
 
 				g.Expect(numberFernetKeys).Should(BeNumerically("==", 6))
-				for i := 0; i < 6; i++ {
+				for i := range 6 {
 					g.Expect(secret.Data["FernetKeys"+strconv.Itoa(i)]).NotTo(BeNil())
 				}
 			}, timeout, interval).Should(Succeed())
@@ -1530,7 +1530,7 @@ var _ = Describe("Keystone controller", func() {
 				updatedSecret := th.GetSecret(types.NamespacedName{Namespace: keystoneAPIName.Namespace, Name: "keystone"})
 				g.Expect(updatedSecret).ToNot(BeNil())
 
-				for i := 0; i < 4; i++ {
+				for i := range 4 {
 
 					// old idx 0 > new 4
 					if i == 0 {
@@ -1575,7 +1575,7 @@ var _ = Describe("Keystone controller", func() {
 				infra.CreateTopology(t, topologySpec)
 			}
 			spec := GetDefaultKeystoneAPISpec()
-			spec["topologyRef"] = map[string]interface{}{
+			spec["topologyRef"] = map[string]any{
 				"name": topologyRef.Name,
 			}
 			DeferCleanup(
@@ -1698,7 +1698,7 @@ var _ = Describe("Keystone controller", func() {
 	When("A KeystoneAPI is created with nodeSelector", func() {
 		BeforeEach(func() {
 			spec := GetDefaultKeystoneAPISpec()
-			spec["nodeSelector"] = map[string]interface{}{
+			spec["nodeSelector"] = map[string]any{
 				"foo": "bar",
 			}
 			DeferCleanup(
@@ -1836,7 +1836,7 @@ OIDCRedirectURI "{{ .KeystoneEndpointPublic }}/v3/auth/OS-FEDERATION/websso/open
 			)
 
 			spec := GetDefaultKeystoneAPISpec()
-			spec["httpdCustomization"] = map[string]interface{}{
+			spec["httpdCustomization"] = map[string]any{
 				"customConfigSecret": customServiceConfigSecretName.Name,
 			}
 
