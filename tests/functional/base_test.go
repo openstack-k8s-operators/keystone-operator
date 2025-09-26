@@ -32,8 +32,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func GetKeystoneAPISpec(fernetMaxKeys int32) map[string]interface{} {
-	return map[string]interface{}{
+func GetKeystoneAPISpec(fernetMaxKeys int32) map[string]any {
+	return map[string]any{
 		"databaseInstance":    "openstack",
 		"replicas":            1,
 		"secret":              SecretName,
@@ -42,22 +42,22 @@ func GetKeystoneAPISpec(fernetMaxKeys int32) map[string]interface{} {
 	}
 }
 
-func GetDefaultKeystoneAPISpec() map[string]interface{} {
+func GetDefaultKeystoneAPISpec() map[string]any {
 	return GetKeystoneAPISpec(5)
 }
 
-func GetTLSKeystoneAPISpec() map[string]interface{} {
-	return map[string]interface{}{
+func GetTLSKeystoneAPISpec() map[string]any {
+	return map[string]any{
 		"databaseInstance": "openstack",
 		"replicas":         1,
 		"secret":           SecretName,
 		"databaseAccount":  AccountName,
-		"tls": map[string]interface{}{
-			"api": map[string]interface{}{
-				"internal": map[string]interface{}{
+		"tls": map[string]any{
+			"api": map[string]any{
+				"internal": map[string]any{
 					"secretName": InternalCertSecretName,
 				},
-				"public": map[string]interface{}{
+				"public": map[string]any{
 					"secretName": PublicCertSecretName,
 				},
 			},
@@ -66,12 +66,12 @@ func GetTLSKeystoneAPISpec() map[string]interface{} {
 	}
 }
 
-func CreateKeystoneAPI(name types.NamespacedName, spec map[string]interface{}) client.Object {
+func CreateKeystoneAPI(name types.NamespacedName, spec map[string]any) client.Object {
 
-	raw := map[string]interface{}{
+	raw := map[string]any{
 		"apiVersion": "keystone.openstack.org/v1beta1",
 		"kind":       "KeystoneAPI",
-		"metadata": map[string]interface{}{
+		"metadata": map[string]any{
 			"name":      name.Name,
 			"namespace": name.Namespace,
 		},
@@ -114,7 +114,7 @@ func CreateKeystoneMessageBusSecret(namespace string, name string) *corev1.Secre
 	s := th.CreateSecret(
 		types.NamespacedName{Namespace: namespace, Name: name},
 		map[string][]byte{
-			"transport_url": []byte(fmt.Sprintf("rabbit://%s/fake", name)),
+			"transport_url": fmt.Appendf(nil, "rabbit://%s/fake", name),
 		},
 	)
 	logger.Info("Secret created", "name", name)
@@ -129,16 +129,16 @@ func CreateKeystoneMessageBusSecret(namespace string, name string) *corev1.Secre
 // want to avoid by default
 // 2. Usually a topologySpreadConstraints is used to take care about
 // multi AZ, which is not applicable in this context
-func GetSampleTopologySpec(label string) (map[string]interface{}, []corev1.TopologySpreadConstraint) {
+func GetSampleTopologySpec(label string) (map[string]any, []corev1.TopologySpreadConstraint) {
 	// Build the topology Spec
-	topologySpec := map[string]interface{}{
-		"topologySpreadConstraints": []map[string]interface{}{
+	topologySpec := map[string]any{
+		"topologySpreadConstraints": []map[string]any{
 			{
 				"maxSkew":           1,
 				"topologyKey":       corev1.LabelHostname,
 				"whenUnsatisfiable": "ScheduleAnyway",
-				"labelSelector": map[string]interface{}{
-					"matchLabels": map[string]interface{}{
+				"labelSelector": map[string]any{
+					"matchLabels": map[string]any{
 						"service":   keystone_base.ServiceName,
 						"component": label,
 					},
@@ -165,26 +165,26 @@ func GetSampleTopologySpec(label string) (map[string]interface{}, []corev1.Topol
 
 // GetExtraMounts - Utility function that simulates extraMounts pointing
 // to a  secret
-func GetExtraMounts(kemName string, kemPath string) []map[string]interface{} {
-	return []map[string]interface{}{
+func GetExtraMounts(kemName string, kemPath string) []map[string]any {
+	return []map[string]any{
 		{
 			"name":   kemName,
 			"region": "az0",
-			"extraVol": []map[string]interface{}{
+			"extraVol": []map[string]any{
 				{
 					"extraVolType": kemName,
 					"propagation": []string{
 						"Keystone",
 					},
-					"volumes": []map[string]interface{}{
+					"volumes": []map[string]any{
 						{
 							"name": kemName,
-							"secret": map[string]interface{}{
+							"secret": map[string]any{
 								"secretName": kemName,
 							},
 						},
 					},
-					"mounts": []map[string]interface{}{
+					"mounts": []map[string]any{
 						{
 							"name":      kemName,
 							"mountPath": kemPath,

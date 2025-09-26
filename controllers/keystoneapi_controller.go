@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"sort"
 	"strconv"
 	"time"
@@ -1325,9 +1326,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		common.CustomServiceConfigFileName: instance.Spec.CustomServiceConfig,
 		"my.cnf":                           db.GetDatabaseClientConfig(tlsCfg), //(mschuppert) for now just get the default my.cnf
 	}
-	for key, data := range instance.Spec.DefaultConfigOverwrite {
-		customData[key] = data
-	}
+	maps.Copy(customData, instance.Spec.DefaultConfigOverwrite)
 
 	transportURLSecret, _, err := oko_secret.GetSecret(ctx, h, instance.Status.TransportURLSecret, instance.Namespace)
 	if err != nil {
@@ -1337,7 +1336,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	databaseAccount := db.GetAccount()
 	dbSecret := db.GetSecret()
 
-	templateParameters := map[string]interface{}{
+	templateParameters := map[string]any{
 		"MemcachedServers":         mc.GetMemcachedServerListString(),
 		"MemcachedServersWithInet": mc.GetMemcachedServerListWithInetString(),
 		"MemcachedTLS":             mc.GetMemcachedTLSSupport(),
@@ -1376,9 +1375,9 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 
 	// create httpd  vhost template parameters
 	customTemplates := map[string]string{}
-	httpdVhostConfig := map[string]interface{}{}
+	httpdVhostConfig := map[string]any{}
 	for _, endpt := range []service.Endpoint{service.EndpointInternal, service.EndpointPublic} {
-		endptConfig := map[string]interface{}{}
+		endptConfig := map[string]any{}
 		endptConfig["ServerName"] = fmt.Sprintf("%s-%s.%s.svc", instance.Name, endpt.String(), instance.Namespace)
 		endptConfig["TLS"] = false // default TLS to false, and set it bellow to true if enabled
 		if instance.Spec.TLS.API.Enabled(endpt) {
@@ -1441,7 +1440,7 @@ func (r *KeystoneAPIReconciler) reconcileCloudConfig(
 ) error {
 	// clouds.yaml
 	var openStackConfig keystone.OpenStackConfig
-	templateParameters := make(map[string]interface{})
+	templateParameters := make(map[string]any)
 	cmLabels := labels.GetLabels(instance, labels.GetGroupLabel(keystone.ServiceName), map[string]string{})
 
 	authURL, err := instance.GetEndpoint(endpoint.EndpointPublic)
@@ -1740,7 +1739,7 @@ func (r *KeystoneAPIReconciler) ensureFederationRealmConfig(
 	}
 	newSecretData["_filenames.json"] = string(filenamesJSON)
 
-	templateParameters := make(map[string]interface{})
+	templateParameters := make(map[string]any)
 	cmLabels := labels.GetLabels(instance, labels.GetGroupLabel(keystone.ServiceName), map[string]string{})
 	newSecret := []util.Template{
 		{

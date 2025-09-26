@@ -35,7 +35,7 @@ func getVolumes(
 	fernetKeys := []corev1.KeyToPath{}
 	numberKeys := int(*instance.Spec.FernetMaxActiveKeys)
 
-	for i := 0; i < numberKeys; i++ {
+	for i := range numberKeys {
 		fernetKeys = append(
 			fernetKeys,
 			corev1.KeyToPath{
