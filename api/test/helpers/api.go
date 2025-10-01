@@ -21,8 +21,8 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
-	"github.com/gophercloud/gophercloud/openstack/identity/v3/domains"
-	"github.com/gophercloud/gophercloud/openstack/identity/v3/users"
+	"github.com/gophercloud/gophercloud/v2/openstack/identity/v3/domains"
+	"github.com/gophercloud/gophercloud/v2/openstack/identity/v3/users"
 	"golang.org/x/exp/maps"
 
 	api "github.com/openstack-k8s-operators/lib-common/modules/test/apis"

@@ -270,6 +270,7 @@ func (r *KeystoneServiceReconciler) reconcileDelete(
 	if instance.Status.ServiceID != "" && os != nil {
 		// Delete User
 		err := os.DeleteUser(
+			ctx,
 			log,
 			instance.Spec.ServiceUser,
 			"default")
@@ -279,6 +280,7 @@ func (r *KeystoneServiceReconciler) reconcileDelete(
 
 		// Delete Service
 		err = os.DeleteService(
+			ctx,
 			log,
 			instance.Status.ServiceID)
 		if err != nil {
@@ -425,6 +427,7 @@ func (r *KeystoneServiceReconciler) reconcileService(
 
 	// verify if there is already a service in keystone for the type and name
 	service, err := os.GetService(
+		ctx,
 		log,
 		instance.Spec.ServiceType,
 		instance.Spec.ServiceName,
@@ -438,6 +441,7 @@ func (r *KeystoneServiceReconciler) reconcileService(
 	if service == nil {
 		// create the service
 		instance.Status.ServiceID, err = os.CreateService(
+			ctx,
 			log,
 			openstack.Service{
 				Name:        instance.Spec.ServiceName,
@@ -458,6 +462,7 @@ func (r *KeystoneServiceReconciler) reconcileService(
 			service.Extra["description"] != instance.Spec.ServiceDescription {
 			// update the service ONLY if Enabled or Description changed.
 			err := os.UpdateService(
+				ctx,
 				log,
 				openstack.Service{
 					Name:        instance.Spec.ServiceName,
@@ -504,6 +509,7 @@ func (r *KeystoneServiceReconciler) reconcileUser(
 	// create service project if it does not exist
 	//
 	serviceProjectID, err := os.CreateProject(
+		ctx,
 		log,
 		openstack.Project{
 			Name:        "service",
@@ -518,6 +524,7 @@ func (r *KeystoneServiceReconciler) reconcileUser(
 	// create user if it does not exist
 	//
 	userID, err := os.CreateUser(
+		ctx,
 		log,
 		openstack.User{
 			Name:      instance.Spec.ServiceUser,
@@ -534,6 +541,7 @@ func (r *KeystoneServiceReconciler) reconcileUser(
 		// create role if it does not exist
 		//
 		_, err = os.CreateRole(
+			ctx,
 			log,
 			roleName)
 		if err != nil {
@@ -544,6 +552,7 @@ func (r *KeystoneServiceReconciler) reconcileUser(
 		// add the role to the user
 		//
 		err = os.AssignUserRole(
+			ctx,
 			log,
 			roleName,
 			userID,
