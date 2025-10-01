@@ -22,7 +22,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/v2"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/helper"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/secret"
@@ -116,7 +116,6 @@ func GetKeystoneAPIByName(
 
 	return keystoneAPI, nil
 }
-
 
 // GetAdminServiceClient - get a system scoped admin serviceClient for the keystoneAPI instance
 func GetAdminServiceClient(
