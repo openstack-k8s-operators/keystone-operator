@@ -196,3 +196,30 @@ func GetExtraMounts(kemName string, kemPath string) []map[string]any {
 		},
 	}
 }
+
+// ApplicationCredential helper functions
+func CreateACWithSpec(name types.NamespacedName, spec map[string]interface{}) client.Object {
+	raw := map[string]interface{}{
+		"apiVersion": "keystone.openstack.org/v1beta1",
+		"kind":       "KeystoneApplicationCredential",
+		"metadata": map[string]interface{}{
+			"name":      name.Name,
+			"namespace": name.Namespace,
+		},
+		"spec": spec,
+	}
+	return th.CreateUnstructured(raw)
+}
+
+func GetApplicationCredential(name types.NamespacedName) *keystonev1.KeystoneApplicationCredential {
+	instance := &keystonev1.KeystoneApplicationCredential{}
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, name, instance)).Should(Succeed())
+	}, timeout, interval).Should(Succeed())
+	return instance
+}
+
+func ACConditionGetter(name types.NamespacedName) condition.Conditions {
+	instance := GetApplicationCredential(name)
+	return instance.Status.Conditions
+}
