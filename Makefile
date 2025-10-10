@@ -376,7 +376,7 @@ run-with-webhook: manifests generate fmt vet ## Run a controller from your host.
 	/bin/bash hack/run_with_local_webhook.sh
 
 
-BRANCH ?= main
+BRANCH ?= 18.0-fr4
 .PHONY: force-bump
 force-bump: ## Force bump operator and lib-common dependencies
 	for dep in $$(cat go.mod | grep openstack-k8s-operators | grep -vE -- 'indirect|keystone-operator|^replace' | awk '{print $$1}'); do \
