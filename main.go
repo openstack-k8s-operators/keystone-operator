@@ -164,6 +164,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = (&controllers.ApplicationCredentialReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		Kclient:       kclient,
+		EventRecorder: mgr.GetEventRecorderFor("keystoneapplicationcredential-controller"),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ApplicationCredential")
+		os.Exit(1)
+	}
+
 	// Acquire environmental defaults and initialize operator defaults with them
 	keystonev1.SetupDefaults()
 
