@@ -275,6 +275,7 @@ func (r *KeystoneEndpointReconciler) reconcileDelete(
 			}
 
 			err = os.DeleteEndpoint(
+				ctx,
 				Log,
 				openstack.Endpoint{
 					Name:         instance.Spec.ServiceName,
@@ -471,6 +472,7 @@ func (r *KeystoneEndpointReconciler) reconcileEndpoints(
 				}
 
 				err = os.DeleteEndpoint(
+					ctx,
 					Log,
 					openstack.Endpoint{
 						Name:         instance.Spec.ServiceName,
@@ -504,6 +506,7 @@ func (r *KeystoneEndpointReconciler) reconcileEndpoints(
 
 		// get registered endpoints for the service and endpointType
 		allEndpoints, err := os.GetEndpoints(
+			ctx,
 			Log,
 			instance.Status.ServiceID,
 			endpointType)
@@ -515,6 +518,7 @@ func (r *KeystoneEndpointReconciler) reconcileEndpoints(
 		if len(allEndpoints) == 0 {
 			// Create the endpoint
 			endpointID, err = os.CreateEndpoint(
+				ctx,
 				Log,
 				openstack.Endpoint{
 					Name:         instance.Spec.ServiceName,
@@ -532,6 +536,7 @@ func (r *KeystoneEndpointReconciler) reconcileEndpoints(
 			endpointID = endpoint.ID
 			if endpointURL != endpoint.URL {
 				endpointID, err = os.UpdateEndpoint(
+					ctx,
 					Log,
 					openstack.Endpoint{
 						Name:         endpoint.Name,
