@@ -7,11 +7,11 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gophercloud/gophercloud/v2 v2.8.0
 	github.com/onsi/gomega v1.38.2
-	github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20251002120642-c2d58c6fc03e
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20250929092825-4c2402451077
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20251021145236-2b84ec9fd9bb
-	github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20250929092825-4c2402451077
-	github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20250929092825-4c2402451077
+	github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20251110170511-c2d4a351a7c3
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20251103072528-9eb684fef4ef
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20251103072528-9eb684fef4ef
+	github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20251103072528-9eb684fef4ef
+	github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20251103072528-9eb684fef4ef
 	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67
 	k8s.io/api v0.31.13
 	k8s.io/apimachinery v0.31.13
@@ -45,7 +45,6 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
-	github.com/onsi/ginkgo/v2 v2.27.1 // indirect
 	github.com/openshift/api v3.9.0+incompatible // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.22.0 // indirect

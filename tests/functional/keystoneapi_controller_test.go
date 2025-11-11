@@ -417,7 +417,7 @@ var _ = Describe("Keystone controller", func() {
 			Expect(configData).To(
 				ContainSubstring("backend = dogpile.cache.memcached"))
 			Expect(configData).To(
-				ContainSubstring(fmt.Sprintf("memcache_servers=inet:[memcached-0.memcached.%s.svc]:11211,inet:[memcached-1.memcached.%s.svc]:11211,inet:[memcached-2.memcached.%s.svc]:11211",
+				ContainSubstring(fmt.Sprintf("memcache_servers=inet:memcached-0.memcached.%s.svc:11211,inet:memcached-1.memcached.%s.svc:11211,inet:memcached-2.memcached.%s.svc:11211",
 					keystoneAPIName.Namespace, keystoneAPIName.Namespace, keystoneAPIName.Namespace)))
 			mariadbAccount := mariadb.GetMariaDBAccount(keystoneAccountName)
 			mariadbSecret := th.GetSecret(types.NamespacedName{Name: mariadbAccount.Spec.Secret, Namespace: keystoneAPIName.Namespace})
