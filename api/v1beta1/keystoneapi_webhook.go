@@ -25,6 +25,7 @@ package v1beta1
 import (
 	"fmt"
 
+	rabbitmqv1 "github.com/openstack-k8s-operators/infra-operator/apis/rabbitmq/v1beta1"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -76,6 +77,7 @@ func (spec *KeystoneAPISpecCore) Default() {
 	if spec.APITimeout == 0 {
 		spec.APITimeout = keystoneAPIDefaults.APITimeout
 	}
+	rabbitmqv1.DefaultRabbitMqConfig(&spec.NotificationsBus, spec.RabbitMqClusterName)
 }
 
 var _ webhook.Validator = &KeystoneAPI{}
@@ -148,8 +150,15 @@ func (spec *KeystoneAPISpec) ValidateUpdate(old KeystoneAPISpec, basePath *field
 }
 
 // ValidateUpdate validates the KeystoneAPISpecCore spec during update
-func (spec *KeystoneAPISpecCore) ValidateUpdate(_ KeystoneAPISpecCore, basePath *field.Path, namespace string) field.ErrorList {
+func (spec *KeystoneAPISpecCore) ValidateUpdate(old KeystoneAPISpecCore, basePath *field.Path, namespace string) field.ErrorList {
 	var allErrs field.ErrorList
+
+	// Reject changes to deprecated RabbitMqClusterName field - users should use the new notificationsBus.cluster field instead
+	if spec.RabbitMqClusterName != old.RabbitMqClusterName {
+		allErrs = append(allErrs, field.Forbidden(
+			basePath.Child("rabbitMqClusterName"),
+			"rabbitMqClusterName is deprecated and cannot be changed. Please use notificationsBus.cluster instead"))
+	}
 
 	// validate the service override key is valid
 	allErrs = append(allErrs, service.ValidateRoutedOverrides(basePath.Child("override").Child("service"), spec.Override.Service)...)
