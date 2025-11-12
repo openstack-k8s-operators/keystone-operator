@@ -35,6 +35,9 @@ const (
 
 	// KeystoneServiceOSUserReadyCondition Status=True condition which indicates if the service user got created in the keystone instance is ready/was successful
 	KeystoneServiceOSUserReadyCondition condition.Type = "KeystoneServiceOSUserReady"
+
+	// KeystoneApplicationCredentialReadyCondition Status=True condition which indicates if the ApplicationCredential has been created and is ready
+	KeystoneApplicationCredentialReadyCondition condition.Type = "KeystoneApplicationCredentialReady"
 )
 
 // Common Messages used by API objects.
@@ -111,4 +114,16 @@ const (
 
 	// KeystoneServiceOSUserReadyErrorMessage
 	KeystoneServiceOSUserReadyErrorMessage = "Keystone Service user error occured %s"
+
+	//
+	// KeystoneApplicationCredentialReady condition messages
+	//
+	// KeystoneApplicationCredentialReadyInitMessage
+	KeystoneApplicationCredentialReadyInitMessage = "ApplicationCredential not yet created"
+
+	// KeystoneApplicationCredentialReadyMessage
+	KeystoneApplicationCredentialReadyMessage = "ApplicationCredential ready"
+
+	// KeystoneApplicationCredentialReadyErrorMessage
+	KeystoneApplicationCredentialReadyErrorMessage = "ApplicationCredential error occurred: %s"
 )
