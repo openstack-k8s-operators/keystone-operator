@@ -29,7 +29,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -52,15 +51,6 @@ func SetupKeystoneAPIDefaults(defaults KeystoneAPIDefaults) {
 
 	keystoneapilog.Info("KeystoneAPI defaults initialized", "defaults", defaults)
 }
-
-// SetupWebhookWithManager sets up the webhook with the Manager
-func (r *KeystoneAPI) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(r).
-		Complete()
-}
-
-//+kubebuilder:webhook:path=/mutate-keystone-openstack-org-v1beta1-keystoneapi,mutating=true,failurePolicy=fail,sideEffects=None,groups=keystone.openstack.org,resources=keystoneapis,verbs=create;update,versions=v1beta1,name=mkeystoneapi.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Defaulter = &KeystoneAPI{}
 
@@ -88,9 +78,6 @@ func (spec *KeystoneAPISpecCore) Default() {
 	}
 }
 
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-keystone-openstack-org-v1beta1-keystoneapi,mutating=false,failurePolicy=fail,sideEffects=None,groups=keystone.openstack.org,resources=keystoneapis,verbs=create;update,versions=v1beta1,name=vkeystoneapi.kb.io,admissionReviewVersions=v1
-
 var _ webhook.Validator = &KeystoneAPI{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
@@ -117,6 +104,7 @@ func (spec *KeystoneAPISpec) ValidateCreate(basePath *field.Path, namespace stri
 	return spec.KeystoneAPISpecCore.ValidateCreate(basePath, namespace)
 }
 
+// ValidateCreate validates the KeystoneAPISpecCore spec during creation
 func (spec *KeystoneAPISpecCore) ValidateCreate(basePath *field.Path, namespace string) field.ErrorList {
 	var allErrs field.ErrorList
 
@@ -159,6 +147,7 @@ func (spec *KeystoneAPISpec) ValidateUpdate(old KeystoneAPISpec, basePath *field
 	return spec.KeystoneAPISpecCore.ValidateUpdate(old.KeystoneAPISpecCore, basePath, namespace)
 }
 
+// ValidateUpdate validates the KeystoneAPISpecCore spec during update
 func (spec *KeystoneAPISpecCore) ValidateUpdate(_ KeystoneAPISpecCore, basePath *field.Path, namespace string) field.ErrorList {
 	var allErrs field.ErrorList
 
