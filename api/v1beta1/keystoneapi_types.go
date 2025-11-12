@@ -53,6 +53,7 @@ const (
 	APIDefaultTimeout = 60
 )
 
+// KeystoneAPISpec defines the desired state of KeystoneAPI
 type KeystoneAPISpec struct {
 	KeystoneAPISpecCore `json:",inline"`
 
@@ -61,7 +62,7 @@ type KeystoneAPISpec struct {
 	ContainerImage string `json:"containerImage"`
 }
 
-// KeystoneAPISpec defines the desired state of KeystoneAPI
+// KeystoneAPISpecCore defines the desired state of KeystoneAPI core spec
 type KeystoneAPISpecCore struct {
 	// +kubebuilder:validation:Required
 	// MariaDB instance name
@@ -348,7 +349,7 @@ func SetupDefaults() {
 	SetupKeystoneAPIDefaults(keystoneDefaults)
 }
 
-// KeystoneExtraVolMounts exposes additional parameters processed by keystone-operator
+// KeystoneExtraMounts exposes additional parameters processed by keystone-operator
 // and defines the common VolMounts structure provided by the main storage module
 type KeystoneExtraMounts struct {
 	// +kubebuilder:validation:Optional

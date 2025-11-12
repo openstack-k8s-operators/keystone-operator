@@ -12,7 +12,7 @@ webhooks:
       namespace: system
       path: /mutate-keystone-openstack-org-v1beta1-keystoneapi
   failurePolicy: Fail
-  name: mkeystoneapi.kb.io
+  name: mkeystoneapi-v1beta1.kb.io
   rules:
   - apiGroups:
     - keystone.openstack.org
@@ -38,7 +38,7 @@ webhooks:
       namespace: system
       path: /validate-keystone-openstack-org-v1beta1-keystoneapi
   failurePolicy: Fail
-  name: vkeystoneapi.kb.io
+  name: vkeystoneapi-v1beta1.kb.io
   rules:
   - apiGroups:
     - keystone.openstack.org

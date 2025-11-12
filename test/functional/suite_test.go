@@ -33,8 +33,9 @@ import (
 	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
 	keystone_test "github.com/openstack-k8s-operators/keystone-operator/api/test/helpers"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
-	"github.com/openstack-k8s-operators/keystone-operator/controllers"
-	keystone_base "github.com/openstack-k8s-operators/keystone-operator/pkg/keystone"
+	"github.com/openstack-k8s-operators/keystone-operator/internal/controller"
+	keystone_base "github.com/openstack-k8s-operators/keystone-operator/internal/keystone"
+	webhookv1beta1 "github.com/openstack-k8s-operators/keystone-operator/internal/webhook/v1beta1"
 	common_test "github.com/openstack-k8s-operators/lib-common/modules/common/test/helpers"
 	test "github.com/openstack-k8s-operators/lib-common/modules/test"
 	mariadb_test "github.com/openstack-k8s-operators/mariadb-operator/api/test/helpers"
@@ -167,12 +168,13 @@ var _ = BeforeSuite(func() {
 	kclient, err := kubernetes.NewForConfig(cfg)
 	Expect(err).ToNot(HaveOccurred(), "failed to create kclient")
 
-	err = (&keystonev1.KeystoneAPI{}).SetupWebhookWithManager(k8sManager)
-	Expect(err).NotTo(HaveOccurred())
-
+	// Setup webhook defaults
 	keystonev1.SetupDefaults()
 
-	err = (&controllers.KeystoneAPIReconciler{
+	err = webhookv1beta1.SetupKeystoneAPIWebhookWithManager(k8sManager)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = (&controller.KeystoneAPIReconciler{
 		Client:  k8sManager.GetClient(),
 		Scheme:  k8sManager.GetScheme(),
 		Kclient: kclient,
