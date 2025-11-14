@@ -27,7 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
-	keystone_base "github.com/openstack-k8s-operators/keystone-operator/pkg/keystone"
+	keystone_base "github.com/openstack-k8s-operators/keystone-operator/internal/keystone"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
