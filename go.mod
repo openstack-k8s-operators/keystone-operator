@@ -17,9 +17,9 @@ require (
 	github.com/openstack-k8s-operators/mariadb-operator/api v0.6.1-0.20251110170510-e669472c745c
 	go.uber.org/zap v1.27.0
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/api v0.31.13
-	k8s.io/apimachinery v0.31.13
-	k8s.io/client-go v0.31.13
+	k8s.io/api v0.31.14
+	k8s.io/apimachinery v0.31.14
+	k8s.io/client-go v0.31.14
 	k8s.io/utils v0.0.0-20250820121507-0af2bda4dd1d
 	sigs.k8s.io/controller-runtime v0.19.7
 )
