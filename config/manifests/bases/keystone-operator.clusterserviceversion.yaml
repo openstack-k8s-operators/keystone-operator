@@ -65,3 +65,4 @@ spec:
     name: Red Hat Inc.
     url: https://redhat.com/
   version: 0.0.0
+  minKubeVersion: 0.0.0
