@@ -17,9 +17,9 @@ require (
 	github.com/openstack-k8s-operators/mariadb-operator/api v0.6.1-0.20251110170510-e669472c745c
 	go.uber.org/zap v1.27.1
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/api v0.31.13
-	k8s.io/apimachinery v0.31.13
-	k8s.io/client-go v0.31.13
+	k8s.io/api v0.31.14
+	k8s.io/apimachinery v0.31.14
+	k8s.io/client-go v0.31.14
 	k8s.io/utils v0.0.0-20250820121507-0af2bda4dd1d
 	sigs.k8s.io/controller-runtime v0.19.7
 )
@@ -121,21 +121,21 @@ replace github.com/openstack-k8s-operators/keystone-operator/api => ./api
 replace github.com/openshift/api => github.com/openshift/api v0.0.0-20250711200046-c86d80652a9e //allow-merging
 
 // pin these to avoid later versions pulled by rabbitmq
-replace k8s.io/apimachinery => k8s.io/apimachinery v0.31.13 //allow-merging
+replace k8s.io/apimachinery => k8s.io/apimachinery v0.31.14 //allow-merging
 
-replace k8s.io/api => k8s.io/api v0.31.13 //allow-merging
+replace k8s.io/api => k8s.io/api v0.31.14 //allow-merging
 
-replace k8s.io/apiserver => k8s.io/apiserver v0.31.13 //allow-merging
+replace k8s.io/apiserver => k8s.io/apiserver v0.31.14 //allow-merging
 
-replace k8s.io/client-go => k8s.io/client-go v0.31.13 //allow-merging
+replace k8s.io/client-go => k8s.io/client-go v0.31.14 //allow-merging
 
-replace k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.31.13 //allow-merging
+replace k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.31.14 //allow-merging
 
-replace k8s.io/cli-runtime => k8s.io/cli-runtime v0.31.13 //allow-merging
+replace k8s.io/cli-runtime => k8s.io/cli-runtime v0.31.14 //allow-merging
 
-replace k8s.io/code-generator => k8s.io/code-generator v0.31.13 //allow-merging
+replace k8s.io/code-generator => k8s.io/code-generator v0.31.14 //allow-merging
 
-replace k8s.io/component-base => k8s.io/component-base v0.31.13 //allow-merging
+replace k8s.io/component-base => k8s.io/component-base v0.31.14 //allow-merging
 
 // custom RabbitmqClusterSpecCore for OpenStackControlplane (v2.16.0_patches)
 replace github.com/rabbitmq/cluster-operator/v2 => github.com/openstack-k8s-operators/rabbitmq-cluster-operator/v2 v2.6.1-0.20250929174222-a0d328fa4dec //allow-merging
