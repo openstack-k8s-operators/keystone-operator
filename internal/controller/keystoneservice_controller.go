@@ -25,6 +25,7 @@ import (
 	"github.com/go-logr/logr"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
+	endpoint "github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
 	helper "github.com/openstack-k8s-operators/lib-common/modules/common/helper"
 	secret "github.com/openstack-k8s-operators/lib-common/modules/common/secret"
 
@@ -214,10 +215,15 @@ func (r *KeystoneServiceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	//
 	// get admin authentication OpenStack
 	//
+	adminInterface := endpoint.EndpointInternal
+	if keystoneAPI.Spec.ExternalKeystoneAPI {
+		adminInterface = endpoint.EndpointPublic
+	}
 	os, ctrlResult, err := keystonev1.GetAdminServiceClient(
 		ctx,
 		helper,
 		keystoneAPI,
+		adminInterface,
 	)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
@@ -433,7 +439,7 @@ func (r *KeystoneServiceReconciler) reconcileService(
 		instance.Spec.ServiceName,
 	)
 	// If the service is not found, don't count that as an error here,
-	// it gets created bellow
+	// it gets created below
 	if err != nil && !strings.Contains(err.Error(), openstack.ServiceNotFound) {
 		return err
 	}
