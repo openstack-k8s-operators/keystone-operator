@@ -244,6 +244,11 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return r.reconcileDelete(ctx, instance, helper)
 	}
 
+	// Check if external Keystone API is configured
+	if instance.Spec.ExternalKeystoneAPI {
+		return r.reconcileExternalKeystoneAPI(ctx, instance, helper)
+	}
+
 	// Handle non-deleted clusters
 	return r.reconcileNormal(ctx, instance, helper)
 }
@@ -450,6 +455,14 @@ func (r *KeystoneAPIReconciler) findObjectsForSrc(ctx context.Context, src clien
 func (r *KeystoneAPIReconciler) reconcileDelete(ctx context.Context, instance *keystonev1.KeystoneAPI, helper *helper.Helper) (ctrl.Result, error) {
 	Log := r.GetLogger(ctx)
 	Log.Info("Reconciling Service delete")
+
+	// If using external Keystone API, we don't have any resources to clean up
+	if instance.Spec.ExternalKeystoneAPI {
+		// Just remove the finalizer
+		controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
+		Log.Info("Reconciled External Keystone API delete successfully")
+		return ctrl.Result{}, nil
+	}
 
 	// We need to allow all KeystoneEndpoint and KeystoneService processing to finish
 	// in the case of a delete before we remove the finalizers.  For instance, in the
@@ -747,6 +760,184 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	return ctrl.Result{}, nil
 }
 
+func (r *KeystoneAPIReconciler) reconcileExternalKeystoneAPI(
+	ctx context.Context,
+	instance *keystonev1.KeystoneAPI,
+	helper *helper.Helper,
+) (ctrl.Result, error) {
+	Log := r.GetLogger(ctx)
+	Log.Info("Reconciling External Keystone API")
+
+	// When using external Keystone API, we skip all deployment logic
+	// and just use the endpoints from the override spec
+
+	// serviceLabels?
+
+	// Verify override spec is valid
+	if instance.Spec.Override.Service == nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.InputReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.InputReadyWaitingMessage))
+		return ctrl.Result{}, nil
+	}
+
+	configMapVars := make(map[string]env.Setter)
+
+	// Verify secret is available (needed for admin client operations)
+	ctrlResult, err := r.verifySecret(ctx, instance, helper, configMapVars)
+	if err != nil {
+		return ctrlResult, err
+	} else if (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, nil
+	}
+
+	// service DB is not needed
+	instance.Status.Conditions.MarkTrue(mariadbv1.MariaDBAccountReadyCondition, keystonev1.ExternalKeystoneAPIDBAccountMessage)
+	instance.Status.Conditions.MarkTrue(condition.DBReadyCondition, keystonev1.ExternalKeystoneAPIDBMessage)
+	instance.Status.Conditions.MarkTrue(condition.DBSyncReadyCondition, keystonev1.ExternalKeystoneAPIDBMessage)
+
+	// RabbitMQ transportURL is not needed
+	instance.Status.Conditions.MarkTrue(condition.RabbitMqTransportURLReadyCondition, keystonev1.ExternalKeystoneAPIRabbitMQTransportURLMessage)
+
+	// memcached is not needed
+	instance.Status.Conditions.MarkTrue(condition.MemcachedReadyCondition, keystonev1.ExternalKeystoneAPIMemcachedReadyMessage)
+
+	// Mark service conditions as ready since they're being managed externally
+	instance.Status.Conditions.MarkTrue(condition.ServiceAccountReadyCondition, "External Keystone API - no service account needed")
+	instance.Status.Conditions.MarkTrue(condition.RoleReadyCondition, "External Keystone API - no role needed")
+	instance.Status.Conditions.MarkTrue(condition.RoleBindingReadyCondition, "External Keystone API - no role binding needed")
+	instance.Status.Conditions.MarkTrue(condition.ServiceConfigReadyCondition, keystonev1.ExternalKeystoneAPIServiceMessage)
+	instance.Status.Conditions.MarkTrue(condition.BootstrapReadyCondition, keystonev1.ExternalKeystoneAPIServiceMessage)
+	instance.Status.Conditions.MarkTrue(condition.CreateServiceReadyCondition, keystonev1.ExternalKeystoneAPIServiceMessage)
+	instance.Status.Conditions.MarkTrue(condition.DeploymentReadyCondition, keystonev1.ExternalKeystoneAPIServiceMessage)
+	instance.Status.Conditions.MarkTrue(condition.CronJobReadyCondition, keystonev1.ExternalKeystoneAPIServiceMessage)
+	// Set ready count to 0 since we're not deploying anything
+	instance.Status.ReadyCount = 0
+
+	// Verify TLS input (CA cert secret if provided)
+	ctrlResult, err = r.verifyTLSInput(ctx, instance, helper, configMapVars)
+	if err != nil {
+		return ctrlResult, err
+	} else if (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, nil
+	}
+	instance.Status.Conditions.MarkTrue(condition.TLSInputReadyCondition, condition.InputReadyMessage)
+
+	// TODO: Do we need network annotations if we we dont have Keystone API?
+	instance.Status.Conditions.MarkTrue(condition.NetworkAttachmentsReadyCondition, keystonev1.ExternalKeystoneAPINetworkAttachmentsReadyMessage)
+
+	// Add endpoints
+
+	// Set API endpoints from externalKeystoneAPI spec
+	if instance.Status.APIEndpoints == nil {
+		instance.Status.APIEndpoints = map[string]string{}
+	}
+	// Copy endpoints from spec to status
+	for endpointType, data := range instance.Spec.Override.Service {
+		if data.EndpointURL != nil {
+			instance.Status.APIEndpoints[string(endpointType)] = *data.EndpointURL
+		} else {
+			instance.Status.Conditions.Set(condition.FalseCondition(
+				condition.InputReadyCondition,
+				condition.ErrorReason,
+				condition.SeverityWarning,
+				condition.InputReadyWaitingMessage))
+			return ctrl.Result{}, nil
+		}
+	}
+
+	Log.Info("Reconciled External Keystone API successfully")
+	return ctrl.Result{}, nil
+}
+
+// verifySecret verifies the OpenStack secret exists and adds its hash to configMapVars
+func (r *KeystoneAPIReconciler) verifySecret(
+	ctx context.Context,
+	instance *keystonev1.KeystoneAPI,
+	helper *helper.Helper,
+	configMapVars map[string]env.Setter,
+) (ctrl.Result, error) {
+	// check for required OpenStack secret holding passwords for service/admin user and add hash to the vars map
+	// NOTE: VerifySecret handles the "not found" error and returns RequeueAfter ctrl.Result if so, so we don't
+	//       need to check the error type here
+	hash, result, err := oko_secret.VerifySecret(ctx, types.NamespacedName{Name: instance.Spec.Secret, Namespace: instance.Namespace}, []string{"AdminPassword"}, helper.GetClient(), time.Second*10)
+	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.InputReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.InputReadyErrorMessage,
+			err.Error()))
+		return ctrl.Result{}, err
+	} else if (result != ctrl.Result{}) {
+		// This case is "secret not found".  VerifySecret already logs a message for it.
+		// We treat this as a warning because it means that the service will not be able to start
+		// while we are waiting for the secret to be created manually by the user.
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.InputReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.InputReadyWaitingMessage))
+		return result, nil
+	}
+
+	// Add hash to configMapVars if provided
+	if configMapVars != nil {
+		configMapVars[instance.Spec.Secret] = env.SetValue(hash)
+	}
+
+	instance.Status.Conditions.MarkTrue(condition.InputReadyCondition, condition.InputReadyMessage)
+
+	return ctrl.Result{}, nil
+}
+func (r *KeystoneAPIReconciler) verifyTLSInput(
+	ctx context.Context,
+	instance *keystonev1.KeystoneAPI,
+	helper *helper.Helper,
+	configMapVars map[string]env.Setter,
+) (ctrl.Result, error) {
+	// Validate the CA cert secret if provided
+	if instance.Spec.TLS.CaBundleSecretName != "" {
+		hash, err := tls.ValidateCACertSecret(
+			ctx,
+			helper.GetClient(),
+			types.NamespacedName{
+				Name:      instance.Spec.TLS.CaBundleSecretName,
+				Namespace: instance.Namespace,
+			},
+		)
+		if err != nil {
+			if k8s_errors.IsNotFound(err) {
+				// Since the CA cert secret should have been manually created by the user and provided in the spec,
+				// we treat this as a warning because it means that the service will not be able to start.
+				instance.Status.Conditions.Set(condition.FalseCondition(
+					condition.TLSInputReadyCondition,
+					condition.ErrorReason,
+					condition.SeverityWarning,
+					condition.TLSInputReadyWaitingMessage,
+					instance.Spec.TLS.CaBundleSecretName))
+				return ctrl.Result{}, nil
+			}
+			instance.Status.Conditions.Set(condition.FalseCondition(
+				condition.TLSInputReadyCondition,
+				condition.ErrorReason,
+				condition.SeverityWarning,
+				condition.TLSInputErrorMessage,
+				err.Error()))
+			return ctrl.Result{}, err
+		}
+
+		if hash != "" {
+			if configMapVars != nil {
+				configMapVars[tls.CABundleKey] = env.SetValue(hash)
+			}
+		}
+	}
+
+	return ctrl.Result{}, nil
+}
 func (r *KeystoneAPIReconciler) reconcileUpdate(ctx context.Context) (ctrl.Result, error) {
 	Log := r.GetLogger(ctx)
 	Log.Info("Reconciling Service update")
@@ -787,32 +978,13 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 
 	//
 	// check for required OpenStack secret holding passwords for service/admin user and add hash to the vars map
-	// NOTE: VerifySecret handles the "not found" error and returns RequeueAfter ctrl.Result if so, so we don't
-	//       need to check the error type here
 	//
-	hash, result, err := oko_secret.VerifySecret(ctx, types.NamespacedName{Name: instance.Spec.Secret, Namespace: instance.Namespace}, []string{"AdminPassword"}, helper.GetClient(), time.Second*10)
+	ctrlResult, err := r.verifySecret(ctx, instance, helper, configMapVars)
 	if err != nil {
-		instance.Status.Conditions.Set(condition.FalseCondition(
-			condition.InputReadyCondition,
-			condition.ErrorReason,
-			condition.SeverityWarning,
-			condition.InputReadyErrorMessage,
-			err.Error()))
-		return ctrl.Result{}, err
-	} else if (result != ctrl.Result{}) {
-		// This case is "secret not found".  VerifySecret already logs a message for it.
-		// We treat this as a warning because it means that the service will not be able to start
-		// while we are waiting for the secret to be created manually by the user.
-		instance.Status.Conditions.Set(condition.FalseCondition(
-			condition.InputReadyCondition,
-			condition.ErrorReason,
-			condition.SeverityWarning,
-			condition.InputReadyWaitingMessage))
-		return result, nil
+		return ctrlResult, err
+	} else if (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, nil
 	}
-	configMapVars[instance.Spec.Secret] = env.SetValue(hash)
-
-	instance.Status.Conditions.MarkTrue(condition.InputReadyCondition, condition.InputReadyMessage)
 
 	// run check OpenStack secret - end
 
@@ -970,40 +1142,12 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	//
 	// TLS input validation
 	//
-	// Validate the CA cert secret if provided
-	if instance.Spec.TLS.CaBundleSecretName != "" {
-		hash, err := tls.ValidateCACertSecret(
-			ctx,
-			helper.GetClient(),
-			types.NamespacedName{
-				Name:      instance.Spec.TLS.CaBundleSecretName,
-				Namespace: instance.Namespace,
-			},
-		)
-		if err != nil {
-			if k8s_errors.IsNotFound(err) {
-				// Since the CA cert secret should have been manually created by the user and provided in the spec,
-				// we treat this as a warning because it means that the service will not be able to start.
-				instance.Status.Conditions.Set(condition.FalseCondition(
-					condition.TLSInputReadyCondition,
-					condition.ErrorReason,
-					condition.SeverityWarning,
-					condition.TLSInputReadyWaitingMessage,
-					instance.Spec.TLS.CaBundleSecretName))
-				return ctrl.Result{}, nil
-			}
-			instance.Status.Conditions.Set(condition.FalseCondition(
-				condition.TLSInputReadyCondition,
-				condition.ErrorReason,
-				condition.SeverityWarning,
-				condition.TLSInputErrorMessage,
-				err.Error()))
-			return ctrl.Result{}, err
-		}
-
-		if hash != "" {
-			configMapVars[tls.CABundleKey] = env.SetValue(hash)
-		}
+	// Verify TLS input (CA cert secret if provided)
+	ctrlResult, err = r.verifyTLSInput(ctx, instance, helper, configMapVars)
+	if err != nil {
+		return ctrlResult, err
+	} else if (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, nil
 	}
 
 	// Validate API service certs secrets
@@ -1089,7 +1233,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	}
 
 	// Handle service init
-	ctrlResult, err := r.reconcileInit(ctx, instance, helper, serviceLabels, serviceAnnotations, memcached)
+	ctrlResult, err = r.reconcileInit(ctx, instance, helper, serviceLabels, serviceAnnotations, memcached)
 	if err != nil {
 		return ctrlResult, err
 	} else if (ctrlResult != ctrl.Result{}) {
