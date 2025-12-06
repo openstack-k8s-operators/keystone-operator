@@ -138,6 +138,112 @@ func GetAdminServiceClient(
 	return os, ctrlResult, nil
 }
 
+// GetUserServiceClient - returns an *openstack.OpenStack object scoped as the given service user
+func GetUserServiceClient(
+	ctx context.Context,
+	h *helper.Helper,
+	keystoneAPI *KeystoneAPI,
+	userName string,
+	secretName string,
+	passwordSelector string,
+) (*openstack.OpenStack, ctrl.Result, error) {
+
+	authURL, err := keystoneAPI.GetEndpoint(endpoint.EndpointInternal)
+	if err != nil {
+		return nil, ctrl.Result{}, err
+	}
+
+	parsedAuthURL, err := url.Parse(authURL)
+	if err != nil {
+		return nil, ctrl.Result{}, err
+	}
+
+	tlsConfig := &openstack.TLSConfig{}
+	if parsedAuthURL.Scheme == "https" && keystoneAPI.Spec.TLS.CaBundleSecretName != "" {
+		caCert, ctrlResult, err := secret.GetDataFromSecret(
+			ctx,
+			h,
+			keystoneAPI.Spec.TLS.CaBundleSecretName,
+			10*time.Second,
+			tls.InternalCABundleKey)
+		if err != nil {
+			return nil, ctrlResult, err
+		}
+		if (ctrlResult != ctrl.Result{}) {
+			return nil, ctrlResult,
+				fmt.Errorf("CABundleSecret %s not found",
+					keystoneAPI.Spec.TLS.CaBundleSecretName)
+		}
+
+		tlsConfig = &openstack.TLSConfig{
+			CACerts: []string{caCert},
+		}
+	}
+
+	password, res, err := getPasswordFromOSPSecret(ctx, h, secretName, passwordSelector)
+	if err != nil {
+		return nil, ctrl.Result{}, fmt.Errorf("failed to get password from osp-secret for user %q: %w", userName, err)
+	}
+	if res != (ctrl.Result{}) {
+		return nil, res, nil
+	}
+
+	scope := &gophercloud.AuthScope{
+		ProjectName: "service",
+		DomainName:  "Default",
+	}
+
+	osClient, err := openstack.NewOpenStack(
+		ctx,
+		h.GetLogger(),
+		openstack.AuthOpts{
+			AuthURL:    authURL,
+			Username:   userName,
+			Password:   password,
+			TenantName: "service",
+			DomainName: "Default",
+			Region:     keystoneAPI.Spec.Region,
+			TLS:        tlsConfig,
+			Scope:      scope,
+		},
+	)
+	if err != nil {
+		return nil, ctrl.Result{}, err
+	}
+
+	return osClient, ctrl.Result{}, nil
+}
+
+func getPasswordFromOSPSecret(
+	ctx context.Context,
+	h *helper.Helper,
+	ospSecretName, passwordSelector string,
+) (string, ctrl.Result, error) {
+	if ospSecretName == "" {
+		return "", ctrl.Result{}, fmt.Errorf("secret name is empty, cannot retrieve password for selector %q", passwordSelector)
+	}
+	if passwordSelector == "" {
+		return "", ctrl.Result{}, fmt.Errorf("password selector is empty, cannot retrieve password from secret %q", ospSecretName)
+	}
+	data, res, err := secret.GetDataFromSecret(
+		ctx,
+		h,
+		ospSecretName,
+		10*time.Second,
+		passwordSelector,
+	)
+	if err != nil {
+		return "", ctrl.Result{}, fmt.Errorf("failed to get %q from Secret/%s: %w", passwordSelector, ospSecretName, err)
+	}
+	if res != (ctrl.Result{}) {
+		return "", res, nil
+	}
+	if data == "" {
+		return "", ctrl.Result{}, fmt.Errorf("password selector %q in secret %q is empty", passwordSelector, ospSecretName)
+	}
+	return data, ctrl.Result{}, nil
+}
+
 // GetScopedAdminServiceClient - get a scoped admin serviceClient for the keystoneAPI instance
 func GetScopedAdminServiceClient(
 	ctx context.Context,
