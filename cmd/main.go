@@ -276,6 +276,16 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "KeystoneEndpoint")
 		os.Exit(1)
 	}
+	if err := (&controller.ApplicationCredentialReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		Kclient:       kclient,
+		Log:           ctrl.Log.WithName("controllers").WithName("ApplicationCredential"),
+		EventRecorder: mgr.GetEventRecorderFor("keystoneapplicationcredential-controller"),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "KeystoneApplicationCredential")
+		os.Exit(1)
+	}
 	// nolint:goconst
 	checker := healthz.Ping
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
