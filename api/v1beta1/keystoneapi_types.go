@@ -213,6 +213,18 @@ type KeystoneAPISpecCore struct {
 	// This is only needed when multiple realms are federated.
 	// Config files mount path is set to /var/lib/httpd/metadata/
 	FederatedRealmConfig string `json:"federatedRealmConfig"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=false
+	// ExternalKeystoneAPI - Enable use of external Keystone API endpoints instead of deploying a local Keystone API
+	ExternalKeystoneAPI bool `json:"externalKeystoneAPI,omitempty"`
+}
+
+// ExternalKeystoneAPI defines the configuration for an external Keystone API
+type ExternalKeystoneAPI struct {
+	// +kubebuilder:validation:Optional
+	// Endpoints - Endpoint URLs for the external Keystone API
+	Endpoints map[string]string `json:"endpoints,omitempty"`
 }
 
 // APIOverrideSpec to override the generated manifest of several child resources.
