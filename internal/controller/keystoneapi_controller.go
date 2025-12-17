@@ -847,6 +847,8 @@ func (r *KeystoneAPIReconciler) reconcileExternalKeystoneAPI(
 			return ctrl.Result{}, nil
 		}
 	}
+	// Copy region from spec to status 
+	instance.Status.Region = instance.Spec.Region
 
 	Log.Info("Reconciled External Keystone API successfully")
 	return ctrl.Result{}, nil
