@@ -53,6 +53,14 @@ const (
 	APIDefaultTimeout = 60
 )
 
+var (
+	// interfaceBundleKeys maps endpoint winterfaces to their corresponding key in the CA bundle secret
+	interfaceBundleKeys = map[endpoint.Endpoint]string{
+		endpoint.EndpointInternal: tls.InternalCABundleKey,
+		endpoint.EndpointPublic:   tls.CABundleKey,
+	}
+)
+
 // KeystoneAPISpec defines the desired state of KeystoneAPI
 type KeystoneAPISpec struct {
 	KeystoneAPISpecCore `json:",inline"`
@@ -213,6 +221,11 @@ type KeystoneAPISpecCore struct {
 	// This is only needed when multiple realms are federated.
 	// Config files mount path is set to /var/lib/httpd/metadata/
 	FederatedRealmConfig string `json:"federatedRealmConfig"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=false
+	// ExternalKeystoneAPI - Enable use of external Keystone API endpoints instead of deploying a local Keystone API
+	ExternalKeystoneAPI bool `json:"externalKeystoneAPI"`
 }
 
 // APIOverrideSpec to override the generated manifest of several child resources.

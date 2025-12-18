@@ -26,7 +26,6 @@ import (
 	"github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/helper"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/secret"
-	"github.com/openstack-k8s-operators/lib-common/modules/common/tls"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -145,8 +144,13 @@ func GetScopedAdminServiceClient(
 	keystoneAPI *KeystoneAPI,
 	scope *gophercloud.AuthScope,
 ) (*openstack.OpenStack, ctrl.Result, error) {
-	// get public endpoint as authurl from keystone instance
-	authURL, err := keystoneAPI.GetEndpoint(endpoint.EndpointInternal)
+	// get endpoint as authurl from keystone instance
+	// default to internal endpoint if not specified
+	epInterface := endpoint.EndpointInternal
+	if keystoneAPI.Spec.ExternalKeystoneAPI {
+		epInterface = endpoint.Endpoint(endpoint.EndpointPublic)
+	}
+	authURL, err := keystoneAPI.GetEndpoint(epInterface)
 	if err != nil {
 		return nil, ctrl.Result{}, err
 	}
@@ -163,7 +167,7 @@ func GetScopedAdminServiceClient(
 			h,
 			keystoneAPI.Spec.TLS.CaBundleSecretName,
 			10*time.Second,
-			tls.InternalCABundleKey)
+			interfaceBundleKeys[epInterface])
 		if err != nil {
 			return nil, ctrl.Result{}, err
 		}
