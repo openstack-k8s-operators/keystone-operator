@@ -33,6 +33,7 @@ import (
 	. "github.com/openstack-k8s-operators/lib-common/modules/common/test/helpers"
 
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
+	rabbitmqv1 "github.com/openstack-k8s-operators/infra-operator/apis/rabbitmq/v1beta1"
 	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	mariadb_test "github.com/openstack-k8s-operators/mariadb-operator/api/test/helpers"
@@ -2178,6 +2179,95 @@ OIDCRedirectURI "{{ .KeystoneEndpointPublic }}/v3/auth/OS-FEDERATION/websso/open
 		})
 	})
 
+	When("A KeystoneAPI is created with custom RabbitMQ user and vhost", func() {
+		BeforeEach(func() {
+			spec := GetDefaultKeystoneAPISpec()
+			spec["notificationsBus"] = map[string]any{
+				"user":  "custom-keystone-user",
+				"vhost": "custom-keystone-vhost",
+			}
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, spec))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
+		})
+
+		It("should create a TransportURL with custom username and vhost", func() {
+			transportURLName := types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
+				Namespace: namespace,
+			}
+
+			// Get the TransportURL object
+			transportURL := infra.GetTransportURL(transportURLName)
+
+			// Verify the custom username is set
+			Expect(transportURL.Spec.Username).To(Equal("custom-keystone-user"))
+
+			// Verify the custom vhost is set
+			Expect(transportURL.Spec.Vhost).To(Equal("custom-keystone-vhost"))
+
+			// Verify the RabbitMQ cluster name is set correctly
+			Expect(transportURL.Spec.RabbitmqClusterName).To(Equal("rabbitmq"))
+		})
+	})
+
+	When("A KeystoneAPI is created without custom RabbitMQ user and vhost", func() {
+		BeforeEach(func() {
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, GetDefaultKeystoneAPISpec()))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
+		})
+
+		It("should create a TransportURL with default (empty) username and vhost", func() {
+			transportURLName := types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
+				Namespace: namespace,
+			}
+
+			// Get the TransportURL object
+			transportURL := infra.GetTransportURL(transportURLName)
+
+			// Verify the username is empty (default)
+			Expect(transportURL.Spec.Username).To(BeEmpty())
+
+			// Verify the vhost is empty (default)
+			Expect(transportURL.Spec.Vhost).To(BeEmpty())
+
+			// Verify the RabbitMQ cluster name is set correctly
+			Expect(transportURL.Spec.RabbitmqClusterName).To(Equal("rabbitmq"))
+		})
+	})
+
 	// Run MariaDBAccount suite tests.  these are pre-packaged ginkgo tests
 	// that exercise standard account create / update patterns that should be
 	// common to all controllers that ensure MariaDBAccount CRs.
@@ -2346,6 +2436,89 @@ OIDCRedirectURI "{{ .KeystoneEndpointPublic }}/v3/auth/OS-FEDERATION/websso/open
 			Expect(configData).To(ContainSubstring("tls_certfile=/etc/pki/tls/certs/mtls.crt"))
 			Expect(configData).To(ContainSubstring("tls_keyfile=/etc/pki/tls/private/mtls.key"))
 			Expect(configData).To(ContainSubstring("tls_cafile=/etc/pki/tls/certs/mtls-ca.crt"))
+		})
+	})
+
+	When("KeystoneAPI starts with notifications enabled and then disables them", func() {
+		var transportURLName types.NamespacedName
+
+		BeforeEach(func() {
+			spec := GetDefaultKeystoneAPISpec()
+			spec["notificationsBus"] = map[string]any{
+				"cluster": "rabbitmq-notifications",
+				"user":    "keystone-notifications",
+				"vhost":   "/notifications",
+			}
+
+			transportURLName = types.NamespacedName{
+				Namespace: namespace,
+				Name:      "keystone-keystone-transport",
+			}
+
+			// Setup infrastructure before creating KeystoneAPI
+			DeferCleanup(k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(
+				k8sClient.Delete, ctx, infra.CreateTransportURLSecret(namespace, "rabbitmq-notifications-secret", false))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					"openstack",
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(types.NamespacedName{Namespace: namespace, Name: "memcached"})
+
+			// Create KeystoneAPI instance
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, spec))
+
+			// Wait for MariaDB resources to be created, then simulate them as ready
+			Eventually(func() error {
+				return k8sClient.Get(ctx, keystoneAccountName, &mariadbv1.MariaDBAccount{})
+			}, timeout, interval).Should(Succeed())
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
+
+			// Wait for the controller to create the TransportURL
+			Eventually(func() error {
+				return k8sClient.Get(ctx, transportURLName, &rabbitmqv1.TransportURL{})
+			}, timeout, interval).Should(Succeed())
+
+			// Simulate the TransportURL as ready
+			infra.SimulateTransportURLReady(transportURLName)
+		})
+
+		It("should initially have notifications TransportURL configured with custom settings", func() {
+			Eventually(func(g Gomega) {
+				transportURL := infra.GetTransportURL(transportURLName)
+				g.Expect(transportURL.Spec.RabbitmqClusterName).To(Equal("rabbitmq-notifications"))
+				g.Expect(transportURL.Spec.Username).To(Equal("keystone-notifications"))
+				g.Expect(transportURL.Spec.Vhost).To(Equal("/notifications"))
+			}, timeout, interval).Should(Succeed())
+		})
+
+		It("should revert to default RabbitMQ config when notificationsBus is removed", func() {
+			// Verify notifications are initially configured
+			transportURL := infra.GetTransportURL(transportURLName)
+			Expect(transportURL.Spec.RabbitmqClusterName).To(Equal("rabbitmq-notifications"))
+			Expect(transportURL.Spec.Username).To(Equal("keystone-notifications"))
+
+			// Update the KeystoneAPI spec to remove notificationsBus
+			Eventually(func(g Gomega) {
+				keystone := GetKeystoneAPI(keystoneAPIName)
+				keystone.Spec.NotificationsBus = rabbitmqv1.RabbitMqConfig{}
+				g.Expect(k8sClient.Update(ctx, keystone)).To(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			// Wait for TransportURL to be updated with default config
+			Eventually(func(g Gomega) {
+				transportURL := infra.GetTransportURL(transportURLName)
+				// Should use the default RabbitMqClusterName
+				g.Expect(transportURL.Spec.RabbitmqClusterName).To(Equal("rabbitmq"))
+			}, timeout, interval).Should(Succeed())
 		})
 	})
 
