@@ -817,11 +817,13 @@ func (r *KeystoneAPIReconciler) reconcileExternalKeystoneAPI(
 	instance.Status.ReadyCount = 0
 
 	// Verify TLS input (CA cert secret if provided)
-	ctrlResult, err = r.verifyTLSInput(ctx, instance, helper, configMapVars)
+	err = r.verifyTLSInput(ctx, instance, helper, configMapVars)
 	if err != nil {
-		return ctrlResult, err
-	} else if (ctrlResult != ctrl.Result{}) {
-		return ctrlResult, nil
+		if k8s_errors.IsNotFound(err) {
+			// Don't return NotFound error to the caller
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, err
 	}
 	instance.Status.Conditions.MarkTrue(condition.TLSInputReadyCondition, condition.InputReadyMessage)
 
@@ -907,7 +909,7 @@ func (r *KeystoneAPIReconciler) verifyTLSInput(
 	instance *keystonev1.KeystoneAPI,
 	helper *helper.Helper,
 	configMapVars map[string]env.Setter,
-) (ctrl.Result, error) {
+) error {
 	// Validate the CA cert secret if provided
 	if instance.Spec.TLS.CaBundleSecretName != "" {
 		hash, err := tls.ValidateCACertSecret(
@@ -928,15 +930,15 @@ func (r *KeystoneAPIReconciler) verifyTLSInput(
 					condition.SeverityWarning,
 					condition.TLSInputReadyWaitingMessage,
 					instance.Spec.TLS.CaBundleSecretName))
-				return ctrl.Result{}, nil
+			} else {
+				instance.Status.Conditions.Set(condition.FalseCondition(
+					condition.TLSInputReadyCondition,
+					condition.ErrorReason,
+					condition.SeverityWarning,
+					condition.TLSInputErrorMessage,
+					err.Error()))
 			}
-			instance.Status.Conditions.Set(condition.FalseCondition(
-				condition.TLSInputReadyCondition,
-				condition.ErrorReason,
-				condition.SeverityWarning,
-				condition.TLSInputErrorMessage,
-				err.Error()))
-			return ctrl.Result{}, err
+			return err
 		}
 
 		if hash != "" {
@@ -946,7 +948,7 @@ func (r *KeystoneAPIReconciler) verifyTLSInput(
 		}
 	}
 
-	return ctrl.Result{}, nil
+	return nil
 }
 func (r *KeystoneAPIReconciler) reconcileUpdate(ctx context.Context) (ctrl.Result, error) {
 	Log := r.GetLogger(ctx)
@@ -1153,11 +1155,13 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	// TLS input validation
 	//
 	// Verify TLS input (CA cert secret if provided)
-	ctrlResult, err = r.verifyTLSInput(ctx, instance, helper, configMapVars)
+	err = r.verifyTLSInput(ctx, instance, helper, configMapVars)
 	if err != nil {
-		return ctrlResult, err
-	} else if (ctrlResult != ctrl.Result{}) {
-		return ctrlResult, nil
+		if k8s_errors.IsNotFound(err) {
+			// Don't return NotFound error to the caller
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, err
 	}
 
 	// Validate API service certs secrets
