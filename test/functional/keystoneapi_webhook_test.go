@@ -23,9 +23,6 @@ import (
 	. "github.com/onsi/ginkgo/v2" //revive:disable:dot-imports
 	. "github.com/onsi/gomega"    //revive:disable:dot-imports
 
-	//revive:disable-next-line:dot-imports
-	. "github.com/openstack-k8s-operators/lib-common/modules/common/test/helpers"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -171,12 +168,11 @@ var _ = Describe("KeystoneAPI Webhook", func() {
 			th.SimulateJobSuccess(bootstrapJobName)
 			th.SimulateDeploymentReplicaReady(deploymentName)
 
-			th.ExpectCondition(
-				keystoneAPIName,
-				ConditionGetterFunc(KeystoneConditionGetter),
-				condition.ReadyCondition,
-				corev1.ConditionTrue,
-			)
+			Eventually(func(g Gomega) {
+				instance := GetKeystoneAPI(keystoneAPIName)
+				g.Expect(instance).NotTo(BeNil())
+				g.Expect(instance.Status.Conditions.IsTrue(condition.ReadyCondition)).To(BeTrue())
+			}, timeout, interval).Should(Succeed())
 		})
 
 		It("rejects update with wrong service override endpoint type", func() {
