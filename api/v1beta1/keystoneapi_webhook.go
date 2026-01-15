@@ -24,6 +24,7 @@ package v1beta1
 
 import (
 	"fmt"
+	"net/url"
 
 	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -186,38 +187,67 @@ func (spec *KeystoneAPISpecCore) ValidateExternalKeystoneAPI(basePath *field.Pat
 
 	overridePath := basePath.Child("override").Child("service")
 
-	// When ExternalKeystoneAPI is true, service overrides must be provided
-	if spec.Override.Service == nil || len(spec.Override.Service) == 0 {
-		allErrs = append(allErrs, field.Required(
-			overridePath,
-			"external Keystone API requires service override configuration",
-		))
-		return allErrs
-	}
-
 	// Both public and internal endpoints must be defined with EndpointURL set
 	// This ensures services that depend on both endpoints (like Glance) don't fail
 	// when rendering templates
+	// Note: We don't check for nil or empty service override here because the
+	// hasPublic and hasInternal checks below will catch missing endpoints regardless
+	// of whether the map is nil, empty, or contains invalid keys.
 	hasPublic := false
 	hasInternal := false
 
 	for endpointType, overrideSpec := range spec.Override.Service {
+		endpointURLPath := overridePath.Key(string(endpointType)).Child("endpointURL")
 		if endpointType == service.EndpointPublic {
 			hasPublic = true
 			if overrideSpec.EndpointURL == nil || *overrideSpec.EndpointURL == "" {
 				allErrs = append(allErrs, field.Required(
-					overridePath.Key(string(endpointType)).Child("endpointURL"),
+					endpointURLPath,
 					"external Keystone API requires endpointURL to be set for public endpoint",
 				))
+			} else {
+				// Validate URL format
+				parsedURL, err := url.Parse(*overrideSpec.EndpointURL)
+				if err != nil {
+					allErrs = append(allErrs, field.Invalid(
+						endpointURLPath,
+						*overrideSpec.EndpointURL,
+						fmt.Sprintf("invalid URL format: %v", err),
+					))
+				} else if parsedURL.Scheme == "" {
+					// Require a scheme (http:// or https://)
+					allErrs = append(allErrs, field.Invalid(
+						endpointURLPath,
+						*overrideSpec.EndpointURL,
+						"URL must include a scheme (e.g., http:// or https://)",
+					))
+				}
 			}
 		}
 		if endpointType == service.EndpointInternal {
 			hasInternal = true
 			if overrideSpec.EndpointURL == nil || *overrideSpec.EndpointURL == "" {
 				allErrs = append(allErrs, field.Required(
-					overridePath.Key(string(endpointType)).Child("endpointURL"),
+					endpointURLPath,
 					"external Keystone API requires endpointURL to be set for internal endpoint",
 				))
+			} else {
+				// Validate URL format
+				parsedURL, err := url.Parse(*overrideSpec.EndpointURL)
+				if err != nil {
+					allErrs = append(allErrs, field.Invalid(
+						endpointURLPath,
+						*overrideSpec.EndpointURL,
+						fmt.Sprintf("invalid URL format: %v", err),
+					))
+				} else if parsedURL.Scheme == "" {
+					// Require a scheme (http:// or https://)
+					allErrs = append(allErrs, field.Invalid(
+						endpointURLPath,
+						*overrideSpec.EndpointURL,
+						"URL must include a scheme (e.g., http:// or https://)",
+					))
+				}
 			}
 		}
 	}
