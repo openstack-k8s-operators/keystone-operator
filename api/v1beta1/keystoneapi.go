@@ -123,22 +123,164 @@ func GetAdminServiceClient(
 	h *helper.Helper,
 	keystoneAPI *KeystoneAPI,
 ) (*openstack.OpenStack, ctrl.Result, error) {
-	os, ctrlResult, err := GetScopedAdminServiceClient(
+	// Get the password of the admin user from Spec.Secret using PasswordSelectors.Admin
+	authPassword, ctrlResult, err := secret.GetDataFromSecret(
+		ctx,
+		h,
+		keystoneAPI.Spec.Secret,
+		10*time.Second,
+		keystoneAPI.Spec.PasswordSelectors.Admin)
+	if err != nil {
+		return nil, ctrl.Result{}, err
+	}
+	if (ctrlResult != ctrl.Result{}) {
+		return nil, ctrlResult, fmt.Errorf("password for user %s not found", keystoneAPI.Spec.PasswordSelectors.Admin)
+	}
+
+	return GetScopedClient(
 		ctx,
 		h,
 		keystoneAPI,
+		keystoneAPI.Spec.AdminUser,
+		authPassword,
+		keystoneAPI.Spec.AdminProject,
+		"Default",
+		"", // Use default region from keystoneAPI
 		&gophercloud.AuthScope{
 			System: true,
 		},
 	)
-	if err != nil {
-		return nil, ctrlResult, err
+}
+
+// GetScopedClient - returns an *openstack.OpenStack object with the specified credentials and scope
+func GetScopedClient(
+	ctx context.Context,
+	h *helper.Helper,
+	keystoneAPI *KeystoneAPI,
+	username string,
+	password string,
+	tenantName string,
+	domainName string,
+	region string,
+	scope *gophercloud.AuthScope,
+) (*openstack.OpenStack, ctrl.Result, error) {
+
+	// Use keystoneAPI region as default if not specified
+	if region == "" {
+		region = keystoneAPI.Spec.Region
 	}
 
-	return os, ctrlResult, nil
+	authURL, err := keystoneAPI.GetEndpoint(endpoint.EndpointInternal)
+	if err != nil {
+		return nil, ctrl.Result{}, err
+	}
+
+	parsedAuthURL, err := url.Parse(authURL)
+	if err != nil {
+		return nil, ctrl.Result{}, err
+	}
+
+	tlsConfig := &openstack.TLSConfig{}
+	if parsedAuthURL.Scheme == "https" && keystoneAPI.Spec.TLS.CaBundleSecretName != "" {
+		caCert, ctrlResult, err := secret.GetDataFromSecret(
+			ctx,
+			h,
+			keystoneAPI.Spec.TLS.CaBundleSecretName,
+			10*time.Second,
+			tls.InternalCABundleKey)
+		if err != nil {
+			return nil, ctrlResult, err
+		}
+		if (ctrlResult != ctrl.Result{}) {
+			return nil, ctrlResult,
+				fmt.Errorf("CABundleSecret %s not found",
+					keystoneAPI.Spec.TLS.CaBundleSecretName)
+		}
+
+		tlsConfig = &openstack.TLSConfig{
+			CACerts: []string{caCert},
+		}
+	}
+
+	osClient, err := openstack.NewOpenStack(
+		ctx,
+		h.GetLogger(),
+		openstack.AuthOpts{
+			AuthURL:    authURL,
+			Username:   username,
+			Password:   password,
+			TenantName: tenantName,
+			DomainName: domainName,
+			Region:     region,
+			TLS:        tlsConfig,
+			Scope:      scope,
+		},
+	)
+	if err != nil {
+		return nil, ctrl.Result{}, err
+	}
+
+	return osClient, ctrl.Result{}, nil
+}
+
+// GetUserServiceClient - returns an *openstack.OpenStack object scoped as the given service user
+func GetUserServiceClient(
+	ctx context.Context,
+	h *helper.Helper,
+	keystoneAPI *KeystoneAPI,
+	userName string,
+	secretName string,
+	passwordSelector string,
+) (*openstack.OpenStack, ctrl.Result, error) {
+
+	password, res, err := getPasswordFromOSPSecret(ctx, h, secretName, passwordSelector)
+	if err != nil {
+		return nil, ctrl.Result{}, fmt.Errorf("failed to get password from osp-secret for user %q: %w", userName, err)
+	}
+	if res != (ctrl.Result{}) {
+		return nil, res, nil
+	}
+
+	return GetScopedClient(
+		ctx,
+		h,
+		keystoneAPI,
+		userName,
+		password,
+		"service",
+		"Default",
+		"", // Use default region from keystoneAPI
+		&gophercloud.AuthScope{
+			ProjectName: "service",
+			DomainName:  "Default",
+		},
+	)
+}
+
+func getPasswordFromOSPSecret(
+	ctx context.Context,
+	h *helper.Helper,
+	ospSecretName, passwordSelector string,
+) (string, ctrl.Result, error) {
+	data, res, err := secret.GetDataFromSecret(
+		ctx,
+		h,
+		ospSecretName,
+		10*time.Second,
+		passwordSelector,
+	)
+	if err != nil {
+		return "", ctrl.Result{}, err
+	}
+	if res != (ctrl.Result{}) {
+		return "", res, nil
+	}
+	return data, ctrl.Result{}, nil
 }
 
 // GetScopedAdminServiceClient - get a scoped admin serviceClient for the keystoneAPI instance
+//
+// Deprecated: Use GetScopedClient instead. This function will be removed in a future release.
 func GetScopedAdminServiceClient(
 	ctx context.Context,
 	h *helper.Helper,
