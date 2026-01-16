@@ -221,6 +221,11 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		cl.Set(condition.UnknownCondition(condition.RoleBindingReadyCondition, condition.InitReason, condition.RoleBindingReadyInitMessage))
 	}
 
+	// Init Topology condition if there's a reference
+	if instance.Spec.TopologyRef != nil {
+		cl.Set(condition.UnknownCondition(condition.TopologyReadyCondition, condition.InitReason, condition.TopologyReadyInitMessage))
+	}
+
 	instance.Status.Conditions.Init(&cl)
 	instance.Status.ObservedGeneration = instance.Generation
 
@@ -237,11 +242,6 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 	if instance.Status.NetworkAttachments == nil {
 		instance.Status.NetworkAttachments = map[string][]string{}
-	}
-	// Init Topology condition if there's a reference
-	if instance.Spec.TopologyRef != nil {
-		c := condition.UnknownCondition(condition.TopologyReadyCondition, condition.InitReason, condition.TopologyReadyInitMessage)
-		instance.Status.Conditions.Set(c)
 	}
 
 	// Handle service delete
@@ -775,8 +775,6 @@ func (r *KeystoneAPIReconciler) reconcileExternalKeystoneAPI(
 
 	// When using external Keystone API, we skip all deployment logic
 	// and just use the endpoints from the override spec
-
-	// serviceLabels?
 
 	configMapVars := make(map[string]env.Setter)
 

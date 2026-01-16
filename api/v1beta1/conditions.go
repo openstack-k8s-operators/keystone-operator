@@ -112,24 +112,4 @@ const (
 	// KeystoneServiceOSUserReadyErrorMessage
 	KeystoneServiceOSUserReadyErrorMessage = "Keystone Service user error occured %s"
 
-	//
-	// External Keystone API condition messages
-	//
-	// ExternalKeystoneAPIDBMessage
-	ExternalKeystoneAPIDBMessage = "External Keystone API configured - database is not managed by this operator"
-
-	// ExternalKeystoneAPIDBAccountMessage
-	ExternalKeystoneAPIDBAccountMessage = "External Keystone API configured - database account is not managed by this operator"
-
-	// ExternalKeystoneAPIRabbitMQTransportURLMessage
-	ExternalKeystoneAPIRabbitMQTransportURLMessage = "External Keystone API configured - RabbitMQ is not managed by this operator"
-
-	// ExternalKeystoneAPIMemcachedReadyMessage
-	ExternalKeystoneAPIMemcachedReadyMessage = "External Keystone API configured - memcached is not managed by this operator"
-
-	// ExternalKeystoneAPIServiceConfigReadyMessage
-	ExternalKeystoneAPIServiceMessage = "External Keystone API configured - service is not managed by this operator"
-
-	// ExternalKeystoneAPINetworkAttachmentsReadyMessage
-	ExternalKeystoneAPINetworkAttachmentsReadyMessage = "External Keystone API configured - network attachments are not managed by this operator"
 )
