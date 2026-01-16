@@ -54,7 +54,7 @@ const (
 )
 
 var (
-	// interfaceBundleKeys maps endpoint winterfaces to their corresponding key in the CA bundle secret
+	// interfaceBundleKeys maps endpoint interfaces to their corresponding key in the CA bundle secret
 	interfaceBundleKeys = map[endpoint.Endpoint]string{
 		endpoint.EndpointInternal: tls.InternalCABundleKey,
 		endpoint.EndpointPublic:   tls.CABundleKey,

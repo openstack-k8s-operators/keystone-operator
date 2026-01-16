@@ -2434,19 +2434,9 @@ OIDCRedirectURI "{{ .KeystoneEndpointPublic }}/v3/auth/OS-FEDERATION/websso/open
 				g.Expect(instance.Status.ReadyCount).To(Equal(int32(0)))
 			}, timeout, interval).Should(Succeed())
 
-			// Verify conditions are set for external keystone
-			th.ExpectCondition(
-				keystoneAPIName,
-				ConditionGetterFunc(KeystoneConditionGetter),
-				condition.DBReadyCondition,
-				corev1.ConditionTrue,
-			)
-			th.ExpectCondition(
-				keystoneAPIName,
-				ConditionGetterFunc(KeystoneConditionGetter),
-				condition.DeploymentReadyCondition,
-				corev1.ConditionTrue,
-			)
+			// Verify ReadyCondition is set for external keystone
+			// Note: DBReadyCondition and DeploymentReadyCondition are not set for external Keystone API
+			// as they are not relevant when using an external service
 			th.ExpectCondition(
 				keystoneAPIName,
 				ConditionGetterFunc(KeystoneConditionGetter),

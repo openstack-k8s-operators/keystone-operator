@@ -197,26 +197,29 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	//
 	// Conditions init
 	//
-	cl := condition.CreateList(
-		condition.UnknownCondition(condition.DBReadyCondition, condition.InitReason, condition.DBReadyInitMessage),
-		condition.UnknownCondition(condition.DBSyncReadyCondition, condition.InitReason, condition.DBSyncReadyInitMessage),
-		condition.UnknownCondition(condition.RabbitMqTransportURLReadyCondition, condition.InitReason, condition.RabbitMqTransportURLReadyInitMessage),
-		condition.UnknownCondition(condition.MemcachedReadyCondition, condition.InitReason, condition.MemcachedReadyInitMessage),
-		condition.UnknownCondition(condition.CreateServiceReadyCondition, condition.InitReason, condition.CreateServiceReadyInitMessage),
-		condition.UnknownCondition(condition.BootstrapReadyCondition, condition.InitReason, condition.BootstrapReadyInitMessage),
-		condition.UnknownCondition(condition.InputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
-		condition.UnknownCondition(condition.ServiceConfigReadyCondition, condition.InitReason, condition.ServiceConfigReadyInitMessage),
-		condition.UnknownCondition(condition.DeploymentReadyCondition, condition.InitReason, condition.DeploymentReadyInitMessage),
-		condition.UnknownCondition(condition.NetworkAttachmentsReadyCondition, condition.InitReason, condition.NetworkAttachmentsReadyInitMessage),
-		condition.UnknownCondition(condition.CronJobReadyCondition, condition.InitReason, condition.CronJobReadyInitMessage),
-		condition.UnknownCondition(condition.TLSInputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
-		// service account, role, rolebinding conditions
-		condition.UnknownCondition(condition.ServiceAccountReadyCondition, condition.InitReason, condition.ServiceAccountReadyInitMessage),
-		condition.UnknownCondition(condition.RoleReadyCondition, condition.InitReason, condition.RoleReadyInitMessage),
-		condition.UnknownCondition(condition.RoleBindingReadyCondition, condition.InitReason, condition.RoleBindingReadyInitMessage),
-	)
+	// Add conditions only for internal Keystone API
+	if !instance.Spec.ExternalKeystoneAPI {
+		cl := condition.CreateList(
+			condition.UnknownCondition(condition.DBReadyCondition, condition.InitReason, condition.DBReadyInitMessage),
+			condition.UnknownCondition(condition.DBSyncReadyCondition, condition.InitReason, condition.DBSyncReadyInitMessage),
+			condition.UnknownCondition(condition.RabbitMqTransportURLReadyCondition, condition.InitReason, condition.RabbitMqTransportURLReadyInitMessage),
+			condition.UnknownCondition(condition.MemcachedReadyCondition, condition.InitReason, condition.MemcachedReadyInitMessage),
+			condition.UnknownCondition(condition.CreateServiceReadyCondition, condition.InitReason, condition.CreateServiceReadyInitMessage),
+			condition.UnknownCondition(condition.BootstrapReadyCondition, condition.InitReason, condition.BootstrapReadyInitMessage),
+			condition.UnknownCondition(condition.InputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
+			condition.UnknownCondition(condition.ServiceConfigReadyCondition, condition.InitReason, condition.ServiceConfigReadyInitMessage),
+			condition.UnknownCondition(condition.DeploymentReadyCondition, condition.InitReason, condition.DeploymentReadyInitMessage),
+			condition.UnknownCondition(condition.NetworkAttachmentsReadyCondition, condition.InitReason, condition.NetworkAttachmentsReadyInitMessage),
+			condition.UnknownCondition(condition.CronJobReadyCondition, condition.InitReason, condition.CronJobReadyInitMessage),
+			condition.UnknownCondition(condition.TLSInputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
+			// service account, role, rolebinding conditions
+			condition.UnknownCondition(condition.ServiceAccountReadyCondition, condition.InitReason, condition.ServiceAccountReadyInitMessage),
+			condition.UnknownCondition(condition.RoleReadyCondition, condition.InitReason, condition.RoleReadyInitMessage),
+			condition.UnknownCondition(condition.RoleBindingReadyCondition, condition.InitReason, condition.RoleBindingReadyInitMessage),
+		)
 
-	instance.Status.Conditions.Init(&cl)
+		instance.Status.Conditions.Init(&cl)
+	}
 	instance.Status.ObservedGeneration = instance.Generation
 
 	// If we're not deleting this and the service object doesn't have our finalizer, add it.
@@ -236,7 +239,7 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// Init Topology condition if there's a reference
 	if instance.Spec.TopologyRef != nil {
 		c := condition.UnknownCondition(condition.TopologyReadyCondition, condition.InitReason, condition.TopologyReadyInitMessage)
-		cl.Set(c)
+		instance.Status.Conditions.Set(c)
 	}
 
 	// Handle service delete
@@ -793,26 +796,6 @@ func (r *KeystoneAPIReconciler) reconcileExternalKeystoneAPI(
 		return ctrlResult, nil
 	}
 
-	// service DB is not needed
-	instance.Status.Conditions.MarkTrue(mariadbv1.MariaDBAccountReadyCondition, keystonev1.ExternalKeystoneAPIDBAccountMessage)
-	instance.Status.Conditions.MarkTrue(condition.DBReadyCondition, keystonev1.ExternalKeystoneAPIDBMessage)
-	instance.Status.Conditions.MarkTrue(condition.DBSyncReadyCondition, keystonev1.ExternalKeystoneAPIDBMessage)
-
-	// RabbitMQ transportURL is not needed
-	instance.Status.Conditions.MarkTrue(condition.RabbitMqTransportURLReadyCondition, keystonev1.ExternalKeystoneAPIRabbitMQTransportURLMessage)
-
-	// memcached is not needed
-	instance.Status.Conditions.MarkTrue(condition.MemcachedReadyCondition, keystonev1.ExternalKeystoneAPIMemcachedReadyMessage)
-
-	// Mark service conditions as ready since they're being managed externally
-	instance.Status.Conditions.MarkTrue(condition.ServiceAccountReadyCondition, "External Keystone API - no service account needed")
-	instance.Status.Conditions.MarkTrue(condition.RoleReadyCondition, "External Keystone API - no role needed")
-	instance.Status.Conditions.MarkTrue(condition.RoleBindingReadyCondition, "External Keystone API - no role binding needed")
-	instance.Status.Conditions.MarkTrue(condition.ServiceConfigReadyCondition, keystonev1.ExternalKeystoneAPIServiceMessage)
-	instance.Status.Conditions.MarkTrue(condition.BootstrapReadyCondition, keystonev1.ExternalKeystoneAPIServiceMessage)
-	instance.Status.Conditions.MarkTrue(condition.CreateServiceReadyCondition, keystonev1.ExternalKeystoneAPIServiceMessage)
-	instance.Status.Conditions.MarkTrue(condition.DeploymentReadyCondition, keystonev1.ExternalKeystoneAPIServiceMessage)
-	instance.Status.Conditions.MarkTrue(condition.CronJobReadyCondition, keystonev1.ExternalKeystoneAPIServiceMessage)
 	// Set ready count to 0 since we're not deploying anything
 	instance.Status.ReadyCount = 0
 
@@ -826,9 +809,6 @@ func (r *KeystoneAPIReconciler) reconcileExternalKeystoneAPI(
 		return ctrl.Result{}, err
 	}
 	instance.Status.Conditions.MarkTrue(condition.TLSInputReadyCondition, condition.InputReadyMessage)
-
-	// TODO: Do we need network annotations if we we dont have Keystone API?
-	instance.Status.Conditions.MarkTrue(condition.NetworkAttachmentsReadyCondition, keystonev1.ExternalKeystoneAPINetworkAttachmentsReadyMessage)
 
 	// Add endpoints
 
