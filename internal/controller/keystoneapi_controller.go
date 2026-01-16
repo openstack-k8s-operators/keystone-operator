@@ -197,29 +197,31 @@ func (r *KeystoneAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	//
 	// Conditions init
 	//
-	// Add conditions only for internal Keystone API
-	if !instance.Spec.ExternalKeystoneAPI {
-		cl := condition.CreateList(
-			condition.UnknownCondition(condition.DBReadyCondition, condition.InitReason, condition.DBReadyInitMessage),
-			condition.UnknownCondition(condition.DBSyncReadyCondition, condition.InitReason, condition.DBSyncReadyInitMessage),
-			condition.UnknownCondition(condition.RabbitMqTransportURLReadyCondition, condition.InitReason, condition.RabbitMqTransportURLReadyInitMessage),
-			condition.UnknownCondition(condition.MemcachedReadyCondition, condition.InitReason, condition.MemcachedReadyInitMessage),
-			condition.UnknownCondition(condition.CreateServiceReadyCondition, condition.InitReason, condition.CreateServiceReadyInitMessage),
-			condition.UnknownCondition(condition.BootstrapReadyCondition, condition.InitReason, condition.BootstrapReadyInitMessage),
-			condition.UnknownCondition(condition.InputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
-			condition.UnknownCondition(condition.ServiceConfigReadyCondition, condition.InitReason, condition.ServiceConfigReadyInitMessage),
-			condition.UnknownCondition(condition.DeploymentReadyCondition, condition.InitReason, condition.DeploymentReadyInitMessage),
-			condition.UnknownCondition(condition.NetworkAttachmentsReadyCondition, condition.InitReason, condition.NetworkAttachmentsReadyInitMessage),
-			condition.UnknownCondition(condition.CronJobReadyCondition, condition.InitReason, condition.CronJobReadyInitMessage),
-			condition.UnknownCondition(condition.TLSInputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
-			// service account, role, rolebinding conditions
-			condition.UnknownCondition(condition.ServiceAccountReadyCondition, condition.InitReason, condition.ServiceAccountReadyInitMessage),
-			condition.UnknownCondition(condition.RoleReadyCondition, condition.InitReason, condition.RoleReadyInitMessage),
-			condition.UnknownCondition(condition.RoleBindingReadyCondition, condition.InitReason, condition.RoleBindingReadyInitMessage),
-		)
+	// Always needed conditions
+	cl := condition.CreateList(
+		condition.UnknownCondition(condition.InputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
+		condition.UnknownCondition(condition.TLSInputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
+	)
 
-		instance.Status.Conditions.Init(&cl)
+	// Only for internal Keystone API
+	if !instance.Spec.ExternalKeystoneAPI {
+		cl.Set(condition.UnknownCondition(condition.DBReadyCondition, condition.InitReason, condition.DBReadyInitMessage))
+		cl.Set(condition.UnknownCondition(condition.DBSyncReadyCondition, condition.InitReason, condition.DBSyncReadyInitMessage))
+		cl.Set(condition.UnknownCondition(condition.RabbitMqTransportURLReadyCondition, condition.InitReason, condition.RabbitMqTransportURLReadyInitMessage))
+		cl.Set(condition.UnknownCondition(condition.MemcachedReadyCondition, condition.InitReason, condition.MemcachedReadyInitMessage))
+		cl.Set(condition.UnknownCondition(condition.CreateServiceReadyCondition, condition.InitReason, condition.CreateServiceReadyInitMessage))
+		cl.Set(condition.UnknownCondition(condition.BootstrapReadyCondition, condition.InitReason, condition.BootstrapReadyInitMessage))
+		cl.Set(condition.UnknownCondition(condition.ServiceConfigReadyCondition, condition.InitReason, condition.ServiceConfigReadyInitMessage))
+		cl.Set(condition.UnknownCondition(condition.DeploymentReadyCondition, condition.InitReason, condition.DeploymentReadyInitMessage))
+		cl.Set(condition.UnknownCondition(condition.NetworkAttachmentsReadyCondition, condition.InitReason, condition.NetworkAttachmentsReadyInitMessage))
+		cl.Set(condition.UnknownCondition(condition.CronJobReadyCondition, condition.InitReason, condition.CronJobReadyInitMessage))
+		// service account, role, rolebinding conditions
+		cl.Set(condition.UnknownCondition(condition.ServiceAccountReadyCondition, condition.InitReason, condition.ServiceAccountReadyInitMessage))
+		cl.Set(condition.UnknownCondition(condition.RoleReadyCondition, condition.InitReason, condition.RoleReadyInitMessage))
+		cl.Set(condition.UnknownCondition(condition.RoleBindingReadyCondition, condition.InitReason, condition.RoleBindingReadyInitMessage))
 	}
+
+	instance.Status.Conditions.Init(&cl)
 	instance.Status.ObservedGeneration = instance.Generation
 
 	// If we're not deleting this and the service object doesn't have our finalizer, add it.
@@ -776,16 +778,6 @@ func (r *KeystoneAPIReconciler) reconcileExternalKeystoneAPI(
 
 	// serviceLabels?
 
-	// Verify override spec is valid
-	if instance.Spec.Override.Service == nil {
-		instance.Status.Conditions.Set(condition.FalseCondition(
-			condition.InputReadyCondition,
-			condition.ErrorReason,
-			condition.SeverityWarning,
-			condition.InputReadyWaitingMessage))
-		return ctrl.Result{}, nil
-	}
-
 	configMapVars := make(map[string]env.Setter)
 
 	// Verify secret is available (needed for admin client operations)
@@ -795,6 +787,80 @@ func (r *KeystoneAPIReconciler) reconcileExternalKeystoneAPI(
 	} else if (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, nil
 	}
+
+	// Verify override spec is valid - both public and internal endpoints must be defined
+	if len(instance.Spec.Override.Service) == 0 {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.InputReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.InputReadyWaitingMessage))
+		return ctrl.Result{}, nil
+	}
+
+	// Verify both public and internal endpoints are defined with valid EndpointURL
+	hasPublic := false
+	hasInternal := false
+	publicEndpointURL := ""
+	internalEndpointURL := ""
+
+	for endpointType, data := range instance.Spec.Override.Service {
+		if endpointType == service.EndpointPublic {
+			hasPublic = true
+			if data.EndpointURL == nil || *data.EndpointURL == "" {
+				instance.Status.Conditions.Set(condition.FalseCondition(
+					condition.InputReadyCondition,
+					condition.ErrorReason,
+					condition.SeverityWarning,
+					"external Keystone API requires endpointURL to be set for public endpoint"))
+				return ctrl.Result{}, nil
+			}
+			publicEndpointURL = *data.EndpointURL
+		}
+		if endpointType == service.EndpointInternal {
+			hasInternal = true
+			if data.EndpointURL == nil || *data.EndpointURL == "" {
+				instance.Status.Conditions.Set(condition.FalseCondition(
+					condition.InputReadyCondition,
+					condition.ErrorReason,
+					condition.SeverityWarning,
+					"external Keystone API requires endpointURL to be set for internal endpoint"))
+				return ctrl.Result{}, nil
+			}
+			internalEndpointURL = *data.EndpointURL
+		}
+	}
+
+	if !hasPublic {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.InputReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			"external Keystone API requires public endpoint to be defined"))
+		return ctrl.Result{}, nil
+	}
+
+	if !hasInternal {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.InputReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			"external Keystone API requires internal endpoint to be defined"))
+		return ctrl.Result{}, nil
+	}
+
+	// Set API endpoints from externalKeystoneAPI spec
+	if instance.Status.APIEndpoints == nil {
+		instance.Status.APIEndpoints = map[string]string{}
+	}
+	instance.Status.APIEndpoints[string(service.EndpointPublic)] = publicEndpointURL
+	instance.Status.APIEndpoints[string(service.EndpointInternal)] = internalEndpointURL
+
+	// Copy region from spec to status
+	instance.Status.Region = instance.Spec.Region
+
+	// Set InputReadyCondition after both secret and endpoints are verified
+	instance.Status.Conditions.MarkTrue(condition.InputReadyCondition, condition.InputReadyMessage)
 
 	// Set ready count to 0 since we're not deploying anything
 	instance.Status.ReadyCount = 0
@@ -809,28 +875,6 @@ func (r *KeystoneAPIReconciler) reconcileExternalKeystoneAPI(
 		return ctrl.Result{}, err
 	}
 	instance.Status.Conditions.MarkTrue(condition.TLSInputReadyCondition, condition.InputReadyMessage)
-
-	// Add endpoints
-
-	// Set API endpoints from externalKeystoneAPI spec
-	if instance.Status.APIEndpoints == nil {
-		instance.Status.APIEndpoints = map[string]string{}
-	}
-	// Copy endpoints from spec to status
-	for endpointType, data := range instance.Spec.Override.Service {
-		if data.EndpointURL != nil {
-			instance.Status.APIEndpoints[string(endpointType)] = *data.EndpointURL
-		} else {
-			instance.Status.Conditions.Set(condition.FalseCondition(
-				condition.InputReadyCondition,
-				condition.ErrorReason,
-				condition.SeverityWarning,
-				condition.InputReadyWaitingMessage))
-			return ctrl.Result{}, nil
-		}
-	}
-	// Copy region from spec to status
-	instance.Status.Region = instance.Spec.Region
 
 	//
 	// create OpenStackClient config
@@ -879,8 +923,6 @@ func (r *KeystoneAPIReconciler) verifySecret(
 	if configMapVars != nil {
 		configMapVars[instance.Spec.Secret] = env.SetValue(hash)
 	}
-
-	instance.Status.Conditions.MarkTrue(condition.InputReadyCondition, condition.InputReadyMessage)
 
 	return ctrl.Result{}, nil
 }
@@ -977,6 +1019,8 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	} else if (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, nil
 	}
+
+	instance.Status.Conditions.MarkTrue(condition.InputReadyCondition, condition.InputReadyMessage)
 
 	// run check OpenStack secret - end
 
