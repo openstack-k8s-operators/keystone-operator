@@ -37,7 +37,9 @@ import (
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	mariadb_test "github.com/openstack-k8s-operators/mariadb-operator/api/test/helpers"
 	mariadbv1 "github.com/openstack-k8s-operators/mariadb-operator/api/v1beta1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -2346,6 +2348,107 @@ OIDCRedirectURI "{{ .KeystoneEndpointPublic }}/v3/auth/OS-FEDERATION/websso/open
 			Expect(configData).To(ContainSubstring("tls_certfile=/etc/pki/tls/certs/mtls.crt"))
 			Expect(configData).To(ContainSubstring("tls_keyfile=/etc/pki/tls/private/mtls.key"))
 			Expect(configData).To(ContainSubstring("tls_cafile=/etc/pki/tls/certs/mtls-ca.crt"))
+		})
+	})
+
+	When("A KeystoneAPI is created with region specified", func() {
+		BeforeEach(func() {
+			spec := GetDefaultKeystoneAPISpec()
+			spec["region"] = "test-region"
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, spec))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
+				Namespace: namespace,
+			})
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+			th.SimulateDeploymentReplicaReady(deploymentName)
+		})
+
+		It("should set region in status", func() {
+			Eventually(func(g Gomega) {
+				instance := keystone.GetKeystoneAPI(keystoneAPIName)
+				g.Expect(instance).NotTo(BeNil())
+				g.Expect(instance.Status.Region).To(Equal("test-region"))
+				g.Expect(instance.Spec.Region).To(Equal("test-region"))
+			}, timeout, interval).Should(Succeed())
+
+			th.ExpectCondition(
+				keystoneAPIName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionTrue,
+			)
+		})
+	})
+
+	When("A KeystoneAPI is created with externalKeystoneAPI enabled", func() {
+		BeforeEach(func() {
+			spec := GetDefaultKeystoneAPISpec()
+			spec["externalKeystoneAPI"] = true
+			spec["region"] = "external-region"
+			spec["override"] = map[string]any{
+				"service": map[string]any{
+					"public": map[string]any{
+						"endpointURL": "https://external-keystone.example.com:5000",
+					},
+					"internal": map[string]any{
+						"endpointURL": "https://internal-keystone.example.com:5000",
+					},
+				},
+			}
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, spec))
+		})
+
+		It("should set region and endpoints in status without deploying resources", func() {
+			Eventually(func(g Gomega) {
+				instance := keystone.GetKeystoneAPI(keystoneAPIName)
+				g.Expect(instance).NotTo(BeNil())
+				g.Expect(instance.Spec.ExternalKeystoneAPI).To(BeTrue())
+				g.Expect(instance.Status.Region).To(Equal("external-region"))
+				g.Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("public", "https://external-keystone.example.com:5000"))
+				g.Expect(instance.Status.APIEndpoints).To(HaveKeyWithValue("internal", "https://internal-keystone.example.com:5000"))
+				g.Expect(instance.Status.ReadyCount).To(Equal(int32(0)))
+			}, timeout, interval).Should(Succeed())
+
+			// Verify ReadyCondition is set for external keystone
+			// Note: DBReadyCondition and DeploymentReadyCondition are not set for external Keystone API
+			// as they are not relevant when using an external service
+			th.ExpectCondition(
+				keystoneAPIName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionTrue,
+			)
+
+			// Verify no deployment is created
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, deploymentName, &appsv1.Deployment{})
+				return k8s_errors.IsNotFound(err)
+			}, timeout, interval).Should(BeTrue())
 		})
 	})
 

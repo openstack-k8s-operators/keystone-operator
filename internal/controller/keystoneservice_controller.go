@@ -433,7 +433,7 @@ func (r *KeystoneServiceReconciler) reconcileService(
 		instance.Spec.ServiceName,
 	)
 	// If the service is not found, don't count that as an error here,
-	// it gets created bellow
+	// it gets created below
 	if err != nil && !strings.Contains(err.Error(), openstack.ServiceNotFound) {
 		return err
 	}

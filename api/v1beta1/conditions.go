@@ -111,4 +111,5 @@ const (
 
 	// KeystoneServiceOSUserReadyErrorMessage
 	KeystoneServiceOSUserReadyErrorMessage = "Keystone Service user error occured %s"
+
 )

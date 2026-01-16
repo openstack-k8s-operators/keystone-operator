@@ -23,9 +23,6 @@ import (
 	. "github.com/onsi/ginkgo/v2" //revive:disable:dot-imports
 	. "github.com/onsi/gomega"    //revive:disable:dot-imports
 
-	//revive:disable-next-line:dot-imports
-	. "github.com/openstack-k8s-operators/lib-common/modules/common/test/helpers"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -171,12 +168,11 @@ var _ = Describe("KeystoneAPI Webhook", func() {
 			th.SimulateJobSuccess(bootstrapJobName)
 			th.SimulateDeploymentReplicaReady(deploymentName)
 
-			th.ExpectCondition(
-				keystoneAPIName,
-				ConditionGetterFunc(KeystoneConditionGetter),
-				condition.ReadyCondition,
-				corev1.ConditionTrue,
-			)
+			Eventually(func(g Gomega) {
+				instance := GetKeystoneAPI(keystoneAPIName)
+				g.Expect(instance).NotTo(BeNil())
+				g.Expect(instance.Status.Conditions.IsTrue(condition.ReadyCondition)).To(BeTrue())
+			}, timeout, interval).Should(Succeed())
 		})
 
 		It("rejects update with wrong service override endpoint type", func() {
@@ -219,5 +215,296 @@ var _ = Describe("KeystoneAPI Webhook", func() {
 			ContainSubstring(
 				"spec.topologyRef.namespace: Invalid value: \"namespace\": Customizing namespace field is not supported"),
 		)
+	})
+
+	When("ExternalKeystoneAPI validation", func() {
+		It("rejects ExternalKeystoneAPI=true with nil service override", func() {
+			spec := GetDefaultKeystoneAPISpec()
+			spec["externalKeystoneAPI"] = true
+			// Don't set any override
+
+			raw := map[string]any{
+				"apiVersion": "keystone.openstack.org/v1beta1",
+				"kind":       "KeystoneAPI",
+				"metadata": map[string]any{
+					"name":      keystoneAPIName.Name,
+					"namespace": keystoneAPIName.Namespace,
+				},
+				"spec": spec,
+			}
+
+			unstructuredObj := &unstructured.Unstructured{Object: raw}
+			_, err := controllerutil.CreateOrPatch(
+				th.Ctx, th.K8sClient, unstructuredObj, func() error { return nil })
+			Expect(err).To(HaveOccurred())
+			// The validation now checks for missing endpoints rather than missing override
+			Expect(err.Error()).To(
+				Or(
+					ContainSubstring("external Keystone API requires public endpoint to be defined"),
+					ContainSubstring("external Keystone API requires internal endpoint to be defined"),
+				),
+			)
+		})
+
+		It("rejects ExternalKeystoneAPI=true with empty service override", func() {
+			spec := GetDefaultKeystoneAPISpec()
+			spec["externalKeystoneAPI"] = true
+			spec["override"] = map[string]any{
+				"service": map[string]any{},
+			}
+
+			raw := map[string]any{
+				"apiVersion": "keystone.openstack.org/v1beta1",
+				"kind":       "KeystoneAPI",
+				"metadata": map[string]any{
+					"name":      keystoneAPIName.Name,
+					"namespace": keystoneAPIName.Namespace,
+				},
+				"spec": spec,
+			}
+
+			unstructuredObj := &unstructured.Unstructured{Object: raw}
+			_, err := controllerutil.CreateOrPatch(
+				th.Ctx, th.K8sClient, unstructuredObj, func() error { return nil })
+			Expect(err).To(HaveOccurred())
+			// The validation now checks for missing endpoints rather than missing override
+			Expect(err.Error()).To(
+				Or(
+					ContainSubstring("external Keystone API requires public endpoint to be defined"),
+					ContainSubstring("external Keystone API requires internal endpoint to be defined"),
+				),
+			)
+		})
+
+		It("rejects ExternalKeystoneAPI=true with service override but no endpoints", func() {
+			spec := GetDefaultKeystoneAPISpec()
+			spec["externalKeystoneAPI"] = true
+			spec["override"] = map[string]any{
+				"service": map[string]any{
+					"admin": map[string]any{
+						"metadata": map[string]any{
+							"labels": map[string]any{
+								"custom": "label",
+							},
+						},
+					},
+				},
+			}
+
+			raw := map[string]any{
+				"apiVersion": "keystone.openstack.org/v1beta1",
+				"kind":       "KeystoneAPI",
+				"metadata": map[string]any{
+					"name":      keystoneAPIName.Name,
+					"namespace": keystoneAPIName.Namespace,
+				},
+				"spec": spec,
+			}
+
+			unstructuredObj := &unstructured.Unstructured{Object: raw}
+			_, err := controllerutil.CreateOrPatch(
+				th.Ctx, th.K8sClient, unstructuredObj, func() error { return nil })
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(
+				ContainSubstring(
+					"external Keystone API requires public endpoint to be defined"),
+			)
+		})
+
+		It("rejects ExternalKeystoneAPI=true with missing public endpoint", func() {
+			spec := GetDefaultKeystoneAPISpec()
+			spec["externalKeystoneAPI"] = true
+			spec["override"] = map[string]any{
+				"service": map[string]any{
+					"internal": map[string]any{
+						"endpointURL": "http://internal.keystone.example.com:5000",
+					},
+				},
+			}
+
+			raw := map[string]any{
+				"apiVersion": "keystone.openstack.org/v1beta1",
+				"kind":       "KeystoneAPI",
+				"metadata": map[string]any{
+					"name":      keystoneAPIName.Name,
+					"namespace": keystoneAPIName.Namespace,
+				},
+				"spec": spec,
+			}
+
+			unstructuredObj := &unstructured.Unstructured{Object: raw}
+			_, err := controllerutil.CreateOrPatch(
+				th.Ctx, th.K8sClient, unstructuredObj, func() error { return nil })
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(
+				ContainSubstring(
+					"external Keystone API requires public endpoint to be defined"),
+			)
+		})
+
+		It("rejects ExternalKeystoneAPI=true with missing internal endpoint", func() {
+			spec := GetDefaultKeystoneAPISpec()
+			spec["externalKeystoneAPI"] = true
+			spec["override"] = map[string]any{
+				"service": map[string]any{
+					"public": map[string]any{
+						"endpointURL": "http://public.keystone.example.com:5000",
+					},
+				},
+			}
+
+			raw := map[string]any{
+				"apiVersion": "keystone.openstack.org/v1beta1",
+				"kind":       "KeystoneAPI",
+				"metadata": map[string]any{
+					"name":      keystoneAPIName.Name,
+					"namespace": keystoneAPIName.Namespace,
+				},
+				"spec": spec,
+			}
+
+			unstructuredObj := &unstructured.Unstructured{Object: raw}
+			_, err := controllerutil.CreateOrPatch(
+				th.Ctx, th.K8sClient, unstructuredObj, func() error { return nil })
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(
+				ContainSubstring(
+					"external Keystone API requires internal endpoint to be defined"),
+			)
+		})
+
+		It("rejects ExternalKeystoneAPI=true with empty endpointURL", func() {
+			spec := GetDefaultKeystoneAPISpec()
+			spec["externalKeystoneAPI"] = true
+			spec["override"] = map[string]any{
+				"service": map[string]any{
+					"public": map[string]any{
+						"endpointURL": "",
+					},
+					"internal": map[string]any{
+						"endpointURL": "http://internal.keystone.example.com:5000",
+					},
+				},
+			}
+
+			raw := map[string]any{
+				"apiVersion": "keystone.openstack.org/v1beta1",
+				"kind":       "KeystoneAPI",
+				"metadata": map[string]any{
+					"name":      keystoneAPIName.Name,
+					"namespace": keystoneAPIName.Namespace,
+				},
+				"spec": spec,
+			}
+
+			unstructuredObj := &unstructured.Unstructured{Object: raw}
+			_, err := controllerutil.CreateOrPatch(
+				th.Ctx, th.K8sClient, unstructuredObj, func() error { return nil })
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(
+				ContainSubstring(
+					"external Keystone API requires endpointURL to be set for public endpoint"),
+			)
+		})
+
+		It("rejects ExternalKeystoneAPI=true with invalid URL format for public endpoint", func() {
+			spec := GetDefaultKeystoneAPISpec()
+			spec["externalKeystoneAPI"] = true
+			spec["override"] = map[string]any{
+				"service": map[string]any{
+					"public": map[string]any{
+						"endpointURL": "not-a-valid-url",
+					},
+					"internal": map[string]any{
+						"endpointURL": "http://internal.keystone.example.com:5000",
+					},
+				},
+			}
+
+			raw := map[string]any{
+				"apiVersion": "keystone.openstack.org/v1beta1",
+				"kind":       "KeystoneAPI",
+				"metadata": map[string]any{
+					"name":      keystoneAPIName.Name,
+					"namespace": keystoneAPIName.Namespace,
+				},
+				"spec": spec,
+			}
+
+			unstructuredObj := &unstructured.Unstructured{Object: raw}
+			_, err := controllerutil.CreateOrPatch(
+				th.Ctx, th.K8sClient, unstructuredObj, func() error { return nil })
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(
+				ContainSubstring(
+					"URL must include a scheme"),
+			)
+		})
+
+		It("rejects ExternalKeystoneAPI=true with invalid URL format for internal endpoint", func() {
+			spec := GetDefaultKeystoneAPISpec()
+			spec["externalKeystoneAPI"] = true
+			spec["override"] = map[string]any{
+				"service": map[string]any{
+					"public": map[string]any{
+						"endpointURL": "http://public.keystone.example.com:5000",
+					},
+					"internal": map[string]any{
+						"endpointURL": "://invalid-url",
+					},
+				},
+			}
+
+			raw := map[string]any{
+				"apiVersion": "keystone.openstack.org/v1beta1",
+				"kind":       "KeystoneAPI",
+				"metadata": map[string]any{
+					"name":      keystoneAPIName.Name,
+					"namespace": keystoneAPIName.Namespace,
+				},
+				"spec": spec,
+			}
+
+			unstructuredObj := &unstructured.Unstructured{Object: raw}
+			_, err := controllerutil.CreateOrPatch(
+				th.Ctx, th.K8sClient, unstructuredObj, func() error { return nil })
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(
+				Or(
+					ContainSubstring("invalid URL format"),
+					ContainSubstring("URL must include a scheme"),
+				),
+			)
+		})
+
+		It("accepts ExternalKeystoneAPI=true with valid endpoints", func() {
+			spec := GetDefaultKeystoneAPISpec()
+			spec["externalKeystoneAPI"] = true
+			spec["override"] = map[string]any{
+				"service": map[string]any{
+					"public": map[string]any{
+						"endpointURL": "http://public.keystone.example.com:5000",
+					},
+					"internal": map[string]any{
+						"endpointURL": "http://internal.keystone.example.com:5000",
+					},
+				},
+			}
+
+			raw := map[string]any{
+				"apiVersion": "keystone.openstack.org/v1beta1",
+				"kind":       "KeystoneAPI",
+				"metadata": map[string]any{
+					"name":      keystoneAPIName.Name,
+					"namespace": keystoneAPIName.Namespace,
+				},
+				"spec": spec,
+			}
+
+			unstructuredObj := &unstructured.Unstructured{Object: raw}
+			_, err := controllerutil.CreateOrPatch(
+				th.Ctx, th.K8sClient, unstructuredObj, func() error { return nil })
+			Expect(err).NotTo(HaveOccurred())
+		})
 	})
 })
