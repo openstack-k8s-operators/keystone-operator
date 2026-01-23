@@ -53,13 +53,6 @@ const (
 	APIDefaultTimeout = 60
 )
 
-var (
-	// interfaceBundleKeys maps endpoint interfaces to their corresponding key in the CA bundle secret
-	interfaceBundleKeys = map[endpoint.Endpoint]string{
-		endpoint.EndpointInternal: tls.InternalCABundleKey,
-		endpoint.EndpointPublic:   tls.CABundleKey,
-	}
-)
 
 // KeystoneAPISpec defines the desired state of KeystoneAPI
 type KeystoneAPISpec struct {
