@@ -26,6 +26,7 @@ import (
 	"github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/helper"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/secret"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/tls"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -136,13 +137,6 @@ func GetAdminServiceClient(
 		return nil, ctrlResult, fmt.Errorf("password for user %s not found", keystoneAPI.Spec.PasswordSelectors.Admin)
 	}
 
-	// get endpoint as authurl from keystone instance
-	// default to internal endpoint if not specified
-	epInterface := endpoint.EndpointInternal
-	if keystoneAPI.Spec.ExternalKeystoneAPI {
-		epInterface = endpoint.EndpointPublic
-	}
-
 	return GetScopedClient(
 		ctx,
 		h,
@@ -152,7 +146,7 @@ func GetAdminServiceClient(
 		keystoneAPI.Spec.AdminProject,
 		"Default",
 		keystoneAPI.Spec.Region,
-		epInterface,
+		endpoint.EndpointInternal,
 		&gophercloud.AuthScope{
 			System: true,
 		},
@@ -195,7 +189,7 @@ func GetScopedClient(
 			h,
 			keystoneAPI.Spec.TLS.CaBundleSecretName,
 			10*time.Second,
-			interfaceBundleKeys[endpointType])
+			tls.CABundleKey)
 		if err != nil {
 			return nil, ctrlResult, err
 		}
@@ -249,13 +243,6 @@ func GetUserServiceClient(
 		return nil, res, nil
 	}
 
-	// get endpoint as authurl from keystone instance
-	// default to internal endpoint if not specified
-	epInterface := endpoint.EndpointInternal
-	if keystoneAPI.Spec.ExternalKeystoneAPI {
-		epInterface = endpoint.EndpointPublic
-	}
-
 	return GetScopedClient(
 		ctx,
 		h,
@@ -265,7 +252,7 @@ func GetUserServiceClient(
 		"service",
 		"Default",
 		keystoneAPI.Spec.Region,
-		epInterface,
+		endpoint.EndpointInternal,
 		&gophercloud.AuthScope{
 			ProjectName: "service",
 			DomainName:  "Default",
@@ -304,12 +291,7 @@ func GetScopedAdminServiceClient(
 	scope *gophercloud.AuthScope,
 ) (*openstack.OpenStack, ctrl.Result, error) {
 	// get endpoint as authurl from keystone instance
-	// default to internal endpoint if not specified
-	epInterface := endpoint.EndpointInternal
-	if keystoneAPI.Spec.ExternalKeystoneAPI {
-		epInterface = endpoint.Endpoint(endpoint.EndpointPublic)
-	}
-	authURL, err := keystoneAPI.GetEndpoint(epInterface)
+	authURL, err := keystoneAPI.GetEndpoint(endpoint.EndpointInternal)
 	if err != nil {
 		return nil, ctrl.Result{}, err
 	}
@@ -326,7 +308,7 @@ func GetScopedAdminServiceClient(
 			h,
 			keystoneAPI.Spec.TLS.CaBundleSecretName,
 			10*time.Second,
-			interfaceBundleKeys[epInterface])
+			tls.CABundleKey)
 		if err != nil {
 			return nil, ctrl.Result{}, err
 		}
