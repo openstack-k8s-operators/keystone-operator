@@ -1466,7 +1466,7 @@ func (r *KeystoneAPIReconciler) transportURLCreateOrUpdate(
 		},
 	}
 	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, transportURL, func() error {
-		// Handle nil NotificationsBus gracefully - use default values
+		// Handle nil NotificationsBus gracefully - use deprecated field or default values
 		if instance.Spec.NotificationsBus != nil {
 			transportURL.Spec.RabbitmqClusterName = instance.Spec.NotificationsBus.Cluster
 			// Always set Username and Vhost to allow clearing/resetting them
@@ -1476,8 +1476,13 @@ func (r *KeystoneAPIReconciler) transportURLCreateOrUpdate(
 			transportURL.Spec.Username = instance.Spec.NotificationsBus.User
 			transportURL.Spec.Vhost = instance.Spec.NotificationsBus.Vhost
 		} else {
-			// If NotificationsBus is nil, use default rabbitmq cluster
-			transportURL.Spec.RabbitmqClusterName = "rabbitmq"
+			// If NotificationsBus is nil, fall back to deprecated RabbitMqClusterName field
+			// for backward compatibility during upgrades
+			if instance.Spec.RabbitMqClusterName != "" {
+				transportURL.Spec.RabbitmqClusterName = instance.Spec.RabbitMqClusterName
+			} else {
+				transportURL.Spec.RabbitmqClusterName = "rabbitmq"
+			}
 			transportURL.Spec.Username = ""
 			transportURL.Spec.Vhost = ""
 		}

@@ -26,15 +26,14 @@ import (
 	"fmt"
 	"net/url"
 
-	rabbitmqv1 "github.com/openstack-k8s-operators/infra-operator/apis/rabbitmq/v1beta1"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
+	common_webhook "github.com/openstack-k8s-operators/lib-common/modules/common/webhook"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-	common_webhook "github.com/openstack-k8s-operators/lib-common/modules/common/webhook"
 )
 
 // KeystoneAPIDefaults -
@@ -79,13 +78,10 @@ func (spec *KeystoneAPISpecCore) Default() {
 	if spec.APITimeout == 0 {
 		spec.APITimeout = keystoneAPIDefaults.APITimeout
 	}
-	// Default NotificationsBus if RabbitMqClusterName is specified
-	if spec.RabbitMqClusterName != "" {
-		if spec.NotificationsBus == nil {
-			spec.NotificationsBus = &rabbitmqv1.RabbitMqConfig{}
-		}
-		rabbitmqv1.DefaultRabbitMqConfig(spec.NotificationsBus, spec.RabbitMqClusterName)
-	}
+
+	// NotificationsBus.Cluster is not defaulted - it must be explicitly set if NotificationsBus is configured
+	// Migration from deprecated fields is handled by openstack-operator
+	// This ensures users make a conscious choice about which cluster to use for notifications
 }
 
 var _ webhook.Validator = &KeystoneAPI{}
