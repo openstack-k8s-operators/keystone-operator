@@ -19,6 +19,7 @@ package v1beta1
 import (
 	"fmt"
 
+	rabbitmqv1 "github.com/openstack-k8s-operators/infra-operator/apis/rabbitmq/v1beta1"
 	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
@@ -183,11 +184,11 @@ type KeystoneAPISpecCore struct {
 	// Override, provides the ability to override the generated manifest of several child resources.
 	Override APIOverrideSpec `json:"override,omitempty"`
 
-	// +kubebuilder:validation:Required
-	// +kubebuilder:default=rabbitmq
+	// +kubebuilder:validation:Optional
 	// RabbitMQ instance name
 	// Needed to request a transportURL that is created and used in Keystone
-	RabbitMqClusterName string `json:"rabbitMqClusterName"`
+	// Deprecated: Use NotificationsBus.Cluster instead
+	RabbitMqClusterName string `json:"rabbitMqClusterName,omitempty"`
 
 	// +kubebuilder:validation:Optional
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
@@ -219,6 +220,10 @@ type KeystoneAPISpecCore struct {
 	// +kubebuilder:default=false
 	// ExternalKeystoneAPI - Enable use of external Keystone API endpoints instead of deploying a local Keystone API
 	ExternalKeystoneAPI bool `json:"externalKeystoneAPI"`
+
+	// +kubebuilder:validation:Optional
+	// NotificationsBus configuration (username, vhost, and cluster)
+	NotificationsBus *rabbitmqv1.RabbitMqConfig `json:"notificationsBus,omitempty"`
 }
 
 // APIOverrideSpec to override the generated manifest of several child resources.

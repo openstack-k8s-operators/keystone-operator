@@ -2675,5 +2675,4 @@ OIDCRedirectURI "{{ .KeystoneEndpointPublic }}/v3/auth/OS-FEDERATION/websso/open
 			Expect(err.Error()).To(ContainSubstring("gracePeriodDays must be smaller than expirationDays"))
 		})
 	})
-
 })
