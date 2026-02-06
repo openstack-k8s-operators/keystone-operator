@@ -17,6 +17,7 @@ limitations under the License.
 package functional_test
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -24,6 +25,7 @@ import (
 	. "github.com/onsi/gomega"    //revive:disable:dot-imports
 
 	corev1 "k8s.io/api/core/v1"
+	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -506,5 +508,50 @@ var _ = Describe("KeystoneAPI Webhook", func() {
 				th.Ctx, th.K8sClient, unstructuredObj, func() error { return nil })
 			Expect(err).NotTo(HaveOccurred())
 		})
+	})
+
+	It("rejects update to deprecated rabbitMqClusterName field", func() {
+		spec := GetDefaultKeystoneAPISpec()
+		spec["rabbitMqClusterName"] = "rabbitmq"
+
+		keystoneName := types.NamespacedName{
+			Namespace: namespace,
+			Name:      "keystone-webhook-test",
+		}
+
+		raw := map[string]any{
+			"apiVersion": "keystone.openstack.org/v1beta1",
+			"kind":       "KeystoneAPI",
+			"metadata": map[string]any{
+				"name":      keystoneName.Name,
+				"namespace": keystoneName.Namespace,
+			},
+			"spec": spec,
+		}
+
+		// Create the KeystoneAPI instance
+		unstructuredObj := &unstructured.Unstructured{Object: raw}
+		_, err := controllerutil.CreateOrPatch(
+			ctx, k8sClient, unstructuredObj, func() error { return nil })
+		Expect(err).ShouldNot(HaveOccurred())
+
+		DeferCleanup(func() {
+			_ = k8sClient.Delete(ctx, unstructuredObj)
+		})
+
+		// Try to update rabbitMqClusterName
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, keystoneName, unstructuredObj)).Should(Succeed())
+			specMap := unstructuredObj.Object["spec"].(map[string]any)
+			specMap["rabbitMqClusterName"] = "rabbitmq2"
+			err := k8sClient.Update(ctx, unstructuredObj)
+			g.Expect(err).Should(HaveOccurred())
+
+			var statusError *k8s_errors.StatusError
+			g.Expect(errors.As(err, &statusError)).To(BeTrue())
+			g.Expect(statusError.ErrStatus.Details.Kind).To(Equal("KeystoneAPI"))
+			g.Expect(statusError.ErrStatus.Message).To(
+				ContainSubstring("field \"spec.rabbitMqClusterName\" is deprecated, use \"spec.notificationsBus.cluster\" instead"))
+		}, timeout, interval).Should(Succeed())
 	})
 })

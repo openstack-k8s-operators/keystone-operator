@@ -27,6 +27,7 @@ import (
 	"net/url"
 
 	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
+	common_webhook "github.com/openstack-k8s-operators/lib-common/modules/common/webhook"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -77,6 +78,10 @@ func (spec *KeystoneAPISpecCore) Default() {
 	if spec.APITimeout == 0 {
 		spec.APITimeout = keystoneAPIDefaults.APITimeout
 	}
+
+	// NotificationsBus.Cluster is not defaulted - it must be explicitly set if NotificationsBus is configured
+	// Migration from deprecated fields is handled by openstack-operator
+	// This ensures users make a conscious choice about which cluster to use for notifications
 }
 
 var _ webhook.Validator = &KeystoneAPI{}
@@ -85,29 +90,36 @@ var _ webhook.Validator = &KeystoneAPI{}
 func (r *KeystoneAPI) ValidateCreate() (admission.Warnings, error) {
 	keystoneapilog.Info("validate create", "name", r.Name)
 
+	var allWarns []string
 	allErrs := field.ErrorList{}
 	basePath := field.NewPath("spec")
 
-	if err := r.Spec.ValidateCreate(basePath, r.Namespace); err != nil {
-		allErrs = append(allErrs, err...)
-	}
+	warns, errs := r.Spec.ValidateCreate(basePath, r.Namespace)
+	allWarns = append(allWarns, warns...)
+	allErrs = append(allErrs, errs...)
 
 	if len(allErrs) != 0 {
-		return nil, apierrors.NewInvalid(GroupVersion.WithKind("KeystoneAPI").GroupKind(), r.Name, allErrs)
+		return allWarns, apierrors.NewInvalid(GroupVersion.WithKind("KeystoneAPI").GroupKind(), r.Name, allErrs)
 	}
 
-	return nil, nil
+	return allWarns, nil
 }
 
 // ValidateCreate - Exported function wrapping non-exported validate functions,
 // this function can be called externally to validate an KeystoneAPI spec.
-func (spec *KeystoneAPISpec) ValidateCreate(basePath *field.Path, namespace string) field.ErrorList {
+func (spec *KeystoneAPISpec) ValidateCreate(basePath *field.Path, namespace string) ([]string, field.ErrorList) {
 	return spec.KeystoneAPISpecCore.ValidateCreate(basePath, namespace)
 }
 
 // ValidateCreate validates the KeystoneAPISpecCore spec during creation
-func (spec *KeystoneAPISpecCore) ValidateCreate(basePath *field.Path, namespace string) field.ErrorList {
+func (spec *KeystoneAPISpecCore) ValidateCreate(basePath *field.Path, namespace string) ([]string, field.ErrorList) {
 	var allErrs field.ErrorList
+	var allWarns []string
+
+	// Validate deprecated fields using reflection-based validation
+	warnings, errs := spec.validateDeprecatedFieldsCreate(basePath)
+	allWarns = append(allWarns, warnings...)
+	allErrs = append(allErrs, errs...)
 
 	// validate the service override key is valid
 	allErrs = append(allErrs, service.ValidateRoutedOverrides(basePath.Child("override").Child("service"), spec.Override.Service)...)
@@ -119,7 +131,7 @@ func (spec *KeystoneAPISpecCore) ValidateCreate(basePath *field.Path, namespace 
 	// Validate external Keystone API configuration
 	allErrs = append(allErrs, spec.ValidateExternalKeystoneAPI(basePath)...)
 
-	return allErrs
+	return allWarns, allErrs
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
@@ -131,29 +143,36 @@ func (r *KeystoneAPI) ValidateUpdate(old runtime.Object) (admission.Warnings, er
 		return nil, apierrors.NewInternalError(fmt.Errorf("unable to convert existing object"))
 	}
 
+	var allWarns []string
 	allErrs := field.ErrorList{}
 	basePath := field.NewPath("spec")
 
-	if err := r.Spec.ValidateUpdate(oldKeystoneAPI.Spec, basePath, r.Namespace); err != nil {
-		allErrs = append(allErrs, err...)
-	}
+	warns, errs := r.Spec.ValidateUpdate(oldKeystoneAPI.Spec, basePath, r.Namespace)
+	allWarns = append(allWarns, warns...)
+	allErrs = append(allErrs, errs...)
 
 	if len(allErrs) != 0 {
-		return nil, apierrors.NewInvalid(GroupVersion.WithKind("KeystoneAPI").GroupKind(), r.Name, allErrs)
+		return allWarns, apierrors.NewInvalid(GroupVersion.WithKind("KeystoneAPI").GroupKind(), r.Name, allErrs)
 	}
 
-	return nil, nil
+	return allWarns, nil
 }
 
 // ValidateUpdate - Exported function wrapping non-exported validate functions,
 // this function can be called externally to validate an ironic spec.
-func (spec *KeystoneAPISpec) ValidateUpdate(old KeystoneAPISpec, basePath *field.Path, namespace string) field.ErrorList {
+func (spec *KeystoneAPISpec) ValidateUpdate(old KeystoneAPISpec, basePath *field.Path, namespace string) ([]string, field.ErrorList) {
 	return spec.KeystoneAPISpecCore.ValidateUpdate(old.KeystoneAPISpecCore, basePath, namespace)
 }
 
 // ValidateUpdate validates the KeystoneAPISpecCore spec during update
-func (spec *KeystoneAPISpecCore) ValidateUpdate(_ KeystoneAPISpecCore, basePath *field.Path, namespace string) field.ErrorList {
+func (spec *KeystoneAPISpecCore) ValidateUpdate(old KeystoneAPISpecCore, basePath *field.Path, namespace string) ([]string, field.ErrorList) {
 	var allErrs field.ErrorList
+	var allWarns []string
+
+	// Validate deprecated fields using centralized validation
+	warnings, errs := spec.validateDeprecatedFieldsUpdate(old, basePath)
+	allWarns = append(allWarns, warnings...)
+	allErrs = append(allErrs, errs...)
 
 	// validate the service override key is valid
 	allErrs = append(allErrs, service.ValidateRoutedOverrides(basePath.Child("override").Child("service"), spec.Override.Service)...)
@@ -165,7 +184,7 @@ func (spec *KeystoneAPISpecCore) ValidateUpdate(_ KeystoneAPISpecCore, basePath 
 	// Validate external Keystone API configuration
 	allErrs = append(allErrs, spec.ValidateExternalKeystoneAPI(basePath)...)
 
-	return allErrs
+	return allWarns, allErrs
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
@@ -267,6 +286,57 @@ func (spec *KeystoneAPISpecCore) ValidateExternalKeystoneAPI(basePath *field.Pat
 	}
 
 	return allErrs
+}
+
+// getDeprecatedFields returns the centralized list of deprecated fields for KeystoneAPISpecCore
+func (spec *KeystoneAPISpecCore) getDeprecatedFields(old *KeystoneAPISpecCore) []common_webhook.DeprecatedFieldUpdate {
+	// Handle NewValue pointer - NotificationsBus can be nil
+	var newValue *string
+	if spec.NotificationsBus != nil {
+		newValue = &spec.NotificationsBus.Cluster
+	}
+
+	deprecatedFields := []common_webhook.DeprecatedFieldUpdate{
+		{
+			DeprecatedFieldName: "rabbitMqClusterName",
+			NewFieldPath:        []string{"notificationsBus", "cluster"},
+			NewDeprecatedValue:  &spec.RabbitMqClusterName,
+			NewValue:            newValue,
+		},
+	}
+
+	// If old spec is provided (UPDATE operation), add old values
+	if old != nil {
+		deprecatedFields[0].OldDeprecatedValue = &old.RabbitMqClusterName
+	}
+
+	return deprecatedFields
+}
+
+// validateDeprecatedFieldsCreate validates deprecated fields during CREATE operations
+func (spec *KeystoneAPISpecCore) validateDeprecatedFieldsCreate(basePath *field.Path) ([]string, field.ErrorList) {
+	// Get deprecated fields list (without old values for CREATE)
+	deprecatedFieldsUpdate := spec.getDeprecatedFields(nil)
+
+	// Convert to DeprecatedField list for CREATE validation
+	deprecatedFields := make([]common_webhook.DeprecatedField, len(deprecatedFieldsUpdate))
+	for i, df := range deprecatedFieldsUpdate {
+		deprecatedFields[i] = common_webhook.DeprecatedField{
+			DeprecatedFieldName: df.DeprecatedFieldName,
+			NewFieldPath:        df.NewFieldPath,
+			DeprecatedValue:     df.NewDeprecatedValue,
+			NewValue:            df.NewValue,
+		}
+	}
+
+	return common_webhook.ValidateDeprecatedFieldsCreate(deprecatedFields, basePath), nil
+}
+
+// validateDeprecatedFieldsUpdate validates deprecated fields during UPDATE operations
+func (spec *KeystoneAPISpecCore) validateDeprecatedFieldsUpdate(old KeystoneAPISpecCore, basePath *field.Path) ([]string, field.ErrorList) {
+	// Get deprecated fields list with old values
+	deprecatedFields := spec.getDeprecatedFields(&old)
+	return common_webhook.ValidateDeprecatedFieldsUpdate(deprecatedFields, basePath)
 }
 
 // SetDefaultRouteAnnotations sets HAProxy timeout values of the route
