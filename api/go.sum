@@ -79,14 +79,15 @@ github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee h1:W5t00kpgFd
 github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee/go.mod h1:yWuevngMOJpCy52FWWMvUC8ws7m/LJsjYzDa0/r8luk=
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq1c1nUAm88MOHcQC9l5mIlSMApZMrHA=
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
+github.com/onsi/ginkgo v1.16.5 h1:8xi0RTUf59SOSfEtZMvwTvXYMzG4gV23XVHOZiXNtnE=
 github.com/onsi/ginkgo/v2 v2.28.1 h1:S4hj+HbZp40fNKuLUQOYLDgZLwNUVn19N3Atb98NCyI=
 github.com/onsi/ginkgo/v2 v2.28.1/go.mod h1:CLtbVInNckU3/+gC8LzkGUb9oF+e8W8TdUsxPwvdOgE=
 github.com/onsi/gomega v1.39.1 h1:1IJLAad4zjPn2PsnhH70V4DKRFlrCzGBNrNaru+Vf28=
 github.com/onsi/gomega v1.39.1/go.mod h1:hL6yVALoTOxeWudERyfppUcZXjMwIMLnuSfruD2lcfg=
 github.com/openshift/api v0.0.0-20250711200046-c86d80652a9e h1:E1OdwSpqWuDPCedyUt0GEdoAE+r5TXy7YS21yNEo+2U=
 github.com/openshift/api v0.0.0-20250711200046-c86d80652a9e/go.mod h1:Shkl4HanLwDiiBzakv+con/aMGnVE2MAGvoKp5oyYUo=
-github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20260128074606-03b808364e4a h1:uJL923hT6ZJE1fKq+/FA0mVX46AgE3H+OClpL2DXq4Y=
-github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20260128074606-03b808364e4a/go.mod h1:ZXwFlspJCdZEUjMbmaf61t5AMB4u2vMyAMMoe/vJroE=
+github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20260212124933-d2541a526cd3 h1:U6CAq9B6Ta/i089/ADVsyruBOvzZEJHaSWAO+s03jDA=
+github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20260212124933-d2541a526cd3/go.mod h1:5hS/cVzc/HURwsbp4MMNwgqAl5bUqKvJdK+4irXeymE=
 github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20260205083029-d03e9df035ef h1:SgzLekXtZuApbRylC3unCXnMaUClT5FPuqsxzIjt3Go=
 github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20260205083029-d03e9df035ef/go.mod h1:ndqfy1KbVorHH6+zlUFPIrCRhMSxO3ImYJUGaooE0x0=
 github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20260205083029-d03e9df035ef h1:IXN2GwCJLirHciDp/sq8oql4F/ScBCKwklTtUYdptS4=
