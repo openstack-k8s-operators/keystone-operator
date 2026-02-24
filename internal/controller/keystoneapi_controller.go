@@ -896,7 +896,24 @@ func (r *KeystoneAPIReconciler) verifySecret(
 	// check for required OpenStack secret holding passwords for service/admin user and add hash to the vars map
 	// NOTE: VerifySecret handles the "not found" error and returns RequeueAfter ctrl.Result if so, so we don't
 	//       need to check the error type here
-	hash, result, err := oko_secret.VerifySecret(ctx, types.NamespacedName{Name: instance.Spec.Secret, Namespace: instance.Namespace}, []string{"AdminPassword"}, helper.GetClient(), time.Second*10)
+	expectedFields := []string{
+		"AdminPassword",
+	}
+	// All expectedFields are password fields, so we associate each with a
+	// password validator to ensure invalid detected patterns are rejected.
+	validateFields := map[string]oko_secret.Validator{}
+	for _, f := range expectedFields {
+		validateFields[f] = oko_secret.PasswordValidator{}
+	}
+	hash, result, err := oko_secret.VerifySecretFields(
+		ctx,
+		types.NamespacedName{
+			Name:      instance.Spec.Secret,
+			Namespace: instance.Namespace,
+		},
+		validateFields,
+		helper.GetClient(),
+		time.Second*10)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.InputReadyCondition,

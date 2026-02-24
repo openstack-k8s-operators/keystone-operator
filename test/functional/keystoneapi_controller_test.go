@@ -128,6 +128,30 @@ var _ = Describe("Keystone controller", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
+	When("A KeystoneAPI instance is created with an invalid password", func() {
+		BeforeEach(func() {
+			// Create the secret containing the wrong password
+			DeferCleanup(k8sClient.Delete, ctx,
+				CreateKeystoneAPIInvalidSecret(namespace, "invalid-osp-secret"))
+
+			spec := GetDefaultKeystoneAPISpec()
+			spec["secret"] = "invalid-osp-secret"
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, spec))
+		})
+
+		It("rejects the password and reports InputReadyCondition as False", func() {
+			expectedErrMsg := "Input data error occurred password does not meet the requirements"
+			th.ExpectConditionWithDetails(
+				keystoneAPIName,
+				ConditionGetterFunc(KeystoneConditionGetter),
+				condition.InputReadyCondition,
+				corev1.ConditionFalse,
+				condition.ErrorReason,
+				expectedErrMsg,
+			)
+		})
+	})
+
 	When("A KeystoneAPI instance is created", func() {
 		BeforeEach(func() {
 			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, GetDefaultKeystoneAPISpec()))

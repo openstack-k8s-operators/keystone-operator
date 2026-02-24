@@ -122,8 +122,8 @@ github.com/openshift/api v0.0.0-20250711200046-c86d80652a9e h1:E1OdwSpqWuDPCedyU
 github.com/openshift/api v0.0.0-20250711200046-c86d80652a9e/go.mod h1:Shkl4HanLwDiiBzakv+con/aMGnVE2MAGvoKp5oyYUo=
 github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20260212124933-d2541a526cd3 h1:U6CAq9B6Ta/i089/ADVsyruBOvzZEJHaSWAO+s03jDA=
 github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20260212124933-d2541a526cd3/go.mod h1:5hS/cVzc/HURwsbp4MMNwgqAl5bUqKvJdK+4irXeymE=
-github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20260205083029-d03e9df035ef h1:SgzLekXtZuApbRylC3unCXnMaUClT5FPuqsxzIjt3Go=
-github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20260205083029-d03e9df035ef/go.mod h1:ndqfy1KbVorHH6+zlUFPIrCRhMSxO3ImYJUGaooE0x0=
+github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20260224071535-c6fd98c589ad h1:CCUNIUzCukBYhMJ0aZbQ2/6eF7Lskzzf/CuXLLtEz5k=
+github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20260224071535-c6fd98c589ad/go.mod h1:+vcGsjqibpMUz3y/g0B5YIXNotlTvQdMB6f92siiwKM=
 github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20260205083029-d03e9df035ef h1:IXN2GwCJLirHciDp/sq8oql4F/ScBCKwklTtUYdptS4=
 github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20260205083029-d03e9df035ef/go.mod h1:zOX7Y05keiSppIvLabuyh42QHBMhCcoskAtxFRbwXKo=
 github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20260205083029-d03e9df035ef h1:2wJUSZ2ybE6JVjEyuk/HEaJ1in64jf/lrPOs8NrRHFo=
