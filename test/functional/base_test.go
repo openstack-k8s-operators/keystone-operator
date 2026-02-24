@@ -97,6 +97,16 @@ func CreateKeystoneAPISecret(namespace string, name string) *corev1.Secret {
 	)
 }
 
+// CreateKeystoneAPIInvalidSecret creates a secret with an invalid password for testing
+func CreateKeystoneAPIInvalidSecret(namespace string, name string) *corev1.Secret {
+	return th.CreateSecret(
+		types.NamespacedName{Namespace: namespace, Name: name},
+		map[string][]byte{
+			"AdminPassword": []byte("c^sometext02%text%text02$someText&"),
+		},
+	)
+}
+
 func KeystoneConditionGetter(name types.NamespacedName) condition.Conditions {
 	instance := GetKeystoneAPI(name)
 	return instance.Status.Conditions
