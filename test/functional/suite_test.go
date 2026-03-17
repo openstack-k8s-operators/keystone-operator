@@ -98,6 +98,8 @@ var _ = BeforeSuite(func() {
 	infraCRDs, err := test.GetCRDDirFromModule(
 		"github.com/openstack-k8s-operators/infra-operator/apis", "../../go.mod", "bases")
 	Expect(err).ShouldNot(HaveOccurred())
+	dataplaneCRDs, err := test.GetDataPlaneCRDDir("../../go.mod")
+	Expect(err).ShouldNot(HaveOccurred())
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
@@ -105,6 +107,7 @@ var _ = BeforeSuite(func() {
 			filepath.Join("..", "..", "config", "crd", "bases"),
 			mariaDBCRDs,
 			infraCRDs,
+			dataplaneCRDs,
 		},
 		// Increase this to 60 or 120 seconds for the single-core run
 		ControlPlaneStartTimeout: 120 * time.Second,
