@@ -2614,39 +2614,127 @@ OIDCRedirectURI "{{ .KeystoneEndpointPublic }}/v3/auth/OS-FEDERATION/websso/open
 		})
 
 		It("should handle deletion with finalizer cleanup", func() {
-			serviceUserSecret := types.NamespacedName{Name: "osp-secret", Namespace: namespace}
-			th.CreateSecret(serviceUserSecret, map[string][]byte{
-				"ServicePassword": []byte("service-password"),
-			})
+			userSecret := CreateACServiceUserSecret(namespace)
 
 			deleteACName := types.NamespacedName{Name: "ac-delete-test", Namespace: namespace}
-			CreateACWithSpec(deleteACName, map[string]interface{}{
-				"userName":         "test-service",
-				"secret":           serviceUserSecret.Name,
-				"passwordSelector": "ServicePassword",
-				"expirationDays":   30,
-				"gracePeriodDays":  7,
-				"roles":            []string{"service"},
-			})
+			CreateACWithSpec(deleteACName, GetDefaultACSpec("test-service", userSecret.Name))
+			WaitForACFinalizer(deleteACName)
 
+			// The controller removes its own finalizer during reconcileDelete, so the CR should be fully deleted
+			DeleteACCR(deleteACName)
+			WaitForACGone(deleteACName)
+		})
+
+		It("should remove the protection finalizer from all AC secrets for the service on deletion", func() {
+			userSecret := CreateACServiceUserSecret(namespace)
+
+			deleteACName := types.NamespacedName{Name: "ac-multi-secret-svc", Namespace: namespace}
+			CreateACWithSpec(deleteACName, GetDefaultACSpec("multi-secret-svc", userSecret.Name))
+			WaitForACFinalizer(deleteACName)
+
+			// Simulate two immutable AC secrets left from an initial creation and one rotation
+			firstSecretName := types.NamespacedName{Name: "ac-multi-secret-svc-aaaaa-secret", Namespace: namespace}
+			secondSecretName := types.NamespacedName{Name: "ac-multi-secret-svc-bbbbb-secret", Namespace: namespace}
+			CreateProtectedACSecret(firstSecretName, "multi-secret-svc")
+			CreateProtectedACSecret(secondSecretName, "multi-secret-svc")
+
+			// Both secrets must start protected
+			for _, sName := range []types.NamespacedName{firstSecretName, secondSecretName} {
+				s := &corev1.Secret{}
+				Expect(k8sClient.Get(ctx, sName, s)).To(Succeed())
+				Expect(s.Finalizers).To(ContainElement(ACSecretProtectionFinalizer))
+			}
+
+			DeleteACCR(deleteACName)
+
+			// The controller should strip the protection finalizer from every secret carrying the service label, and not just Status.SecretName
 			Eventually(func(g Gomega) {
-				ac := GetApplicationCredential(deleteACName)
-				g.Expect(ac.Finalizers).To(ContainElement("openstack.org/applicationcredential"))
+				for _, sName := range []types.NamespacedName{firstSecretName, secondSecretName} {
+					s := &corev1.Secret{}
+					g.Expect(k8sClient.Get(ctx, sName, s)).To(Succeed())
+					g.Expect(s.Finalizers).NotTo(ContainElement(ACSecretProtectionFinalizer),
+						"secret %s should have its protection finalizer removed", sName.Name)
+				}
 			}, timeout, interval).Should(Succeed())
 
-			acInstance := GetApplicationCredential(deleteACName)
-			err := k8sClient.Delete(ctx, acInstance)
-			Expect(err).NotTo(HaveOccurred())
+			WaitForACGone(deleteACName)
+		})
 
+		It("should not remove AC secrets belonging to a different service on deletion", func() {
+			userSecret := CreateACServiceUserSecret(namespace)
+
+			acSvc1Name := types.NamespacedName{Name: "ac-svc-alpha", Namespace: namespace}
+			acSvc2Name := types.NamespacedName{Name: "ac-svc-beta", Namespace: namespace}
+			for _, name := range []types.NamespacedName{acSvc1Name, acSvc2Name} {
+				CreateACWithSpec(name, GetDefaultACSpec(name.Name, userSecret.Name))
+			}
+			for _, name := range []types.NamespacedName{acSvc1Name, acSvc2Name} {
+				WaitForACFinalizer(name)
+			}
+
+			svc1SecretName := types.NamespacedName{Name: "ac-svc-alpha-ccccc-secret", Namespace: namespace}
+			svc2SecretName := types.NamespacedName{Name: "ac-svc-beta-ddddd-secret", Namespace: namespace}
+			CreateProtectedACSecret(svc1SecretName, "svc-alpha")
+			CreateProtectedACSecret(svc2SecretName, "svc-beta")
+
+			// Delete only ac-svc-alpha
+			DeleteACCR(acSvc1Name)
+
+			// svc-alpha secret must lose its finalizer
+			Eventually(func(g Gomega) {
+				s := &corev1.Secret{}
+				g.Expect(k8sClient.Get(ctx, svc1SecretName, s)).To(Succeed())
+				g.Expect(s.Finalizers).NotTo(ContainElement(ACSecretProtectionFinalizer))
+			}, timeout, interval).Should(Succeed())
+
+			// svc-beta secret must keep its finalizer throughout
+			Consistently(func(g Gomega) {
+				s := &corev1.Secret{}
+				g.Expect(k8sClient.Get(ctx, svc2SecretName, s)).To(Succeed())
+				g.Expect(s.Finalizers).To(ContainElement(ACSecretProtectionFinalizer),
+					"svc-beta secret should retain its protection finalizer")
+			}, "3s", interval).Should(Succeed())
+		})
+
+		It("should migrate old mutable secrets by adding the service label on deletion", func() {
+			userSecret := CreateACServiceUserSecret(namespace)
+
+			acName := types.NamespacedName{Name: "ac-migrate-svc", Namespace: namespace}
+			CreateACWithSpec(acName, GetDefaultACSpec("migrate-svc", userSecret.Name))
+			WaitForACFinalizer(acName)
+
+			oldSecretName := types.NamespacedName{Name: "ac-migrate-svc-secret", Namespace: namespace}
+			CreateOldStyleACSecret(oldSecretName, "old-ac-id-12345")
+
+			// Patch status to point to the old-style secret (simulating upgrade from old controller)
 			Eventually(func(g Gomega) {
 				ac := &keystonev1.KeystoneApplicationCredential{}
-				err := k8sClient.Get(ctx, deleteACName, ac)
-				if k8s_errors.IsNotFound(err) {
-					return
-				}
-				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(ac.DeletionTimestamp).NotTo(BeNil())
+				g.Expect(k8sClient.Get(ctx, acName, ac)).To(Succeed())
+				ac.Status.ACID = "old-ac-id-12345"
+				ac.Status.SecretName = oldSecretName.Name
+				g.Expect(k8sClient.Status().Update(ctx, ac)).To(Succeed())
 			}, timeout, interval).Should(Succeed())
+
+			// Verify the old secret does not have the service label yet
+			oldSecret := &corev1.Secret{}
+			Expect(k8sClient.Get(ctx, oldSecretName, oldSecret)).To(Succeed())
+			Expect(oldSecret.Labels).NotTo(HaveKey("application-credential-service"))
+
+			DeleteACCR(acName)
+
+			// reconcileDelete calls ensureServiceLabel before the label-based
+			// list query, so the old secret should get the service label added
+			// and then have its protection finalizer removed
+			Eventually(func(g Gomega) {
+				s := &corev1.Secret{}
+				g.Expect(k8sClient.Get(ctx, oldSecretName, s)).To(Succeed())
+				g.Expect(s.Labels).To(HaveKeyWithValue(
+					"application-credential-service", "migrate-svc"))
+				g.Expect(s.Finalizers).NotTo(ContainElement(ACSecretProtectionFinalizer),
+					"old-style secret should have its protection finalizer removed after migration")
+			}, timeout, interval).Should(Succeed())
+
+			WaitForACGone(acName)
 		})
 
 		It("should validate expiration vs grace period constraints", func() {

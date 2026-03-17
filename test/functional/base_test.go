@@ -23,13 +23,14 @@ import (
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	keystone_base "github.com/openstack-k8s-operators/keystone-operator/internal/keystone"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func GetKeystoneAPISpec(fernetMaxKeys int32) map[string]any {
@@ -208,6 +209,13 @@ func GetExtraMounts(kemName string, kemPath string) []map[string]any {
 }
 
 // ApplicationCredential helper functions
+
+// Finalizer constants used across AC tests
+const (
+	ACCRFinalizer               = "openstack.org/applicationcredential"
+	ACSecretProtectionFinalizer = "openstack.org/ac-secret-protection" //nolint:gosec
+)
+
 func CreateACWithSpec(name types.NamespacedName, spec map[string]interface{}) client.Object {
 	raw := map[string]interface{}{
 		"apiVersion": "keystone.openstack.org/v1beta1",
@@ -219,6 +227,98 @@ func CreateACWithSpec(name types.NamespacedName, spec map[string]interface{}) cl
 		"spec": spec,
 	}
 	return th.CreateUnstructured(raw)
+}
+
+// GetDefaultACSpec returns a minimal, valid AC spec. Callers that need
+// non-default values (roles, accessRules, etc.) should build their own map
+func GetDefaultACSpec(userName, secretName string) map[string]interface{} {
+	return map[string]interface{}{
+		"userName":         userName,
+		"secret":           secretName,
+		"passwordSelector": "ServicePassword",
+		"expirationDays":   30,
+		"gracePeriodDays":  7,
+		"roles":            []string{"service"},
+	}
+}
+
+// CreateACServiceUserSecret creates the standard service-user Secret
+// (key: ServicePassword) used by AC tests and returns its NamespacedName
+func CreateACServiceUserSecret(namespace string) types.NamespacedName {
+	name := types.NamespacedName{Name: "osp-secret", Namespace: namespace}
+	th.CreateSecret(name, map[string][]byte{
+		"ServicePassword": []byte("service-password"),
+	})
+	return name
+}
+
+// CreateProtectedACSecret creates an immutable Kubernetes Secret with the
+// AC label set and the protection finalizer already applied, simulating a
+// secret that was created during a previous reconcile or rotation
+func CreateProtectedACSecret(name types.NamespacedName, serviceName string) *corev1.Secret {
+	immutable := true
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name.Name,
+			Namespace: name.Namespace,
+			Labels: map[string]string{
+				"application-credentials":        "true",
+				"application-credential-service": serviceName,
+			},
+			Finalizers: []string{ACSecretProtectionFinalizer},
+		},
+		Immutable: &immutable,
+		Data: map[string][]byte{
+			keystonev1.ACIDSecretKey:     []byte("fake-ac-id"),
+			keystonev1.ACSecretSecretKey: []byte("fake-ac-secret"),
+		},
+	}
+	Expect(k8sClient.Create(ctx, secret)).To(Succeed())
+	return secret
+}
+
+// CreateOldStyleACSecret creates a mutable secret with only the
+// application-credentials label (no application-credential-service label),
+// simulating a secret created by the pre-immutable secret logic
+func CreateOldStyleACSecret(name types.NamespacedName, acID string) *corev1.Secret {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name.Name,
+			Namespace: name.Namespace,
+			Labels: map[string]string{
+				"application-credentials": "true",
+			},
+			Finalizers: []string{ACSecretProtectionFinalizer},
+		},
+		Data: map[string][]byte{
+			keystonev1.ACIDSecretKey:     []byte(acID),
+			keystonev1.ACSecretSecretKey: []byte("fake-ac-secret"),
+		},
+	}
+	Expect(k8sClient.Create(ctx, secret)).To(Succeed())
+	return secret
+}
+
+// WaitForACFinalizer blocks until the AC CR carries its controller finalizer
+func WaitForACFinalizer(name types.NamespacedName) {
+	Eventually(func(g Gomega) {
+		ac := GetApplicationCredential(name)
+		g.Expect(ac.Finalizers).To(ContainElement(ACCRFinalizer))
+	}, timeout, interval).Should(Succeed())
+}
+
+// DeleteACCR issues a delete on the AC CR. It does not wait for the CR to disappear
+func DeleteACCR(name types.NamespacedName) {
+	acInstance := GetApplicationCredential(name)
+	Expect(k8sClient.Delete(ctx, acInstance)).To(Succeed())
+}
+
+// WaitForACGone blocks until the AC CR is fully removed from the API server
+func WaitForACGone(name types.NamespacedName) {
+	Eventually(func(g Gomega) {
+		err := k8sClient.Get(ctx, name, &keystonev1.KeystoneApplicationCredential{})
+		g.Expect(k8s_errors.IsNotFound(err)).To(BeTrue())
+	}, timeout, interval).Should(Succeed())
 }
 
 func GetApplicationCredential(name types.NamespacedName) *keystonev1.KeystoneApplicationCredential {
