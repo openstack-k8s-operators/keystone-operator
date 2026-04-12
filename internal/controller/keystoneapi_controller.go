@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
-	"sort"
+	"slices"
 	"strconv"
 	"time"
 
@@ -616,7 +616,8 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	}
 
 	apiEndpoints := make(map[string]string)
-	for endpointType, data := range keystoneEndpoints {
+	for _, endpointType := range slices.Sorted(maps.Keys(keystoneEndpoints)) {
+		data := keystoneEndpoints[endpointType]
 		endpointTypeStr := string(endpointType)
 		endpointName := instance.Name + "-" + endpointTypeStr
 
@@ -802,7 +803,8 @@ func (r *KeystoneAPIReconciler) reconcileExternalKeystoneAPI(
 	publicEndpointURL := ""
 	internalEndpointURL := ""
 
-	for endpointType, data := range instance.Spec.Override.Service {
+	for _, endpointType := range slices.Sorted(maps.Keys(instance.Spec.Override.Service)) {
+		data := instance.Spec.Override.Service[endpointType]
 		if endpointType == service.EndpointPublic {
 			hasPublic = true
 			if data.EndpointURL == nil || *data.EndpointURL == "" {
@@ -1604,7 +1606,8 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		endptConfig["Override"] = false
 		if len(httpdOverrideSecret.Data) > 0 {
 			endptConfig["Override"] = true
-			for key, data := range httpdOverrideSecret.Data {
+			for _, key := range slices.Sorted(maps.Keys(httpdOverrideSecret.Data)) {
+				data := httpdOverrideSecret.Data[key]
 				if len(data) > 0 {
 					customTemplates["httpd_custom_"+endpt.String()+"_"+key] = string(data)
 				}
@@ -1925,11 +1928,7 @@ func (r *KeystoneAPIReconciler) ensureFederationRealmConfig(
 	}
 
 	// Extract and Sort Filenames (Keys)
-	var sortedFilenames []string
-	for filename := range rawConfigs {
-		sortedFilenames = append(sortedFilenames, filename)
-	}
-	sort.Strings(sortedFilenames)
+	sortedFilenames := slices.Sorted(maps.Keys(rawConfigs))
 
 	// Prepare data for the new Secret
 	newSecretData := make(map[string]string)

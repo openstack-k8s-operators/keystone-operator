@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"maps"
 	"slices"
 	"time"
 
@@ -267,7 +268,7 @@ func (r *KeystoneEndpointReconciler) reconcileDelete(
 	if os != nil {
 		// Delete Endpoints -  it is ok to call delete on non existing Endpoints
 		// therefore always call delete for the spec.
-		for endpointType := range instance.Spec.Endpoints {
+		for _, endpointType := range slices.Sorted(maps.Keys(instance.Spec.Endpoints)) {
 			// get the gopher availability mapping for the endpointInterface
 			availability, err := openstack.GetAvailability(endpointType)
 			if err != nil {
@@ -441,10 +442,15 @@ func (r *KeystoneEndpointReconciler) reconcileNormal(
 			err.Error()))
 		return ctrl.Result{}, err
 	}
+	// Build sorted endpoint list for deterministic condition message
+	endpointStrs := make([]string, 0, len(instance.Spec.Endpoints))
+	for _, k := range slices.Sorted(maps.Keys(instance.Spec.Endpoints)) {
+		endpointStrs = append(endpointStrs, k+":"+instance.Spec.Endpoints[k])
+	}
 	instance.Status.Conditions.MarkTrue(
 		keystonev1.KeystoneServiceOSEndpointsReadyCondition,
 		keystonev1.KeystoneServiceOSEndpointsReadyMessage,
-		instance.Spec.Endpoints,
+		endpointStrs,
 	)
 
 	Log.Info("Reconciled Endpoint normal successfully")
@@ -463,7 +469,7 @@ func (r *KeystoneEndpointReconciler) reconcileEndpoints(
 	// delete endpoint if it does no longer exist in Spec.Endpoints
 	// but has a reference in Status.EndpointIDs
 	if instance.Status.EndpointIDs != nil {
-		for endpointType := range instance.Status.EndpointIDs {
+		for _, endpointType := range slices.Sorted(maps.Keys(instance.Status.EndpointIDs)) {
 			if _, ok := instance.Spec.Endpoints[endpointType]; !ok {
 				// get the gopher availability mapping for the endpointInterface
 				availability, err := openstack.GetAvailability(endpointType)
@@ -496,7 +502,8 @@ func (r *KeystoneEndpointReconciler) reconcileEndpoints(
 	}
 
 	// create / update endpoints
-	for endpointType, endpointURL := range instance.Spec.Endpoints {
+	for _, endpointType := range slices.Sorted(maps.Keys(instance.Spec.Endpoints)) {
+		endpointURL := instance.Spec.Endpoints[endpointType]
 
 		// get the gopher availability mapping for the endpointType
 		availability, err := openstack.GetAvailability(endpointType)
