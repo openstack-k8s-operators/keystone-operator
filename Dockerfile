@@ -21,6 +21,10 @@ WORKDIR $REMOTE_SOURCE_DIR/$REMOTE_SOURCE_SUBDIR
 USER root
 RUN mkdir -p ${DEST_ROOT}/usr/local/bin/
 
+# Remove go.work - not needed for the build and may reference a Go version
+# from the CI environment that is higher than the build image provides
+RUN rm -f go.work go.work.sum
+
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
 RUN if [ ! -f $CACHITO_ENV_FILE ]; then go mod download ; fi
