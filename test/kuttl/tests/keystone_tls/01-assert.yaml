@@ -17,7 +17,6 @@ spec:
         secretName: cert-keystone-public-svc
     caBundleSecretName: combined-ca-bundle
 status:
-  databaseHostname: openstack.keystone-kuttl-tests.svc
   readyCount: 1
 ---
 apiVersion: apps/v1
@@ -124,6 +123,15 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestAssert
 commands:
   - script: |
+      # Verify databaseHostname matches the expected namespace-based pattern
+      dbHostTemplate='{{.status.databaseHostname}}'
+      dbHostname=$(oc get -n $NAMESPACE KeystoneAPI keystone -o go-template="$dbHostTemplate")
+      expectedDbHostname="openstack.$NAMESPACE.svc"
+      if [ "$dbHostname" != "$expectedDbHostname" ]; then
+        echo "databaseHostname mismatch: got '$dbHostname', expected '$expectedDbHostname'"
+        exit 1
+      fi
+
       # the actual addresses of the apiEndpoints are platform specific, so we can't rely on
       # kuttl asserts to check them. This short script gathers the addresses and checks that
       # the three endpoints are defined and their addresses follow the default pattern

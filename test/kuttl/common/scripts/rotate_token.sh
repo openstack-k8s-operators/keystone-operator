@@ -9,7 +9,7 @@ apiVersion: v1
 kind: Secret
 metadata:
     name: keystone
-    namespace: keystone-kuttl-tests
+    namespace: $NAMESPACE
     annotations:
         keystone.openstack.org/rotatedat: "2009-11-10T23:00:00Z"
 EOF
