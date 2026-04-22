@@ -17,7 +17,7 @@ sleep 60
 
 export OS_TOKEN=$(cat /tmp/temporary_test_token)
 
-output=$(oc exec -tn $NAMESPACE openstackclient -- env -u OS_CLOUD - OS_AUTH_URL=http://keystone-public.keystone-kuttl-tests.svc:5000 OS_AUTH_TYPE=token OS_TOKEN=$OS_TOKEN openstack endpoint list 2>&1 || true)
+output=$(oc exec -tn $NAMESPACE openstackclient -- env -u OS_CLOUD - OS_AUTH_URL=http://keystone-public.$NAMESPACE.svc:5000 OS_AUTH_TYPE=token OS_TOKEN=$OS_TOKEN openstack endpoint list 2>&1 || true)
 
 if echo "$output" | grep -qi "Could not recognize Fernet token"; then
     exit 1
