@@ -18,25 +18,21 @@ package v1beta1
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/openstack-k8s-operators/lib-common/modules/common/helper"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/object"
 )
 
 // ApplicationCredentialData contains AC ID/Secret extracted from a Secret
-// Used by service operators to get AC data from the Secret
 type ApplicationCredentialData struct {
 	ID     string
 	Secret string
-}
-
-// GetACSecretName returns the standard AC Secret name for a service
-func GetACSecretName(serviceName string) string {
-	return fmt.Sprintf("ac-%s-secret", serviceName)
 }
 
 // GetACCRName returns the standard AC CR name for a service
@@ -51,37 +47,68 @@ const (
 	ACSecretSecretKey = "AC_SECRET"
 )
 
-var (
-	// ErrACIDMissing indicates AC_ID key missing or empty in the Secret
-	ErrACIDMissing = errors.New("applicationcredential secret missing AC_ID")
-	// ErrACSecretMissing indicates AC_SECRET key missing or empty in the Secret
-	ErrACSecretMissing = errors.New("applicationcredential secret missing AC_SECRET")
-)
-
-// GetApplicationCredentialFromSecret fetches and validates AC data from the Secret
-func GetApplicationCredentialFromSecret(
+// ManageACSecretFinalizer ensures consumerFinalizer is present on the AC secret
+// identified by newSecretName and absent from the one identified by
+// oldSecretName. It is a no-op when both names are equal.
+func ManageACSecretFinalizer(
 	ctx context.Context,
-	c client.Client,
+	h *helper.Helper,
 	namespace string,
-	serviceName string,
-) (*ApplicationCredentialData, error) {
-	secret := &corev1.Secret{}
-	key := types.NamespacedName{Namespace: namespace, Name: GetACSecretName(serviceName)}
-	if err := c.Get(ctx, key, secret); err != nil {
-		if k8s_errors.IsNotFound(err) {
-			return nil, nil
+	newSecretName string,
+	oldSecretName string,
+	consumerFinalizer string,
+) error {
+	if newSecretName == oldSecretName {
+		return nil
+	}
+
+	var newObj, oldObj client.Object
+
+	if newSecretName != "" {
+		secret := &corev1.Secret{}
+		key := types.NamespacedName{Name: newSecretName, Namespace: namespace}
+		if err := h.GetClient().Get(ctx, key, secret); err != nil {
+			return fmt.Errorf("failed to get new AC secret %s: %w", newSecretName, err)
 		}
-		return nil, fmt.Errorf("get applicationcredential secret %s: %w", key, err)
+		newObj = secret
 	}
 
-	acID, okID := secret.Data[ACIDSecretKey]
-	if !okID || len(acID) == 0 {
-		return nil, fmt.Errorf("%w: %s", ErrACIDMissing, key.String())
-	}
-	acSecret, okSecret := secret.Data[ACSecretSecretKey]
-	if !okSecret || len(acSecret) == 0 {
-		return nil, fmt.Errorf("%w: %s", ErrACSecretMissing, key.String())
+	if oldSecretName != "" {
+		secret := &corev1.Secret{}
+		key := types.NamespacedName{Name: oldSecretName, Namespace: namespace}
+		if err := h.GetClient().Get(ctx, key, secret); err != nil {
+			if !k8s_errors.IsNotFound(err) {
+				return fmt.Errorf("failed to get old AC secret %s: %w", oldSecretName, err)
+			}
+		} else {
+			oldObj = secret
+		}
 	}
 
-	return &ApplicationCredentialData{ID: string(acID), Secret: string(acSecret)}, nil
+	return object.ManageConsumerFinalizer(ctx, h, newObj, oldObj, consumerFinalizer)
+}
+
+// RemoveACSecretConsumerFinalizer removes consumerFinalizer from the AC secret
+// identified by secretName. It is a no-op when secretName is empty or the
+// secret no longer exists.
+func RemoveACSecretConsumerFinalizer(
+	ctx context.Context,
+	h *helper.Helper,
+	namespace string,
+	secretName string,
+	consumerFinalizer string,
+) error {
+	if secretName == "" {
+		return nil
+	}
+
+	secret := &corev1.Secret{}
+	key := types.NamespacedName{Name: secretName, Namespace: namespace}
+	if err := h.GetClient().Get(ctx, key, secret); err != nil {
+		if k8s_errors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	return object.RemoveConsumerFinalizer(ctx, h, secret, consumerFinalizer)
 }
