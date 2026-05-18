@@ -1636,14 +1636,15 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 		},
 		// Configs
 		{
-			Name:           fmt.Sprintf("%s-config-data", instance.Name),
-			Namespace:      instance.Namespace,
-			Type:           util.TemplateTypeConfig,
-			InstanceType:   instance.Kind,
-			StringTemplate: customTemplates,
-			CustomData:     customData,
-			ConfigOptions:  templateParameters,
-			Labels:         cmLabels,
+			Name:            fmt.Sprintf("%s-config-data", instance.Name),
+			Namespace:       instance.Namespace,
+			Type:            util.TemplateTypeConfig,
+			InstanceType:    instance.Kind,
+			StringTemplate:  customTemplates,
+			CustomData:      customData,
+			ConfigOptions:   templateParameters,
+			Labels:          cmLabels,
+			CommonTemplates: []string{"ssl.conf"},
 		},
 	}
 	return oko_secret.EnsureSecrets(ctx, h, instance, tmpl, envVars)
