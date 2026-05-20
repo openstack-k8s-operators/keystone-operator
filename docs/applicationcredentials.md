@@ -53,13 +53,16 @@ status:
   # ACID - the ID in Keystone for this ApplicationCredential
   ACID: "7b23dbac20bc4f048f937415c84bb329"
   # SecretName - name of the k8s Secret storing the ApplicationCredential secret
-  secretName: "ac-barbican-secret"
+  # Format: ac-<service>-<first5ofACID>-secret
+  secretName: "ac-barbican-7b23d-secret"
   # CreatedAt - timestamp of creation
   createdAt: "2025-05-29T09:02:28Z"
   # ExpiresAt - time of validity expiration
   expiresAt: "2026-05-29T09:02:28Z"
   # RotationEligibleAt - when rotation becomes eligible (ExpiresAt - GracePeriodDays)
   rotationEligibleAt: "2025-11-29T09:02:28Z"
+  # PreviousSecretName - the Secret from the prior rotation (retained for EDPM/consumer transition)
+  previousSecretName: "ac-barbican-a1b2c-secret"
   # LastRotated - timestamp when credentials were last rotated (only set after first rotation)
   lastRotated: "2025-05-29T09:02:28Z"
   # Conditions
@@ -120,17 +123,29 @@ the AC controller:
    - Includes access rules if specified in the CR
 
 8. Store Secret
-   - Creates a k8s `Secret` named `ac-barbican-secret`
+   - Creates a new **immutable** k8s `Secret` with a unique name: `ac-<service>-<first5ofACID>-secret`
+   - The name includes the first 5 characters of the Keystone AC ID for uniqueness
    - Adds `openstack.org/ac-secret-protection` finalizer to the Secret
+   - Sets owner reference to the AC CR (for garbage collection on CR deletion)
 
 ```yaml
 apiVersion: v1
 kind: Secret
 metadata:
-  name: ac-barbican-secret
+  name: ac-barbican-7b23d-secret
   namespace: openstack
+  labels:
+    application-credentials: "true"
+    application-credential-service: barbican
   finalizers:
     - openstack.org/ac-secret-protection
+  ownerReferences:
+    - apiVersion: keystone.openstack.org/v1beta1
+      kind: KeystoneApplicationCredential
+      name: ac-barbican
+      controller: true
+      blockOwnerDeletion: true
+immutable: true
 data:
   AC_ID:     <base64-of-AC-ID>
   AC_SECRET: <base64-of-AC-secret>
@@ -138,13 +153,8 @@ data:
 
 9. Update CR status
    - Sets `.status.ACID`, `.status.secretName`, `.status.createdAt`, `.status.expiresAt`, `.status.rotationEligibleAt`
-   - Sets `.status.lastRotated` (only during rotation, not initial creation)
+   - Sets `.status.lastRotated` and emits `ApplicationCredentialRotated` event (only during rotation, not initial creation)
    - Marks AC CR ready
-   - Emits an event for rotation to notify EDPM nodes
-
-10. Requeue for Next Check
-    - Calculates next reconcile at `expiresAt - gracePeriod`
-    - If already in grace window, requeues immediately, otherwise requeues after 24 h
 
 AC in Keystone side:
 ```
@@ -173,16 +183,22 @@ When the next reconcile hits the grace window (`now ≥ expiresAt - gracePeriodD
 - Create New AC
   - Generates a new Keystone AC with a fresh 5-char suffix
   - Uses the same roles, unrestricted flag, access rules, and expirationDays
-  - Does _not_ revoke the old AC, the old credential naturally expires
-- Store Updated Secret
-  - Overwrites the existing `ac-barbican-secret` with the new `AC_ID` and `AC_SECRET`
+- Create New Immutable Secret
+  - Creates a **new** immutable Secret with a unique name (e.g. `ac-barbican-d38dc-secret`)
+  - The previous Secret (e.g. `ac-barbican-7b23d-secret`) is retained as `previousSecretName`
+- Cleanup Old Secrets
+  - Secrets older than `previousSecretName` that have no consumer finalizer are revoked in Keystone and deleted
+  - If EDPM NodeSet hashes are out of sync, cleanup is deferred until the next EDPM deploy (see [EDPM Awareness](#edpm-awareness))
 - Update Status
+  - Sets `.status.secretName` to the new Secret name
   - Replaces `.status.ACID`, `.status.createdAt`, `.status.expiresAt`, and `.status.rotationEligibleAt` with the new values
   - Sets `.status.lastRotated` to current timestamp
   - Re-marks AC CR ready
-  - Emits an event to notify EDPM nodes about the rotation
-- Requeue
-  - Schedules the next check at `(newExpiresAt - gracePeriodDays)`
+  - Emits `ApplicationCredentialRotated` event with expiration and grace period details
+- Propagation
+  - The openstack-operator `Owns` the AC CR, so the status change triggers re-reconciliation
+  - It reads the new `.status.secretName` and updates the service CR's `ApplicationCredentialSecret`
+  - The service operator detects the spec change and reads credentials from the new Secret
 
 ## Manual Rotation
 
@@ -200,42 +216,49 @@ This triggers seamless rotation with one pod restart and no authentication fallb
 
 ## ApplicationCredential Lifecycle and Cleanup
 
-ApplicationCredentials in Keystone are **not automatically deleted** by the controller. This design decision prevents disrupting running services, especially EDPM nodes that actively use these credentials.
+After rotation, the controller actively cleans up unused old secrets. The `cleanupUnusedRotatedSecrets` function finds rotated secrets that are neither the current nor previous secret and have no service consumer finalizer, then revokes the AC in Keystone and deletes the K8s Secret.
 
 **Cleanup behavior:**
-- **During rotation:** The old AC remains in Keystone and expires naturally based on its `expiresAt` timestamp. The new AC is created with fresh credentials.
-- **When AC CR is deleted:** The ApplicationCredential remains in Keystone and continues to be valid until natural expiration.
+- **During rotation:** A new AC and immutable Secret are created. The current secret becomes tracked as `previousSecretName`. Older secrets are revoked in Keystone and deleted from Kubernetes.
+- **Consumer finalizer protection:** Service operators place a finalizer (e.g. `openstack.org/barbican-ac-consumer`) on the AC secret they are actively using. Secrets with a consumer finalizer are never deleted, regardless of rotation state.
+- **When AC CR is deleted:** The controller first checks that all EDPM NodeSet hashes are in sync (see [EDPM Awareness](#edpm-awareness)); if not, deletion is deferred. Once in sync, it revokes ACs in Keystone (best-effort) and removes the `openstack.org/ac-secret-protection` finalizer from **all** AC Secrets for the service (found by label), allowing owner-reference garbage collection to delete them.
 - **Manual cleanup:** If immediate cleanup is required, operators can manually delete the AC from Keystone:
 
 ```bash
 openstack application credential delete <ac-id>
 ```
 
-This approach ensures that deleting the AC CR (intentionally or accidentally) does not cause immediate authentication failures across the control plane and EDPM deployments.
+## EDPM Awareness
 
-## Client-Side Helper Functions
+Nova and ceilometer services render AC secret data into config secrets deployed to EDPM dataplane nodes via ansible. After an AC rotation on the controlplane, EDPM nodes still use the old credentials until the next EDPM deploy. The controller prevents premature revocation of these credentials.
 
-Service operators can use these helper functions to consume ApplicationCredential data:
+**Opt-out via annotation:**
+The `openstack-operator` sets the `keystone.openstack.org/edpm-service` annotation on every AC CR it manages. Services whose credentials are rendered to EDPM nodes (currently nova and ceilometer) are annotated with `"true"`. Controlplane-only services (barbican, heat, etc.) are annotated with `"false"` and skip the NodeSet hash sync check. If the annotation is missing (e.g., accidentally removed or the AC CR was created outside of `openstack-operator`), the controller defaults to EDPM-aware as a fail-safe.
+
+**How it works:**
+- Before cleaning up unused rotated secrets **or proceeding with AC CR deletion**, the controller checks `instance.IsEDPMService()`. If `true`, it calls `edpm.AreSecretHashesInSync()` from `lib-common/modules/edpm/unstructured`. This compares each `OpenStackDataPlaneNodeSet`'s `status.secretHashes` against the live secret hashes in the namespace.
+- If any NodeSet has stale hashes (config changed but EDPM not yet redeployed), AC secret cleanup and AC CR deletion are deferred for that EDPM-aware AC CR.
+- The controller watches `OpenStackDataPlaneNodeSet` resources (via unstructured access, no typed import) and re-evaluates eligibility when a NodeSet status changes — typically after an EDPM deploy updates `status.secretHashes`.
+- If the NodeSet CRD is not installed or no NodeSets exist, cleanup and deletion proceed normally.
+
+This approach is aligned with the RabbitMQ user deletion design in infra-operator, which uses the same `lib-common/modules/edpm/unstructured` module to gate resource cleanup on NodeSet deployment status.
+
+## Exported API Helpers
+
+The `keystone-operator/api/v1beta1` package exports the following helpers for use by other operators:
 
 ```go
 import keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 
-// Get standard AC Secret name for a service
-secretName := keystonev1.GetACSecretName("barbican") // Returns "ac-barbican-secret"
-
 // Get standard AC CR name for a service
 crName := keystonev1.GetACCRName("barbican") // Returns "ac-barbican"
 
-// Fetch AC data directly from the Secret
-acData, err := keystonev1.GetApplicationCredentialFromSecret(
-    ctx, client, namespace, serviceName)
-if err != nil {
-    // Handle error
-}
-if acData != nil {
-    // Use acData.ID and acData.Secret
-}
+// Secret data keys
+keystonev1.ACIDSecretKey     // "AC_ID"
+keystonev1.ACSecretSecretKey // "AC_SECRET"
 ```
+
+Service operators read AC data directly from the Secret referenced by the service CR's `ApplicationCredentialSecret` field, using `ACIDSecretKey` and `ACSecretSecretKey` as the data keys.
 
 ## Validation Rules
 

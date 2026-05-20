@@ -91,6 +91,9 @@ type KeystoneApplicationCredentialStatus struct {
 	// SecretName - name of the k8s Secret storing the ApplicationCredential secret
 	SecretName string `json:"secretName,omitempty"`
 
+	// PreviousSecretName - name of the previous AC secret. Only current and previous are protected by finalizer.
+	PreviousSecretName string `json:"previousSecretName,omitempty"`
+
 	// Conditions
 	Conditions condition.Conditions `json:"conditions,omitempty"`
 

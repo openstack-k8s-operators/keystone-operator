@@ -124,12 +124,14 @@ github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20260508091801-7
 github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20260508091801-73f228e6af31/go.mod h1:/S2AN21zV70V1XuL0Of2dCjYWNkKwQSyNI8l/iQVrMs=
 github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20260518125357-72bdd580c587 h1:p03uEXoSreyu7LpFmb9YyYM8tEx2D2+7qqhLXNWHTq0=
 github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20260518125357-72bdd580c587/go.mod h1:JC04T5G4E/he5ukonV1oCqa0QzFkLv761VbLruVghJM=
+github.com/openstack-k8s-operators/lib-common/modules/edpm v0.0.0-20260518125357-72bdd580c587 h1:JSp8IpCmeK3fydTrlQEEhN4b91aepN86NI2h07XaV6o=
+github.com/openstack-k8s-operators/lib-common/modules/edpm v0.0.0-20260518125357-72bdd580c587/go.mod h1:xsKeDFU3/xEObaVDqd6XEYV3MzvFswbWMlnr2Z3q3ZI=
 github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20260506154724-30a976ba8ef0 h1:kMie+G0aHlGwDHjimjj8AUxTl2R7LGfai/8pev2T+TY=
 github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20260506154724-30a976ba8ef0/go.mod h1:7yqbVpg0k0vW+kZks+TMU/cd1ovoejyHfVPWcyGYLHI=
 github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20260506154724-30a976ba8ef0 h1:wuzSibIT9F/5RbMmxvBVFj6fy2vtKo58nibzmk5L4PM=
 github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20260506154724-30a976ba8ef0/go.mod h1:tft3oDiN+v6wX3ILPXGUM/gCLJz6QtrPN63hxpJ3E24=
-github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20260506154724-30a976ba8ef0 h1:mG3QhS/QWv9Y/AkZZ5OzO6hu6+l5oDXnI/Q5ZUbj6Zs=
-github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20260506154724-30a976ba8ef0/go.mod h1:ZYG9CQe7cOePOKQbenEZFA28kPdkUOe9QKbDRwGhEV0=
+github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20260518125357-72bdd580c587 h1:jpouKcgs2Kc5z2JHIpvsXMxEonfXLgzX3KswuBoeKQ0=
+github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20260518125357-72bdd580c587/go.mod h1:nLS2oK4pBo756JNN1cPgr44S0X9V11QScgVla89Ojok=
 github.com/openstack-k8s-operators/mariadb-operator/api v0.6.1-0.20260503164939-40728ae44d65 h1:MNjmU326MKwYU6xT6AL2aKbr/0ids87wP5B+s5CL2O0=
 github.com/openstack-k8s-operators/mariadb-operator/api v0.6.1-0.20260503164939-40728ae44d65/go.mod h1:I2LO+wGIzbirVczQ9qo/49y2F5Zo/MEg/pabkXOrY2M=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
