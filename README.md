@@ -158,6 +158,11 @@ either by DNS or via /etc/hosts:
 +--------------+-----------+-----------------------------------------------------------------+
 ```
 
+## Customize httpd
+
+- [Customize httpd](config/samples/httpd-overrides): inject custom httpd
+  configuration through extraMounts interface
+
 # Design
 The current design takes care of the following:
 

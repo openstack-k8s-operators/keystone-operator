@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - https://raw.githubusercontent.com/openstack-k8s-operators/openstack-operator/main/config/samples/core_v1beta1_openstackcontrolplane_galera_network_isolation.yaml
+
+patches:
+  - target:
+      kind: OpenStackControlPlane
+      name: .*
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: openstack
+  - path: httpd_overrides.yaml
+
+configMapGenerator:
+- files:
+  - ./httpd_custom_timeout.conf
+  name: httpd-overrides
