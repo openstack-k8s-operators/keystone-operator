@@ -9,14 +9,14 @@ require (
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.7.7
 	github.com/onsi/ginkgo/v2 v2.28.2
 	github.com/onsi/gomega v1.41.0
-	github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20260508091801-73f228e6af31
+	github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20260604063818-4bfc0b32deb7
 	github.com/openstack-k8s-operators/keystone-operator/api v0.3.1-0.20240213125925-e40975f3db7e
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20260518125357-72bdd580c587
-	github.com/openstack-k8s-operators/lib-common/modules/edpm v0.0.0-20260518125357-72bdd580c587
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20260506154724-30a976ba8ef0
-	github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20260506154724-30a976ba8ef0
-	github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20260518125357-72bdd580c587
-	github.com/openstack-k8s-operators/mariadb-operator/api v0.6.1-0.20260503164939-40728ae44d65
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20260526114926-7ebfadd589db
+	github.com/openstack-k8s-operators/lib-common/modules/edpm v0.0.0-20260526114926-7ebfadd589db
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20260526114926-7ebfadd589db
+	github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20260526114926-7ebfadd589db
+	github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20260526114926-7ebfadd589db
+	github.com/openstack-k8s-operators/mariadb-operator/api v0.6.1-0.20260605165917-6ab24eb66b65
 	go.uber.org/zap v1.28.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.31.14
@@ -71,7 +71,7 @@ require (
 	github.com/prometheus/common v0.65.0 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/spf13/cobra v1.9.1 // indirect
-	github.com/spf13/pflag v1.0.7 // indirect
+	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
@@ -91,9 +91,9 @@ require (
 	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
-	golang.org/x/term v0.39.0 // indirect
-	golang.org/x/text v0.33.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/term v0.40.0 // indirect
+	golang.org/x/text v0.34.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
 	golang.org/x/tools v0.41.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
