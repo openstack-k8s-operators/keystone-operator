@@ -34,7 +34,7 @@
       A meta content provider zuul job to build keystone
       specific containers from OpenDev master.
     vars:
-      cifmw_build_containers_force: true
+      cifmw_build_containers_force: false
       cifmw_bop_dlrn_from_source: true
       cifmw_build_containers_registry_namespace: podified-master-centos10
       cifmw_operator_build_operators:

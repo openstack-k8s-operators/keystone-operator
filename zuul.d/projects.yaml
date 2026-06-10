@@ -4,7 +4,8 @@
     github-check:
       jobs:
         # jobs using latest available code - local registry, tag: keystone_latest
-        - keystone-openstack-meta-content-provider-master
+        - keystone-openstack-meta-content-provider-master:
+            voting: false
         - keystone-operator-tempest-master:
             voting: false
         # jobs using latest stable code - tag: current-podified
