@@ -522,6 +522,14 @@ func (r *KeystoneAPIReconciler) reconcileDelete(ctx context.Context, instance *k
 		}
 	}
 
+	if err := rabbitmqv1.RemoveTransportSecretConsumerFinalizer(
+		ctx, helper, instance.Namespace,
+		instance.Status.TransportURLSecret,
+		keystonev1.KeystoneTransportConsumerFinalizer,
+	); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	// Service is deleted so remove the finalizer.
 	controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
 	Log.Info("Reconciled Service delete successfully")
@@ -1069,11 +1077,15 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 		Log.Info(fmt.Sprintf("TransportURL %s successfully reconciled - operation: %s", transportURL.Name, string(op)))
 	}
 
-	instance.Status.TransportURLSecret = transportURL.Status.SecretName
+	if err := rabbitmqv1.ManageTransportSecretFinalizer(
+		ctx, helper, instance.Namespace,
+		transportURL.Status.SecretName,
+		keystonev1.KeystoneTransportConsumerFinalizer,
+	); err != nil {
+		return ctrl.Result{}, err
+	}
 
-	if instance.Status.TransportURLSecret == "" {
-		// Since the TransportURL secret is automatically created by the Infra operator,
-		// we treat this as an info (because the user is not responsible for manually creating it).
+	if transportURL.Status.SecretName == "" {
 		Log.Info(fmt.Sprintf("Waiting for TransportURL %s secret to be created", transportURL.Name))
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.RabbitMqTransportURLReadyCondition,
@@ -1152,7 +1164,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	// - %-config configmap holding minimal keystone config required to get the service up, user can add additional files to be added to the service
 	// - parameters which has passwords gets added from the OpenStack secret via the init container
 	//
-	err = r.generateServiceConfigMaps(ctx, instance, helper, &configMapVars, memcached, db)
+	err = r.generateServiceConfigMaps(ctx, instance, helper, &configMapVars, memcached, db, transportURL.Status.SecretName)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.ServiceConfigReadyCondition,
@@ -1469,6 +1481,30 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	}
 
 	Log.Info("Reconciled Service successfully")
+
+	// Manage the old transport secret's finalizer and status tracking.
+	// Follows the AC rotation pattern: only update status and remove the old
+	// finalizer when AllSubConditionIsTrue. This keeps the rotation guard
+	// active across rapid reconcile cycles until the service has genuinely
+	// deployed with the new credentials.
+	isTransportRotation := instance.Status.TransportURLSecret != "" &&
+		instance.Status.TransportURLSecret != transportURL.Status.SecretName
+
+	if isTransportRotation {
+		if instance.Status.Conditions.AllSubConditionIsTrue() {
+			if err := rabbitmqv1.RemoveTransportSecretConsumerFinalizer(
+				ctx, helper, instance.Namespace,
+				instance.Status.TransportURLSecret,
+				keystonev1.KeystoneTransportConsumerFinalizer,
+			); err != nil {
+				return ctrl.Result{}, err
+			}
+			instance.Status.TransportURLSecret = transportURL.Status.SecretName
+		}
+	} else {
+		instance.Status.TransportURLSecret = transportURL.Status.SecretName
+	}
+
 	return ctrl.Result{}, nil
 }
 
@@ -1520,6 +1556,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	envVars *map[string]env.Setter,
 	mc *memcachedv1.Memcached,
 	db *mariadbv1.Database,
+	transportURLSecretName string,
 ) error {
 	//
 	// create Configmap/Secret required for keystone input
@@ -1545,7 +1582,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	}
 	maps.Copy(customData, instance.Spec.DefaultConfigOverwrite)
 
-	transportURLSecret, _, err := oko_secret.GetSecret(ctx, h, instance.Status.TransportURLSecret, instance.Namespace)
+	transportURLSecret, _, err := oko_secret.GetSecret(ctx, h, transportURLSecretName, instance.Namespace)
 	if err != nil {
 		return err
 	}

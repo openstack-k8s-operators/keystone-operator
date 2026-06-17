@@ -33,6 +33,11 @@ import (
 )
 
 const (
+	// KeystoneTransportConsumerFinalizer is added to transport secrets that
+	// KeystoneAPI is actively consuming, preventing premature deletion
+	// during credential rotation.
+	KeystoneTransportConsumerFinalizer = "openstack.org/keystone-transport-consumer"
+
 	// DbSyncHash hash
 	DbSyncHash = "dbsync"
 
