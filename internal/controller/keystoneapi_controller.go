@@ -1482,28 +1482,18 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 
 	Log.Info("Reconciled Service successfully")
 
-	// Manage the old transport secret's finalizer and status tracking.
-	// Follows the AC rotation pattern: only update status and remove the old
-	// finalizer when AllSubConditionIsTrue. This keeps the rotation guard
-	// active across rapid reconcile cycles until the service has genuinely
-	// deployed with the new credentials.
-	isTransportRotation := instance.Status.TransportURLSecret != "" &&
-		instance.Status.TransportURLSecret != transportURL.Status.SecretName
-
-	if isTransportRotation {
-		if instance.Status.Conditions.AllSubConditionIsTrue() {
-			if err := rabbitmqv1.RemoveTransportSecretConsumerFinalizer(
-				ctx, helper, instance.Namespace,
-				instance.Status.TransportURLSecret,
-				keystonev1.KeystoneTransportConsumerFinalizer,
-			); err != nil {
-				return ctrl.Result{}, err
-			}
-			instance.Status.TransportURLSecret = transportURL.Status.SecretName
-		}
-	} else {
-		instance.Status.TransportURLSecret = transportURL.Status.SecretName
+	allSubCRsStable := op == controllerutil.OperationResultNone
+	secretName, err := rabbitmqv1.FinalizeTransportSecretRotation(
+		ctx, helper, instance.Namespace,
+		instance.Status.TransportURLSecret,
+		transportURL.Status.SecretName,
+		keystonev1.KeystoneTransportConsumerFinalizer,
+		allSubCRsStable && instance.Status.Conditions.AllSubConditionIsTrue(),
+	)
+	if err != nil {
+		return ctrl.Result{}, err
 	}
+	instance.Status.TransportURLSecret = secretName
 
 	return ctrl.Result{}, nil
 }
