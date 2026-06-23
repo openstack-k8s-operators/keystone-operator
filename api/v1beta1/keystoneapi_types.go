@@ -115,6 +115,7 @@ type KeystoneAPISpecCore struct {
 
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=""
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9 =._/-]*$`
 	// TrustFlushArgs - Arguments added to keystone-manage trust_flush command
 	TrustFlushArgs string `json:"trustFlushArgs"`
 
