@@ -35,6 +35,7 @@ import (
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
+	keystoneinternal "github.com/openstack-k8s-operators/keystone-operator/internal/keystone"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	mariadb_test "github.com/openstack-k8s-operators/mariadb-operator/api/test/helpers"
 	mariadbv1 "github.com/openstack-k8s-operators/mariadb-operator/api/v1beta1"
@@ -2785,6 +2786,157 @@ OIDCRedirectURI "{{ .KeystoneEndpointPublic }}/v3/auth/OS-FEDERATION/websso/open
 			err := k8sClient.Create(ctx, obj)
 			Expect(err).To(HaveOccurred(), "Expected creation to fail due to validation constraint")
 			Expect(err.Error()).To(ContainSubstring("gracePeriodDays must be smaller than expirationDays"))
+		})
+	})
+
+	When("TransportURL consumer finalizer is managed", func() {
+		BeforeEach(func() {
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, GetDefaultKeystoneAPISpec()))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
+				Namespace: namespace,
+			})
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateJobSuccess(bootstrapJobName)
+			th.SimulateDeploymentReplicaReady(deploymentName)
+		})
+
+		It("should add the consumer finalizer to the transport secret", func() {
+			Eventually(func(g Gomega) {
+				secret := th.GetSecret(types.NamespacedName{
+					Namespace: namespace,
+					Name:      "rabbitmq-secret",
+				})
+				g.Expect(secret.Finalizers).To(
+					ContainElement(keystoneinternal.TransportConsumerFinalizer))
+			}, timeout, interval).Should(Succeed())
+		})
+
+		It("should remove the consumer finalizer from transport secret on CR deletion", func() {
+			Eventually(func(g Gomega) {
+				secret := th.GetSecret(types.NamespacedName{
+					Namespace: namespace,
+					Name:      "rabbitmq-secret",
+				})
+				g.Expect(secret.Finalizers).To(
+					ContainElement(keystoneinternal.TransportConsumerFinalizer))
+			}, timeout, interval).Should(Succeed())
+
+			th.DeleteInstance(GetKeystoneAPI(keystoneAPIName))
+
+			Eventually(func(g Gomega) {
+				secret := th.GetSecret(types.NamespacedName{
+					Namespace: namespace,
+					Name:      "rabbitmq-secret",
+				})
+				g.Expect(secret.Finalizers).NotTo(
+					ContainElement(keystoneinternal.TransportConsumerFinalizer))
+			}, timeout, interval).Should(Succeed())
+		})
+
+		It("should move the finalizer from the old to the new secret on transport rotation", func() {
+			oldSecretName := "rabbitmq-secret"
+
+			Eventually(func(g Gomega) {
+				secret := th.GetSecret(types.NamespacedName{
+					Namespace: namespace,
+					Name:      oldSecretName,
+				})
+				g.Expect(secret.Finalizers).To(
+					ContainElement(keystoneinternal.TransportConsumerFinalizer))
+			}, timeout, interval).Should(Succeed())
+
+			// Wait for keystone to reach fully ready state
+			Eventually(func(g Gomega) {
+				instance := GetKeystoneAPI(keystoneAPIName)
+				g.Expect(instance.Status.Conditions.IsTrue(condition.ReadyCondition)).To(BeTrue())
+				g.Expect(instance.Status.TransportURLSecret).To(Equal(oldSecretName))
+			}, timeout, interval).Should(Succeed())
+
+			newSecretName := "rabbitmq-secret-rotated"
+
+			// Create the new rotated secret with different content
+			newSecret := th.CreateSecret(
+				types.NamespacedName{
+					Namespace: namespace,
+					Name:      newSecretName,
+				},
+				map[string][]byte{
+					"transport_url": []byte("rabbit://rotated-user:rotated-pass@rabbitmq/fake"),
+				},
+			)
+			DeferCleanup(k8sClient.Delete, ctx, newSecret)
+
+			// Simulate transport rotation: update TransportURL status with new secret name
+			transportURLName := types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
+				Namespace: namespace,
+			}
+			Eventually(func(g Gomega) {
+				transport := infra.GetTransportURL(transportURLName)
+				transport.Status.SecretName = newSecretName
+				g.Expect(k8sClient.Status().Update(ctx, transport)).To(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			// Verify finalizer is added to the new secret
+			Eventually(func(g Gomega) {
+				secret := th.GetSecret(types.NamespacedName{
+					Namespace: namespace,
+					Name:      newSecretName,
+				})
+				g.Expect(secret.Finalizers).To(
+					ContainElement(keystoneinternal.TransportConsumerFinalizer))
+			}, timeout, interval).Should(Succeed())
+
+			// The old secret's finalizer should NOT be removed yet -- deployment
+			// is re-deploying with new credentials and is not ready
+			Consistently(func(g Gomega) {
+				secret := th.GetSecret(types.NamespacedName{
+					Namespace: namespace,
+					Name:      oldSecretName,
+				})
+				g.Expect(secret.Finalizers).To(
+					ContainElement(keystoneinternal.TransportConsumerFinalizer))
+			}, timeout, interval).Should(Succeed())
+
+			// Simulate deployment becoming ready with the new credentials
+			Eventually(func(g Gomega) {
+				th.SimulateDeploymentReplicaReady(deploymentName)
+				// Verify old finalizer is removed
+				secret := th.GetSecret(types.NamespacedName{
+					Namespace: namespace,
+					Name:      oldSecretName,
+				})
+				g.Expect(secret.Finalizers).NotTo(
+					ContainElement(keystoneinternal.TransportConsumerFinalizer))
+			}, timeout, interval).Should(Succeed())
+
+			// Verify status tracks the new secret
+			Eventually(func(g Gomega) {
+				instance := GetKeystoneAPI(keystoneAPIName)
+				g.Expect(instance.Status.TransportURLSecret).To(Equal(newSecretName))
+			}, timeout, interval).Should(Succeed())
 		})
 	})
 })

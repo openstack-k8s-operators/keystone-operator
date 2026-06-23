@@ -53,6 +53,8 @@ const (
 	FederationMultiRealmSecret = "keystone-multirealm-federation-secret"
 	// FederationDefaultMountPath - if user doesn't specify otherwise, this location is used
 	FederationDefaultMountPath = "/var/lib/config-data/default/multirealm-federation"
+	// TransportConsumerFinalizer is the finalizer added to transport URL secrets
+	TransportConsumerFinalizer = "openstack.org/keystone-transport-consumer"
 )
 
 // KeystonePropagation is the definition of the Keystone propagation service
