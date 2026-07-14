@@ -231,7 +231,7 @@ func TestReconcileDelete_EDPMServiceBlockedByStaleNodeSet(t *testing.T) {
 			UserName: serviceName,
 			Secret:   "osp-secret",
 		},
-		Status: keystonev1.KeystoneApplicationCredentialStatus{
+		Status: keystonev1.KeystoneApplicationCredentialStatus{ //nolint:gosec
 			SecretName: "ac-nova-abc12-secret",
 		},
 	}
@@ -382,7 +382,7 @@ func TestReconcileDelete_NonEDPMServiceProceedsDespiteStaleHashes(t *testing.T) 
 			UserName: serviceName,
 			Secret:   "osp-secret",
 		},
-		Status: keystonev1.KeystoneApplicationCredentialStatus{
+		Status: keystonev1.KeystoneApplicationCredentialStatus{ //nolint:gosec
 			SecretName: "ac-heat-abc12-secret",
 		},
 	}
