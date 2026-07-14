@@ -16,6 +16,8 @@ limitations under the License.
 package keystone
 
 import (
+	"strings"
+
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/env"
@@ -26,11 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	// TrustFlushCommand -
-	TrustFlushCommand = "keystone-manage trust_flush"
-)
-
 // CronJob func
 func CronJob(
 	instance *keystonev1.KeystoneAPI,
@@ -39,7 +36,10 @@ func CronJob(
 	memcached *memcachedv1.Memcached,
 ) *batchv1.CronJob {
 
-	args := []string{"-c", TrustFlushCommand + instance.Spec.TrustFlushArgs}
+	cmd := []string{"keystone-manage", "trust_flush"}
+	if instance.Spec.TrustFlushArgs != "" {
+		cmd = append(cmd, strings.Fields(instance.Spec.TrustFlushArgs)...)
+	}
 
 	envVars := map[string]env.Setter{}
 	envVars["KOLLA_CONFIG_STRATEGY"] = env.SetValue("COPY_ALWAYS")
@@ -103,12 +103,9 @@ func CronJob(
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
 								{
-									Name:  ServiceName + "-cron",
-									Image: instance.Spec.ContainerImage,
-									Command: []string{
-										"/bin/bash",
-									},
-									Args:            args,
+									Name:            ServiceName + "-cron",
+									Image:           instance.Spec.ContainerImage,
+									Command:         cmd,
 									Env:             env.MergeEnvs([]corev1.EnvVar{}, envVars),
 									VolumeMounts:    volumeMounts,
 									SecurityContext: baseSecurityContext(),
