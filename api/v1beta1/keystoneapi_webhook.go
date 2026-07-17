@@ -32,7 +32,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -53,8 +52,6 @@ func SetupKeystoneAPIDefaults(defaults KeystoneAPIDefaults) {
 
 	keystoneapilog.Info("KeystoneAPI defaults initialized", "defaults", defaults)
 }
-
-var _ webhook.Defaulter = &KeystoneAPI{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *KeystoneAPI) Default() {
@@ -83,8 +80,6 @@ func (spec *KeystoneAPISpecCore) Default() {
 	// Migration from deprecated fields is handled by openstack-operator
 	// This ensures users make a conscious choice about which cluster to use for notifications
 }
-
-var _ webhook.Validator = &KeystoneAPI{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *KeystoneAPI) ValidateCreate() (admission.Warnings, error) {
