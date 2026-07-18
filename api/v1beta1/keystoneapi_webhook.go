@@ -53,7 +53,7 @@ func SetupKeystoneAPIDefaults(defaults KeystoneAPIDefaults) {
 	keystoneapilog.Info("KeystoneAPI defaults initialized", "defaults", defaults)
 }
 
-// Default implements webhook.Defaulter so a webhook will be registered for the type
+// Default sets default values for the KeystoneAPI resource
 func (r *KeystoneAPI) Default() {
 	keystoneapilog.Info("default", "name", r.Name)
 
@@ -81,7 +81,7 @@ func (spec *KeystoneAPISpecCore) Default() {
 	// This ensures users make a conscious choice about which cluster to use for notifications
 }
 
-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
+// ValidateCreate validates the KeystoneAPI resource upon creation
 func (r *KeystoneAPI) ValidateCreate() (admission.Warnings, error) {
 	keystoneapilog.Info("validate create", "name", r.Name)
 
