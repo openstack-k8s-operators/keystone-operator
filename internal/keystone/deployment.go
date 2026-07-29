@@ -16,24 +16,25 @@ limitations under the License.
 package keystone
 
 import (
+	"fmt"
+
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	common "github.com/openstack-k8s-operators/lib-common/modules/common"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/affinity"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/env"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/pod"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/tls"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/volume"
+	"github.com/openstack-k8s-operators/lib-common/modules/users"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-)
-
-const (
-	// ServiceCommand -
-	ServiceCommand = "/usr/local/bin/kolla_start"
+	"k8s.io/utils/ptr"
 )
 
 // Deployment func
@@ -45,6 +46,7 @@ func Deployment(
 	topology *topologyv1.Topology,
 	federationFilenames []string,
 	memcached *memcachedv1.Memcached,
+	customConfigKeys []string,
 ) (*appsv1.Deployment, error) {
 
 	livenessProbe := &corev1.Probe{
@@ -60,7 +62,7 @@ func Deployment(
 		InitialDelaySeconds: 5,
 	}
 
-	args := []string{"-c", ServiceCommand}
+	args := []string{"-c", "/usr/sbin/httpd -DFOREGROUND"}
 
 	//
 	// https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
@@ -80,12 +82,17 @@ func Deployment(
 	}
 
 	envVars := map[string]env.Setter{}
-	envVars["KOLLA_CONFIG_STRATEGY"] = env.SetValue("COPY_ALWAYS")
 	envVars["CONFIG_HASH"] = env.SetValue(configHash)
 
 	// create Volume and VolumeMounts
 	volumes := getVolumes(instance, instance.Spec.ExtraMounts, KeystonePropagation)
 	volumeMounts := getVolumeMounts(instance.Spec.ExtraMounts, KeystonePropagation)
+
+	volumes = append(volumes,
+		volume.WritableDirVolume(volume.RunHttpdVolumeName),
+		volume.WritableDirVolume(VarLogKeystoneVolumeName),
+		volume.WritableDirVolume(volume.VarLogHttpdVolumeName),
+	)
 
 	// add CA cert if defined
 	if instance.Spec.TLS.CaBundleSecretName != "" {
@@ -113,7 +120,9 @@ func Deployment(
 	// add MTLS cert if defined
 	if memcached.GetMemcachedMTLSSecret() != "" {
 		volumes = append(volumes, memcached.CreateMTLSVolume())
-		volumeMounts = append(volumeMounts, memcached.CreateMTLSVolumeMounts(nil, nil)...)
+		certMountPath := memcachedv1.CertPathDst
+		keyMountPath := memcachedv1.KeyPathDst
+		volumeMounts = append(volumeMounts, memcached.CreateMTLSVolumeMounts(&certMountPath, &keyMountPath)...)
 	}
 
 	for _, endpt := range []service.Endpoint{service.EndpointInternal, service.EndpointPublic} {
@@ -130,10 +139,30 @@ func Deployment(
 			if err != nil {
 				return nil, err
 			}
+			certMount := fmt.Sprintf("/etc/pki/tls/certs/%s.crt", endpt.String())
+			keyMount := fmt.Sprintf("/etc/pki/tls/private/%s.key", endpt.String())
+			svc.CertMount = &certMount
+			svc.KeyMount = &keyMount
 			volumes = append(volumes, svc.CreateVolume(endpt.String()))
 			volumeMounts = append(volumeMounts, svc.CreateVolumeMounts(endpt.String())...)
 		}
 	}
+
+	// mount custom httpd override configs directly to /etc/httpd/conf/
+	for _, key := range customConfigKeys {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "config-data",
+			MountPath: fmt.Sprintf("/etc/httpd/conf/%s", key),
+			SubPath:   key,
+			ReadOnly:  true,
+		})
+	}
+
+	// httpd's master process now runs as the non-root keystone user, so it
+	// needs the apache group to read RPM-shipped conf.d files (e.g.
+	// mod_auth_openidc's auth_openidc.conf) that are baked into the image
+	// with restrictive group ownership rather than volume-mounted.
+	podSecurityContext := pod.RestrictivePodSecurityContext(users.KeystoneUID, users.KeystoneGID, users.ApacheGID)
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -151,8 +180,10 @@ func Deployment(
 					Labels:      labels,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: instance.RbacResourceName(),
-					Volumes:            volumes,
+					ServiceAccountName:           instance.RbacResourceName(),
+					AutomountServiceAccountToken: ptr.To(false),
+					SecurityContext:              podSecurityContext,
+					Volumes:                      volumes,
 					Containers: []corev1.Container{
 						{
 							Name: ServiceName + "-api",
@@ -161,7 +192,7 @@ func Deployment(
 							},
 							Args:            args,
 							Image:           instance.Spec.ContainerImage,
-							SecurityContext: httpdSecurityContext(),
+							SecurityContext: pod.RestrictiveSecurityContext(users.KeystoneUID, users.KeystoneGID),
 							Env:             env.MergeEnvs([]corev1.EnvVar{}, envVars),
 							VolumeMounts:    volumeMounts,
 							Resources:       instance.Spec.Resources,

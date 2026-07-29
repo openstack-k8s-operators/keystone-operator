@@ -21,16 +21,18 @@ import (
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 
 	"github.com/openstack-k8s-operators/lib-common/modules/common/env"
-	"github.com/openstack-k8s-operators/lib-common/modules/common/tls"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/pod"
+	"github.com/openstack-k8s-operators/lib-common/modules/users"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 const (
 	// BootstrapCommand -
-	BootstrapCommand = "/usr/local/bin/kolla_set_configs && keystone-manage bootstrap"
+	BootstrapCommand = "keystone-manage bootstrap"
 )
 
 // BootstrapJob func
@@ -41,13 +43,10 @@ func BootstrapJob(
 	endpoints map[string]string,
 	memcached *memcachedv1.Memcached,
 ) *batchv1.Job {
-	runAsUser := int64(0)
 
 	args := []string{"-c", BootstrapCommand}
 
 	envVars := map[string]env.Setter{}
-	envVars["KOLLA_CONFIG_STRATEGY"] = env.SetValue("COPY_ALWAYS")
-	envVars["KOLLA_BOOTSTRAP"] = env.SetValue("true")
 	envVars["OS_BOOTSTRAP_USERNAME"] = env.SetValue(instance.Spec.AdminUser)
 	envVars["OS_BOOTSTRAP_PROJECT_NAME"] = env.SetValue(instance.Spec.AdminProject)
 	envVars["OS_BOOTSTRAP_SERVICE_NAME"] = env.SetValue(ServiceName)
@@ -66,7 +65,7 @@ func BootstrapJob(
 	// create Volume and VolumeMounts
 	bootstrapExtraMounts := []keystonev1.KeystoneExtraMounts{}
 	volumes := getVolumes(instance, bootstrapExtraMounts, BootstrapPropagation)
-	volumeMounts := getVolumeMounts(bootstrapExtraMounts, BootstrapPropagation)
+	volumeMounts := getBootstrapVolumeMounts()
 
 	// add CA cert if defined
 	if instance.Spec.TLS.CaBundleSecretName != "" {
@@ -77,22 +76,9 @@ func BootstrapJob(
 	// add MTLS cert if defined
 	if memcached.GetMemcachedMTLSSecret() != "" {
 		volumes = append(volumes, memcached.CreateMTLSVolume())
-		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      *memcached.Spec.TLS.MTLS.AuthCertSecret.SecretName,
-			MountPath: "/etc/pki/tls/certs/mtls.crt",
-			SubPath:   tls.CertKey,
-			ReadOnly:  true,
-		}, corev1.VolumeMount{
-			Name:      *memcached.Spec.TLS.MTLS.AuthCertSecret.SecretName,
-			MountPath: "/etc/pki/tls/private/mtls.key",
-			SubPath:   tls.PrivateKey,
-			ReadOnly:  true,
-		}, corev1.VolumeMount{
-			Name:      *memcached.Spec.TLS.MTLS.AuthCertSecret.SecretName,
-			MountPath: "/etc/pki/tls/certs/mtls-ca.crt",
-			SubPath:   tls.CAKey,
-			ReadOnly:  true,
-		})
+		certMountPath := memcachedv1.CertPathDst
+		keyMountPath := memcachedv1.KeyPathDst
+		volumeMounts = append(volumeMounts, memcached.CreateMTLSVolumeMounts(&certMountPath, &keyMountPath)...)
 	}
 
 	job := &batchv1.Job{
@@ -107,8 +93,10 @@ func BootstrapJob(
 					Annotations: annotations,
 				},
 				Spec: corev1.PodSpec{
-					RestartPolicy:      corev1.RestartPolicyOnFailure,
-					ServiceAccountName: instance.RbacResourceName(),
+					RestartPolicy:                corev1.RestartPolicyOnFailure,
+					ServiceAccountName:           instance.RbacResourceName(),
+					AutomountServiceAccountToken: ptr.To(false),
+					SecurityContext:              pod.RestrictivePodSecurityContext(users.KeystoneUID, users.KeystoneGID),
 					Containers: []corev1.Container{
 						{
 							Name:  ServiceName + "-bootstrap",
@@ -116,10 +104,8 @@ func BootstrapJob(
 							Command: []string{
 								"/bin/bash",
 							},
-							Args: args,
-							SecurityContext: &corev1.SecurityContext{
-								RunAsUser: &runAsUser,
-							},
+							Args:            args,
+							SecurityContext: pod.RestrictiveSecurityContext(users.KeystoneUID, users.KeystoneGID),
 							Env: []corev1.EnvVar{
 								{
 									Name: "OS_BOOTSTRAP_PASSWORD",

@@ -248,10 +248,6 @@ func main() {
 		setupLog.Error(err, "")
 		os.Exit(1)
 	}
-	if err != nil {
-		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
-	}
 
 	// Setup webhook defaults
 	keystonev1.SetupDefaults()

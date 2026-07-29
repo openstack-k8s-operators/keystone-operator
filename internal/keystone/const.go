@@ -32,9 +32,6 @@ const (
 	KeystonePublicPort int32 = 5000
 	// KeystoneInternalPort -
 	KeystoneInternalPort int32 = 5000
-	// KeystoneUID is based on kolla
-	// https://github.com/openstack/kolla/blob/master/kolla/common/users.py
-	KeystoneUID int64 = 42425
 	// DefaultFernetMaxActiveKeys -
 	DefaultFernetMaxActiveKeys = 5
 	// DefaultFernetRotationDays -
@@ -52,7 +49,9 @@ const (
 	// FederationMultiRealmSecret - secret to store processed multirealm data
 	FederationMultiRealmSecret = "keystone-multirealm-federation-secret"
 	// FederationDefaultMountPath - if user doesn't specify otherwise, this location is used
-	FederationDefaultMountPath = "/var/lib/config-data/default/multirealm-federation"
+	FederationDefaultMountPath = "/var/lib/httpd/metadata"
+	// VarLogKeystoneVolumeName - name of the writable emptyDir volume mounted at /var/log/keystone
+	VarLogKeystoneVolumeName = "var-log-keystone"
 )
 
 // KeystonePropagation is the definition of the Keystone propagation service
