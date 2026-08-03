@@ -18,18 +18,16 @@ package keystone
 import (
 	"crypto/rand"
 	"encoding/base64"
-
-	"github.com/go-logr/logr"
+	"fmt"
 )
 
 // GenerateFernetKey - returns a base64-encoded, 32-byte key using cryptographically secure random generation
-func GenerateFernetKey(logger logr.Logger) string {
+func GenerateFernetKey() (string, error) {
 	data := make([]byte, 32)
 	_, err := rand.Read(data)
 	if err != nil {
-		logger.Error(err, "failed to read random bytes for Fernet key generation")
-		return ""
+		return "", fmt.Errorf("failed to read random bytes for Fernet key generation: %w", err)
 	}
 
-	return base64.StdEncoding.EncodeToString(data)
+	return base64.StdEncoding.EncodeToString(data), nil
 }
