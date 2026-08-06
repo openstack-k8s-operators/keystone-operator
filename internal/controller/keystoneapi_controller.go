@@ -1742,7 +1742,6 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 	helper *helper.Helper,
 	envVars *map[string]env.Setter,
 ) error {
-	logger := r.GetLogger(ctx)
 	fernetAnnotation := labels.GetGroupLabel(keystone.ServiceName) + "/rotatedat"
 	labels := labels.GetLabels(instance, labels.GetGroupLabel(keystone.ServiceName), map[string]string{})
 	now := time.Now().UTC()
@@ -1763,13 +1762,25 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 	if err != nil && !k8s_errors.IsNotFound(err) {
 		return err
 	} else if k8s_errors.IsNotFound(err) {
+		credentialKeys0, err := keystone.GenerateFernetKey()
+		if err != nil {
+			return err
+		}
+		credentialKeys1, err := keystone.GenerateFernetKey()
+		if err != nil {
+			return err
+		}
 		fernetKeys := map[string]string{
-			"CredentialKeys0": keystone.GenerateFernetKey(logger),
-			"CredentialKeys1": keystone.GenerateFernetKey(logger),
+			"CredentialKeys0": credentialKeys0,
+			"CredentialKeys1": credentialKeys1,
 		}
 
 		for i := 0; i < numberKeys; i++ {
-			fernetKeys[fmt.Sprintf("FernetKeys%d", i)] = keystone.GenerateFernetKey(logger)
+			fernetKey, err := keystone.GenerateFernetKey()
+			if err != nil {
+				return err
+			}
+			fernetKeys[fmt.Sprintf("FernetKeys%d", i)] = fernetKey
 		}
 
 		annotations := map[string]string{
@@ -1785,7 +1796,7 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 				Annotations: annotations,
 			},
 		}
-		err := oko_secret.EnsureSecrets(ctx, helper, instance, tmpl, envVars)
+		err = oko_secret.EnsureSecrets(ctx, helper, instance, tmpl, envVars)
 		if err != nil {
 			return err
 		}
@@ -1817,7 +1828,11 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 			changedKeys = true
 		} else if rotatedAt.AddDate(0, 0, duration).Before(now) {
 			secret.Data[extraKey] = secret.Data["FernetKeys0"]
-			secret.Data["FernetKeys0"] = []byte(keystone.GenerateFernetKey(logger))
+			fernetKey, err := keystone.GenerateFernetKey()
+			if err != nil {
+				return err
+			}
+			secret.Data["FernetKeys0"] = []byte(fernetKey)
 		}
 
 		//
@@ -1854,7 +1869,11 @@ func (r *KeystoneAPIReconciler) ensureFernetKeys(
 			}
 			changedKeys = true
 			i := 1
-			nextKeyValue := []byte(keystone.GenerateFernetKey(logger))
+			fernetKey, err := keystone.GenerateFernetKey()
+			if err != nil {
+				return err
+			}
+			nextKeyValue := []byte(fernetKey)
 			for {
 				key := fmt.Sprintf("FernetKeys%d", i)
 				i++
