@@ -11,12 +11,12 @@ require (
 	github.com/onsi/gomega v1.42.1
 	github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20260820165931-18e54edd62e6
 	github.com/openstack-k8s-operators/keystone-operator/api v0.6.1-0.20260717082957-bb1267fa59f8
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20260818072803-e18950de3098
-	github.com/openstack-k8s-operators/lib-common/modules/edpm v0.0.0-20260818072803-e18950de3098
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20260818072803-e18950de3098
-	github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20260818072803-e18950de3098
-	github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20260818072803-e18950de3098
-	github.com/openstack-k8s-operators/lib-common/modules/users v0.0.0-20260818072803-e18950de3098
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20260824142420-113dc64ecfd4
+	github.com/openstack-k8s-operators/lib-common/modules/edpm v0.0.0-20260824142420-113dc64ecfd4
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20260824142420-113dc64ecfd4
+	github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20260824142420-113dc64ecfd4
+	github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20260824142420-113dc64ecfd4
+	github.com/openstack-k8s-operators/lib-common/modules/users v0.0.0-20260824142420-113dc64ecfd4
 	github.com/openstack-k8s-operators/mariadb-operator/api v0.6.1-0.20260819100335-e5e0d9345b7e
 	go.uber.org/zap v1.28.0
 	gopkg.in/yaml.v3 v3.0.1
