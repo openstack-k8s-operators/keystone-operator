@@ -124,7 +124,7 @@ type KeystoneAPIReconciler struct {
 // +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=roles,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=rolebindings,verbs=get;list;watch;create;update;patch
 // keystone service account permissions that are needed to grant permission to the above
-// +kubebuilder:rbac:groups="security.openshift.io",resourceNames=anyuid,resources=securitycontextconstraints,verbs=use
+// +kubebuilder:rbac:groups="security.openshift.io",resourceNames=nonroot-v2,resources=securitycontextconstraints,verbs=use
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list
 
 // Reconcile reconcile keystone API requests
@@ -545,7 +545,7 @@ func (r *KeystoneAPIReconciler) reconcileInit(
 	rbacRules := []rbacv1.PolicyRule{
 		{
 			APIGroups:     []string{"security.openshift.io"},
-			ResourceNames: []string{"anyuid"},
+			ResourceNames: []string{"nonroot-v2"},
 			Resources:     []string{"securitycontextconstraints"},
 			Verbs:         []string{"use"},
 		},
@@ -1143,11 +1143,10 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 
 	//
 	// create Configmap required for keystone input
-	// - %-scripts configmap holding scripts to e.g. bootstrap the service
 	// - %-config configmap holding minimal keystone config required to get the service up, user can add additional files to be added to the service
 	// - parameters which has passwords gets added from the OpenStack secret via the init container
 	//
-	err = r.generateServiceConfigMaps(ctx, instance, helper, &configMapVars, memcached, db)
+	customConfigKeys, err := r.generateServiceConfigMaps(ctx, instance, helper, &configMapVars, memcached, db)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.ServiceConfigReadyCondition,
@@ -1346,7 +1345,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	//
 
 	// Define a new Deployment object
-	deplDef, err := keystone.Deployment(instance, inputHash, serviceLabels, serviceAnnotations, topology, federationFilenames, memcached)
+	deplDef, err := keystone.Deployment(instance, inputHash, serviceLabels, serviceAnnotations, topology, federationFilenames, memcached, customConfigKeys)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.DeploymentReadyCondition,
@@ -1515,10 +1514,9 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	envVars *map[string]env.Setter,
 	mc *memcachedv1.Memcached,
 	db *mariadbv1.Database,
-) error {
+) ([]string, error) {
 	//
 	// create Configmap/Secret required for keystone input
-	// - %-scripts configmap holding scripts to e.g. bootstrap the service
 	// - %-config configmap holding minimal keystone config required to get the service up, user can add additional files to be added to the service
 	// - parameters which has passwords gets added from the ospSecret via the init container
 	//
@@ -1542,7 +1540,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 
 	transportURLSecret, _, err := oko_secret.GetSecret(ctx, h, instance.Status.TransportURLSecret, instance.Namespace)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	databaseAccount := db.GetAccount()
@@ -1581,7 +1579,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	if instance.Spec.HttpdCustomization.CustomConfigSecret != nil && *instance.Spec.HttpdCustomization.CustomConfigSecret != "" {
 		httpdOverrideSecret, _, err = oko_secret.GetSecret(ctx, h, *instance.Spec.HttpdCustomization.CustomConfigSecret, instance.Namespace)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -1616,19 +1614,18 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	// Marshal the templateParameters map to YAML
 	yamlData, err := yaml.Marshal(templateParameters)
 	if err != nil {
-		return fmt.Errorf("error marshalling to YAML: %w", err)
+		return nil, fmt.Errorf("error marshalling to YAML: %w", err)
 	}
 	customData[common.TemplateParameters] = string(yamlData)
 
+	// customConfigKeys drives the Deployment's SubPath volume mounts for the
+	// httpd override config. Derived from customTemplates (the same data
+	// EnsureSecrets below renders into the config-data Secret) rather than
+	// re-fetching CustomConfigSecret independently, so the mount list can
+	// never diverge from what's actually in the Secret.
+	customConfigKeys := slices.Sorted(maps.Keys(customTemplates))
+
 	tmpl := []util.Template{
-		// Scripts
-		{
-			Name:         fmt.Sprintf("%s-scripts", instance.Name),
-			Namespace:    instance.Namespace,
-			Type:         util.TemplateTypeScripts,
-			InstanceType: instance.Kind,
-			Labels:       cmLabels,
-		},
 		// Configs
 		{
 			Name:            fmt.Sprintf("%s-config-data", instance.Name),
@@ -1642,7 +1639,10 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 			CommonTemplates: []string{"ssl.conf"},
 		},
 	}
-	return oko_secret.EnsureSecrets(ctx, h, instance, tmpl, envVars)
+	if err := oko_secret.EnsureSecrets(ctx, h, instance, tmpl, envVars); err != nil {
+		return nil, err
+	}
+	return customConfigKeys, nil
 }
 
 // reconcileConfigMap -  creates clouds.yaml

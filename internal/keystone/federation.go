@@ -46,7 +46,7 @@ func getFederationVolumeMounts(
 func getFederationVolumes(
 	federationFilenames []string,
 ) []corev1.Volume {
-	var config0640AccessMode int32 = 0644
+	var configMode int32 = 0440
 	vols := []corev1.Volume{}
 
 	for index := range federationFilenames {
@@ -54,7 +54,7 @@ func getFederationVolumes(
 			Name: "federation-realm-volume" + strconv.Itoa(index),
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					DefaultMode: &config0640AccessMode,
+					DefaultMode: &configMode,
 					SecretName:  FederationMultiRealmSecret,
 				},
 			},

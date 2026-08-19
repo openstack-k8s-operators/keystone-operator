@@ -33,55 +33,70 @@ spec:
       containers:
       - args:
         - -c
-        - /usr/local/bin/kolla_start
+        - /usr/sbin/httpd -DFOREGROUND
         volumeMounts:
-        - mountPath: /usr/local/bin/container-scripts
-          name: scripts
-          readOnly: true
-        - mountPath: /var/lib/config-data/default
-          name: config-data
-        - mountPath: /var/lib/kolla/config_files/config.json
+        - mountPath: /etc/keystone/keystone.conf
           name: config-data
           readOnly: true
-          subPath: keystone-api-config.json
+          subPath: keystone.conf
+        - mountPath: /etc/keystone/keystone.conf.d/custom.conf
+          name: config-data
+          readOnly: true
+          subPath: custom.conf
+        - mountPath: /etc/httpd/conf/httpd.conf
+          name: config-data
+          readOnly: true
+          subPath: httpd.conf
+        - mountPath: /etc/httpd/conf.d/ssl.conf
+          name: config-data
+          readOnly: true
+          subPath: ssl.conf
+        - mountPath: /etc/my.cnf
+          name: config-data
+          readOnly: true
+          subPath: my.cnf
         - mountPath: /etc/keystone/fernet-keys
           name: fernet-keys
           readOnly: true
         - mountPath: /etc/keystone/credential-keys
           name: credential-keys
           readOnly: true
+        - mountPath: /run/httpd
+          name: run-httpd
+        - mountPath: /tmp
+          name: tmp
+        - mountPath: /var/log/keystone
+          name: var-log-keystone
+        - mountPath: /var/log/httpd
+          name: var-log-httpd
         - mountPath: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
           name: combined-ca-bundle
           readOnly: true
           subPath: tls-ca-bundle.pem
-        - mountPath: /var/lib/config-data/tls/certs/internal.crt
+        - mountPath: /etc/pki/tls/certs/internal.crt
           name: internal-tls-certs
           readOnly: true
           subPath: tls.crt
-        - mountPath: /var/lib/config-data/tls/private/internal.key
+        - mountPath: /etc/pki/tls/private/internal.key
           name: internal-tls-certs
           readOnly: true
           subPath: tls.key
-        - mountPath: /var/lib/config-data/tls/certs/public.crt
+        - mountPath: /etc/pki/tls/certs/public.crt
           name: public-tls-certs
           readOnly: true
           subPath: tls.crt
-        - mountPath: /var/lib/config-data/tls/private/public.key
+        - mountPath: /etc/pki/tls/private/public.key
           name: public-tls-certs
           readOnly: true
           subPath: tls.key
       volumes:
-      - name: scripts
-        secret:
-          defaultMode: 493
-          secretName: keystone-scripts
       - name: config-data
         secret:
-          defaultMode: 420
+          defaultMode: 288
           secretName: keystone-config-data
       - name: fernet-keys
         secret:
-          defaultMode: 420
+          defaultMode: 288
           items:
           - key: FernetKeys0
             path: "0"
@@ -96,13 +111,21 @@ spec:
           secretName: keystone
       - name: credential-keys
         secret:
-          defaultMode: 420
+          defaultMode: 288
           items:
           - key: CredentialKeys0
             path: "0"
           - key: CredentialKeys1
             path: "1"
           secretName: keystone
+      - emptyDir: {}
+        name: tmp
+      - emptyDir: {}
+        name: run-httpd
+      - emptyDir: {}
+        name: var-log-keystone
+      - emptyDir: {}
+        name: var-log-httpd
       - name: combined-ca-bundle
         secret:
           defaultMode: 292

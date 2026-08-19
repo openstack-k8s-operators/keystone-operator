@@ -534,6 +534,11 @@ var _ = Describe("Keystone controller", func() {
 				corev1.ConditionUnknown,
 			)
 		})
+
+		It("creates bootstrap job with custom.conf mounted", func() {
+			j := th.GetJob(bootstrapJobName)
+			th.AssertVolumeMountPathExists("config-data", "/etc/keystone/keystone.conf.d/custom.conf", "custom.conf", j.Spec.Template.Spec.Containers[0].VolumeMounts)
+		})
 	})
 
 	When("Bootstrap is completed", func() {
@@ -1089,6 +1094,7 @@ var _ = Describe("Keystone controller", func() {
 			j := th.GetJob(bootstrapJobName)
 			th.AssertVolumeExists(caBundleSecretName.Name, j.Spec.Template.Spec.Volumes)
 			th.AssertVolumeMountPathExists(caBundleSecretName.Name, "", "tls-ca-bundle.pem", j.Spec.Template.Spec.Containers[0].VolumeMounts)
+			th.AssertVolumeMountPathExists("config-data", "/etc/keystone/keystone.conf.d/custom.conf", "custom.conf", j.Spec.Template.Spec.Containers[0].VolumeMounts)
 		})
 
 		It("should create a Secret for keystone.conf and my.cnf", func() {
@@ -1964,13 +1970,13 @@ OIDCRedirectURI "{{ .KeystoneEndpointPublic }}/v3/auth/OS-FEDERATION/websso/open
 			// Get Keystone Deployment
 			dp := th.GetDeployment(deploymentName)
 			// Check the resulting deployment fields
-			Expect(dp.Spec.Template.Spec.Volumes).To(HaveLen(5))
+			Expect(dp.Spec.Template.Spec.Volumes).To(HaveLen(8))
 			Expect(dp.Spec.Template.Spec.Containers).To(HaveLen(1))
 			// Get the keystone-api container
 			container := dp.Spec.Template.Spec.Containers[0]
 			// Fail if keystone-api doesn't have the right number of VolumeMounts
 			// entries
-			Expect(container.VolumeMounts).To(HaveLen(6))
+			Expect(container.VolumeMounts).To(HaveLen(12))
 			// Inspect VolumeMounts and make sure we have the Foo MountPath
 			// provided through extraMounts
 			th.AssertVolumeMountPathExists("foo",
@@ -1980,7 +1986,7 @@ OIDCRedirectURI "{{ .KeystoneEndpointPublic }}/v3/auth/OS-FEDERATION/websso/open
 	When("A KeystoneAPI is created with a federatedRealmConfig", func() {
 		const (
 			inputSecretName  = "federation-test-secret"
-			mountPath        = "/var/lib/config-data/default/multirealm-federation"
+			mountPath        = "/var/lib/httpd/metadata"
 			multiRealmSecret = "keystone-multirealm-federation-secret"
 		)
 

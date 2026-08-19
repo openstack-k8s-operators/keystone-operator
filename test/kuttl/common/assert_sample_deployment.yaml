@@ -60,7 +60,7 @@ spec:
       containers:
       - args:
         - -c
-        - /usr/local/bin/kolla_start
+        - /usr/sbin/httpd -DFOREGROUND
         command:
         - /bin/bash
         imagePullPolicy: IfNotPresent
@@ -101,7 +101,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   annotations:
-    openshift.io/scc: anyuid
+    openshift.io/scc: nonroot-v2
   labels:
     service: keystone
 ---

@@ -19,10 +19,13 @@ import (
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 
 	"github.com/openstack-k8s-operators/lib-common/modules/common/env"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/pod"
+	"github.com/openstack-k8s-operators/lib-common/modules/users"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 // DbSyncJob func
@@ -35,8 +38,6 @@ func DbSyncJob(
 	args := []string{"-c", DBSyncCommand}
 
 	envVars := map[string]env.Setter{}
-	envVars["KOLLA_CONFIG_STRATEGY"] = env.SetValue("COPY_ALWAYS")
-	envVars["KOLLA_BOOTSTRAP"] = env.SetValue("true")
 
 	// create Volume and VolumeMounts
 	dbSyncExtraMounts := []keystonev1.KeystoneExtraMounts{}
@@ -61,8 +62,10 @@ func DbSyncJob(
 					Annotations: annotations,
 				},
 				Spec: corev1.PodSpec{
-					RestartPolicy:      corev1.RestartPolicyOnFailure,
-					ServiceAccountName: instance.RbacResourceName(),
+					RestartPolicy:                corev1.RestartPolicyOnFailure,
+					ServiceAccountName:           instance.RbacResourceName(),
+					AutomountServiceAccountToken: ptr.To(false),
+					SecurityContext:              pod.RestrictivePodSecurityContext(users.KeystoneUID, users.KeystoneGID),
 					Containers: []corev1.Container{
 						{
 							Name: ServiceName + "-db-sync",
@@ -71,7 +74,7 @@ func DbSyncJob(
 							},
 							Args:            args,
 							Image:           instance.Spec.ContainerImage,
-							SecurityContext: dbSyncSecurityContext(),
+							SecurityContext: pod.RestrictiveSecurityContext(users.KeystoneUID, users.KeystoneGID),
 							Env:             env.MergeEnvs([]corev1.EnvVar{}, envVars),
 							VolumeMounts:    volumeMounts,
 						},

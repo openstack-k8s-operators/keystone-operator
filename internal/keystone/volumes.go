@@ -18,6 +18,7 @@ package keystone
 import (
 	"fmt"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/volume"
 	"github.com/openstack-k8s-operators/lib-common/modules/storage"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -29,8 +30,7 @@ func getVolumes(
 	svc []storage.PropagationType,
 ) []corev1.Volume {
 	name := instance.Name
-	var scriptsVolumeDefaultMode int32 = 0755
-	var config0640AccessMode int32 = 0644
+	var configAccessMode int32 = 0440
 
 	fernetKeys := []corev1.KeyToPath{}
 	numberKeys := int(*instance.Spec.FernetMaxActiveKeys)
@@ -47,19 +47,10 @@ func getVolumes(
 
 	res := []corev1.Volume{
 		{
-			Name: "scripts",
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					DefaultMode: &scriptsVolumeDefaultMode,
-					SecretName:  name + "-scripts",
-				},
-			},
-		},
-		{
 			Name: "config-data",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					DefaultMode: &config0640AccessMode,
+					DefaultMode: &configAccessMode,
 					SecretName:  name + "-config-data",
 				},
 			},
@@ -68,8 +59,9 @@ func getVolumes(
 			Name: "fernet-keys",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: ServiceName,
-					Items:      fernetKeys,
+					DefaultMode: &configAccessMode,
+					SecretName:  ServiceName,
+					Items:       fernetKeys,
 				},
 			},
 		},
@@ -77,7 +69,8 @@ func getVolumes(
 			Name: "credential-keys",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: ServiceName,
+					DefaultMode: &configAccessMode,
+					SecretName:  ServiceName,
 					Items: []corev1.KeyToPath{
 						{
 							Key:  "CredentialKeys0",
@@ -91,6 +84,7 @@ func getVolumes(
 				},
 			},
 		},
+		volume.WritableDirVolume(volume.TmpVolumeName),
 	}
 	for _, exv := range extraVol {
 		for _, vol := range exv.Propagate(svc) {
@@ -107,26 +101,40 @@ func getVolumes(
 	return res
 }
 
-// getVolumeMounts - general VolumeMounts
+// getVolumeMounts - API deployment VolumeMounts
 func getVolumeMounts(
 	extraVol []keystonev1.KeystoneExtraMounts,
 	svc []storage.PropagationType,
 ) []corev1.VolumeMount {
 	vm := []corev1.VolumeMount{
 		{
-			Name:      "scripts",
-			MountPath: "/usr/local/bin/container-scripts",
+			Name:      "config-data",
+			MountPath: "/etc/keystone/keystone.conf",
+			SubPath:   "keystone.conf",
 			ReadOnly:  true,
 		},
 		{
 			Name:      "config-data",
-			MountPath: "/var/lib/config-data/default",
-			ReadOnly:  false,
+			MountPath: "/etc/keystone/keystone.conf.d/custom.conf",
+			SubPath:   "custom.conf",
+			ReadOnly:  true,
 		},
 		{
 			Name:      "config-data",
-			MountPath: "/var/lib/kolla/config_files/config.json",
-			SubPath:   "keystone-api-config.json",
+			MountPath: "/etc/httpd/conf/httpd.conf",
+			SubPath:   "httpd.conf",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "config-data",
+			MountPath: "/etc/httpd/conf.d/ssl.conf",
+			SubPath:   "ssl.conf",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "config-data",
+			MountPath: "/etc/my.cnf",
+			SubPath:   "my.cnf",
 			ReadOnly:  true,
 		},
 		{
@@ -139,6 +147,10 @@ func getVolumeMounts(
 			ReadOnly:  true,
 			Name:      "credential-keys",
 		},
+		volume.WritableDirVolumeMount(volume.RunHttpdVolumeName, volume.RunHttpdMountPath),
+		volume.WritableDirVolumeMount(volume.TmpVolumeName, volume.TmpMountPath),
+		volume.WritableDirVolumeMount(VarLogKeystoneVolumeName, "/var/log/keystone"),
+		volume.WritableDirVolumeMount(volume.VarLogHttpdVolumeName, volume.VarLogHttpdMountPath),
 	}
 	for _, exv := range extraVol {
 		for _, vol := range exv.Propagate(svc) {
@@ -148,9 +160,45 @@ func getVolumeMounts(
 	return vm
 }
 
+// getBootstrapVolumeMounts - bootstrap job VolumeMounts
+func getBootstrapVolumeMounts() []corev1.VolumeMount {
+	vm := []corev1.VolumeMount{
+		{
+			Name:      "config-data",
+			MountPath: "/etc/keystone/keystone.conf",
+			SubPath:   "keystone.conf",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "config-data",
+			MountPath: "/etc/keystone/keystone.conf.d/custom.conf",
+			SubPath:   "custom.conf",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "config-data",
+			MountPath: "/etc/my.cnf",
+			SubPath:   "my.cnf",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "fernet-keys",
+			MountPath: "/etc/keystone/fernet-keys",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "credential-keys",
+			MountPath: "/etc/keystone/credential-keys",
+			ReadOnly:  true,
+		},
+		volume.WritableDirVolumeMount(volume.TmpVolumeName, volume.TmpMountPath),
+	}
+	return vm
+}
+
 // getCronJobVolumeMounts - cronjob volumeMounts
 func getCronJobVolumeMounts() []corev1.VolumeMount {
-	return []corev1.VolumeMount{
+	vm := []corev1.VolumeMount{
 		{
 			Name:      "config-data",
 			MountPath: "/etc/keystone/keystone.conf",
@@ -168,12 +216,14 @@ func getCronJobVolumeMounts() []corev1.VolumeMount {
 			MountPath: "/etc/keystone/fernet-keys",
 			ReadOnly:  true,
 		},
+		volume.WritableDirVolumeMount(volume.TmpVolumeName, volume.TmpMountPath),
 	}
+	return vm
 }
 
-// getDBSyncVolumeMounts - cronjob volumeMounts
+// getDBSyncVolumeMounts - db-sync job volumeMounts
 func getDBSyncVolumeMounts() []corev1.VolumeMount {
-	return []corev1.VolumeMount{
+	vm := []corev1.VolumeMount{
 		{
 			Name:      "config-data",
 			MountPath: "/etc/keystone/keystone.conf",
@@ -186,5 +236,7 @@ func getDBSyncVolumeMounts() []corev1.VolumeMount {
 			SubPath:   "my.cnf",
 			ReadOnly:  true,
 		},
+		volume.WritableDirVolumeMount(volume.TmpVolumeName, volume.TmpMountPath),
 	}
+	return vm
 }
