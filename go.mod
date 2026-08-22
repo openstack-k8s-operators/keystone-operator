@@ -5,7 +5,7 @@ go 1.26.3
 require (
 	github.com/go-logr/logr v1.4.4
 	github.com/google/uuid v1.6.0
-	github.com/gophercloud/gophercloud/v2 v2.13.0
+	github.com/gophercloud/gophercloud/v2 v2.14.0
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.7.7
 	github.com/onsi/ginkgo/v2 v2.32.0
 	github.com/onsi/gomega v1.42.1
