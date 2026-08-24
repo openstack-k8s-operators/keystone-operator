@@ -67,6 +67,8 @@ func (ac *KeystoneApplicationCredential) IsEDPMService() bool {
 	return ac.GetAnnotations()[EDPMServiceAnnotation] != "false"
 }
 
+// Deprecated: Use object.ManageSecretConsumerFinalizer and
+// object.FinalizeSecretRotation from lib-common instead.
 // ManageACSecretFinalizer ensures consumerFinalizer is present on the AC secret
 // identified by newSecretName and absent from the one identified by
 // oldSecretName. It is a no-op when both names are equal.
@@ -108,6 +110,7 @@ func ManageACSecretFinalizer(
 	return object.ManageConsumerFinalizer(ctx, h, newObj, oldObj, consumerFinalizer)
 }
 
+// Deprecated: Use object.RemoveSecretConsumerFinalizer from lib-common instead.
 // RemoveACSecretConsumerFinalizer removes consumerFinalizer from the AC secret
 // identified by secretName. It is a no-op when secretName is empty or the
 // secret no longer exists.

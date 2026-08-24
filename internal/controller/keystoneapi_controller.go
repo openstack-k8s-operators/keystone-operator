@@ -42,6 +42,7 @@ import (
 	job "github.com/openstack-k8s-operators/lib-common/modules/common/job"
 	labels "github.com/openstack-k8s-operators/lib-common/modules/common/labels"
 	nad "github.com/openstack-k8s-operators/lib-common/modules/common/networkattachment"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/object"
 	common_rbac "github.com/openstack-k8s-operators/lib-common/modules/common/rbac"
 	oko_secret "github.com/openstack-k8s-operators/lib-common/modules/common/secret"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
@@ -96,8 +97,9 @@ func (r *KeystoneAPIReconciler) GetLogger(ctx context.Context) logr.Logger {
 // KeystoneAPIReconciler reconciles a KeystoneAPI object
 type KeystoneAPIReconciler struct {
 	client.Client
-	Kclient kubernetes.Interface
-	Scheme  *runtime.Scheme
+	Kclient   kubernetes.Interface
+	Scheme    *runtime.Scheme
+	APIReader client.Reader
 }
 
 // +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis,verbs=get;list;watch;create;update;patch;delete
@@ -520,6 +522,32 @@ func (r *KeystoneAPIReconciler) reconcileDelete(ctx context.Context, instance *k
 		if err := db.DeleteFinalizer(ctx, helper); err != nil {
 			return ctrl.Result{}, err
 		}
+	}
+
+	if err := object.RemoveSecretConsumerFinalizer(ctx, helper, instance.Namespace,
+		instance.Status.TransportURLSecret, keystone.TransportConsumerFinalizer); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// During a pending rotation, instance.Status.TransportURLSecret still
+	// points at the old secret while the consumer finalizer was already added
+	// to the new one (TransportURL CR's Status.SecretName). Clean that up too
+	// so the new secret doesn't get stuck in Terminating if later deleted.
+	transportURL := &rabbitmqv1.TransportURL{}
+	err = r.Get(ctx, types.NamespacedName{
+		Name:      fmt.Sprintf("%s-keystone-transport", instance.Name),
+		Namespace: instance.Namespace,
+	}, transportURL)
+	if err == nil {
+		if transportURL.Status.SecretName != "" &&
+			transportURL.Status.SecretName != instance.Status.TransportURLSecret {
+			if err := object.RemoveSecretConsumerFinalizer(ctx, helper, instance.Namespace,
+				transportURL.Status.SecretName, keystone.TransportConsumerFinalizer); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	} else if !k8s_errors.IsNotFound(err) {
+		return ctrl.Result{}, err
 	}
 
 	// Service is deleted so remove the finalizer.
@@ -1064,9 +1092,9 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 		Log.Info(fmt.Sprintf("TransportURL %s successfully reconciled - operation: %s", transportURL.Name, string(op)))
 	}
 
-	instance.Status.TransportURLSecret = transportURL.Status.SecretName
+	currentTransportSecret := transportURL.Status.SecretName
 
-	if instance.Status.TransportURLSecret == "" {
+	if currentTransportSecret == "" {
 		// Since the TransportURL secret is automatically created by the Infra operator,
 		// we treat this as an info (because the user is not responsible for manually creating it).
 		Log.Info(fmt.Sprintf("Waiting for TransportURL %s secret to be created", transportURL.Name))
@@ -1079,6 +1107,19 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	}
 	Log.Info(fmt.Sprintf("TransportURL secret name %s", transportURL.Status.SecretName))
 	instance.Status.Conditions.MarkTrue(condition.RabbitMqTransportURLReadyCondition, condition.RabbitMqTransportURLReadyMessage)
+
+	// Set status early for first-time setup so PatchInstance persists it
+	// even on early returns. During rotation (old != current), the status
+	// is only updated by FinalizeSecretRotation at end of reconcile.
+	if instance.Status.TransportURLSecret == "" ||
+		instance.Status.TransportURLSecret == currentTransportSecret {
+		instance.Status.TransportURLSecret = currentTransportSecret
+	}
+
+	if err := object.ManageSecretConsumerFinalizer(ctx, helper, instance.Namespace,
+		currentTransportSecret, keystone.TransportConsumerFinalizer); err != nil {
+		return ctrl.Result{}, err
+	}
 	// run check rabbitmq - end
 
 	//
@@ -1146,7 +1187,7 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	// - %-config configmap holding minimal keystone config required to get the service up, user can add additional files to be added to the service
 	// - parameters which has passwords gets added from the OpenStack secret via the init container
 	//
-	customConfigKeys, err := r.generateServiceConfigMaps(ctx, instance, helper, &configMapVars, memcached, db)
+	customConfigKeys, err := r.generateServiceConfigMaps(ctx, instance, helper, &configMapVars, memcached, db, currentTransportSecret)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.ServiceConfigReadyCondition,
@@ -1228,13 +1269,9 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 
 	// create hash over all the different input resources to identify if any those changed
 	// and a restart/recreate is required.
-	inputHash, hashChanged, err := r.createHashOfInputHashes(ctx, instance, configMapVars)
+	inputHash, _, err := r.createHashOfInputHashes(ctx, instance, configMapVars)
 	if err != nil {
 		return ctrl.Result{}, err
-	} else if hashChanged {
-		// Hash changed and instance status should be updated (which will be done by main defer func),
-		// so we need to return and reconcile again
-		return ctrl.Result{}, nil
 	}
 	instance.Status.Conditions.MarkTrue(condition.ServiceConfigReadyCondition, condition.ServiceConfigReadyMessage)
 
@@ -1408,15 +1445,18 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 		return ctrl.Result{}, err
 	}
 
-	// Mark the Deployment as Ready only if the number of Replicas is equals
-	// to the Deployed instances (ReadyCount), and the the Status.Replicas
-	// match Status.ReadyReplicas. If a deployment update is in progress,
-	// Replicas > ReadyReplicas.
-	// In addition, make sure the controller sees the last Generation
-	// by comparing it with the ObservedGeneration.
+	ready := false
 	if deployment.IsReady(deploy) {
+		ready, err = deployment.IsReadyForInput(ctx, r.APIReader,
+			types.NamespacedName{Name: deploy.Name, Namespace: deploy.Namespace},
+			inputHash)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+	if ready {
 		instance.Status.Conditions.MarkTrue(condition.DeploymentReadyCondition, condition.DeploymentReadyMessage)
-	} else {
+	} else if *instance.Spec.Replicas > 0 {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.DeploymentReadyCondition,
 			condition.RequestedReason,
@@ -1459,6 +1499,36 @@ func (r *KeystoneAPIReconciler) reconcileNormal(
 	//
 	err = r.reconcileCloudConfig(ctx, helper, instance)
 	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Guard the rotation on the sub-conditions computed during this reconcile,
+	// not instance.IsReady(): the Ready condition is reset to Unknown by
+	// Conditions.Init() at the top of every reconcile and only recomputed in
+	// the deferred PatchInstance, so IsReady() would always be false here.
+	guardReady := instance.Status.Conditions.AllSubConditionIsTrue()
+	transportSecretName, err := object.FinalizeSecretRotation(
+		ctx, helper, instance.Namespace,
+		instance.Status.TransportURLSecret,
+		currentTransportSecret,
+		keystone.TransportConsumerFinalizer,
+		guardReady,
+	)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	instance.Status.TransportURLSecret = transportSecretName
+
+	// Self-heal consumer finalizers stranded on secrets superseded during
+	// rapid rotation (A -> B -> C before the workload became ready):
+	// FinalizeSecretRotation only ever releases the single tracked "old"
+	// secret, so any intermediate secret's finalizer would otherwise leak.
+	// keep enumerates every secret that legitimately still holds the
+	// finalizer; all others in the namespace are pruned.
+	if err := object.PruneSecretConsumerFinalizers(
+		ctx, helper, instance.Namespace, keystone.TransportConsumerFinalizer,
+		instance.Status.TransportURLSecret, currentTransportSecret,
+	); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -1514,6 +1584,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	envVars *map[string]env.Setter,
 	mc *memcachedv1.Memcached,
 	db *mariadbv1.Database,
+	transportURLSecretName string,
 ) ([]string, error) {
 	//
 	// create Configmap/Secret required for keystone input
@@ -1538,7 +1609,7 @@ func (r *KeystoneAPIReconciler) generateServiceConfigMaps(
 	}
 	maps.Copy(customData, instance.Spec.DefaultConfigOverwrite)
 
-	transportURLSecret, _, err := oko_secret.GetSecret(ctx, h, instance.Status.TransportURLSecret, instance.Namespace)
+	transportURLSecret, _, err := oko_secret.GetSecret(ctx, h, transportURLSecretName, instance.Namespace)
 	if err != nil {
 		return nil, err
 	}
