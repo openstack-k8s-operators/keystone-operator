@@ -28,6 +28,59 @@
         ^tempest.api.identity.
 
 - job:
+    name: keystone-s2i-content-provider
+    parent: s2i-openstack-container-content-provider
+    description: |
+      Build s2i keystone service images for keystone-s2i-tempest.
+    required-projects:
+      - name: openstack-k8s-operators/s2i-openstack-containers
+        override-checkout: main
+    vars:
+      s2i_ci_images:
+        - keystone/keystone
+
+- job:
+    name: s2i-tempest-base
+    parent: podified-multinode-edpm-deployment-crc-2comp
+    description: |
+      Validate speculatively-built s2i images against a live OpenStack
+      deployment. s2i-built images from the content provider are applied
+      to OpenStackVersion during edpm_prepare via ci-framework
+      set_containers before the control plane is deployed.
+
+      Scalar OpenStackVersion fields come from the s2i image map. Child
+      jobs can extend mapping via cifmw_set_containers_images_extra_mapping
+      (for example cinder-volume or manila-share backend maps).
+    required-projects:
+      - name: openstack-k8s-operators/s2i-openstack-containers
+        override-checkout: main
+    vars:
+      cifmw_crc_additional_insecure_registries:
+        - "{{ s2i_content_provider_registry_ip }}:5001"
+      cifmw_crc_additional_allowed_registries:
+        - "{{ s2i_content_provider_registry_ip }}:5001"
+      cifmw_set_containers_preserve_unlisted: true
+      cifmw_set_containers_images: >-
+        {{
+          (
+            s2i_content_provider_os_custom_container_images | dict2items |
+            json_query('[].{name: key, full_registry: value}')
+          ) + cifmw_set_containers_images_extra_mapping
+        }}
+      cifmw_set_containers_images_extra_mapping: []
+
+- job:
+    name: keystone-s2i-tempest
+    parent: s2i-tempest-base
+    description: |
+      Validate speculatively-built s2i keystone images against a live
+      OpenStack deployment.
+    vars:
+      cifmw_test_operator_tempest_concurrency: 3
+      cifmw_test_operator_tempest_include_list: |
+        ^tempest.api.identity.
+
+- job:
     name: keystone-openstack-meta-content-provider-master
     parent: openstack-meta-content-provider-master
     description: |

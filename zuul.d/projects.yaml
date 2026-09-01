@@ -20,3 +20,10 @@
             dependencies:
               - openstack-k8s-operators-content-provider
             voting: false
+        - keystone-s2i-content-provider:
+            voting: false
+        - keystone-s2i-tempest:
+            voting: false
+            dependencies:
+              - openstack-k8s-operators-content-provider
+              - keystone-s2i-content-provider
