@@ -72,8 +72,8 @@ github.com/google/pprof v0.0.0-20260402051712-545e8a4df936 h1:EwtI+Al+DeppwYX2oX
 github.com/google/pprof v0.0.0-20260402051712-545e8a4df936/go.mod h1:MxpfABSjhmINe3F1It9d+8exIHFvUqtLIRCdOGNXqiI=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
-github.com/gophercloud/gophercloud/v2 v2.13.0 h1:yEyJG+kABd8x2ttTqLsomihU6Kg2YheJSZhvP/QSx+8=
-github.com/gophercloud/gophercloud/v2 v2.13.0/go.mod h1:KZRLVs6gcoy/pEFdkZqFjdYqnS0emMHv66UqdM5lMjU=
+github.com/gophercloud/gophercloud/v2 v2.14.0 h1:xGxKCvyaOxJDc5FqrnKDNqtdYn43ocQPuJ2Cm4KX/cs=
+github.com/gophercloud/gophercloud/v2 v2.14.0/go.mod h1:4fs5I9VH6Wg2LyocDL9xf0ASb8VD63tyLA8sgAX/69U=
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.24.0 h1:TmHmbvxPmaegwhDubVz0lICL0J5Ka2vwTzhoePEXsGE=
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.24.0/go.mod h1:qztMSjm835F2bXf+5HKAPIS5qsmQDqZna/PgVt4rWtI=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
