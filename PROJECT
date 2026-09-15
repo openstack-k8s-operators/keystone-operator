@@ -42,4 +42,13 @@ resources:
   kind: KeystoneEndpoint
   path: github.com/openstack-k8s-operators/keystone-operator/api/v1beta1
   version: v1beta1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: openstack.org
+  group: keystone
+  kind: KeystoneApplicationCredential
+  path: github.com/openstack-k8s-operators/keystone-operator/api/v1beta1
+  version: v1beta1
 version: "3"
