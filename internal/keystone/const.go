@@ -52,6 +52,8 @@ const (
 	FederationDefaultMountPath = "/var/lib/httpd/metadata"
 	// VarLogKeystoneVolumeName - name of the writable emptyDir volume mounted at /var/log/keystone
 	VarLogKeystoneVolumeName = "var-log-keystone"
+	// TransportConsumerFinalizer is the finalizer added to transport URL secrets
+	TransportConsumerFinalizer = "openstack.org/keystone-transport-consumer"
 )
 
 // KeystonePropagation is the definition of the Keystone propagation service
