@@ -28,6 +28,37 @@
         ^tempest.api.identity.
 
 - job:
+    name: keystone-s2i-content-provider
+    parent: s2i-openstack-container-content-provider
+    description: |
+      Build s2i keystone service images for keystone-s2i-test.
+    required-projects:
+      - name: openstack-k8s-operators/s2i-openstack-containers
+        override-checkout: main
+    vars:
+      s2i_ci_images:
+        - keystone/keystone
+
+- job:
+    name: keystone-s2i-test
+    parent: s2i-test-base
+    description: |
+      Validate speculatively-built s2i keystone images against a live
+      OpenStack deployment. s2i-built images from the content provider
+      are applied to OpenStackVersion during edpm_prepare via ci-framework
+      set_containers before the control plane is deployed.
+    vars:
+      cifmw_test_operator_tempest_concurrency: 3
+      cifmw_test_operator_tempest_tempestconf_config:
+        overrides: |
+          identity-feature-enabled.application_credentials true
+          identity-feature-enabled.project_tags true
+          identity-feature-enabled.enforce_scope true
+      cifmw_test_operator_tempest_include_list: |
+        ^tempest.api.identity..*
+        ^keystone_tempest_plugin.tests..*
+
+- job:
     name: keystone-openstack-meta-content-provider-master
     parent: openstack-meta-content-provider-master
     description: |
