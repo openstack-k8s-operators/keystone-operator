@@ -1,6 +1,36 @@
 ---
+# project template to be used locally for operator testing
+- project-template:
+    name: keystone-operator-s2i-testing
+    github-check:
+      jobs:
+        - keystone-s2i-content-provider:
+            voting: false
+        - keystone-s2i-test:
+            voting: false
+            dependencies:
+              - openstack-k8s-operators-content-provider
+              - keystone-s2i-content-provider
+
+# project template to be used in the s2i repository
+- project-template:
+    name: keystone-operator-s2i-component-jobs
+    github-check:
+      jobs:
+        - keystone-s2i-test:
+            vars:
+              content_provider_registry_ip: "{{ s2i_content_provider_registry_ip }}"
+            files:
+              - ^containers/base/
+              - ^containers/keystone/
+            dependencies:
+              - s2i-openstack-container-content-provider
+              - s2i-openstack-container-consumer-smoke
+
 - project:
     name: openstack-k8s-operators/keystone-operator
+    templates:
+      - keystone-operator-s2i-testing
     github-check:
       jobs:
         # jobs using latest available code - local registry, tag: keystone_latest
@@ -20,10 +50,3 @@
             dependencies:
               - openstack-k8s-operators-content-provider
             voting: false
-        - keystone-s2i-content-provider:
-            voting: false
-        - keystone-s2i-test:
-            voting: false
-            dependencies:
-              - openstack-k8s-operators-content-provider
-              - keystone-s2i-content-provider
