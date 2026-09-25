@@ -1,0 +1,44 @@
+# Draft sample: enable external OAuth2 token validation on Keystone itself.
+#
+# Requires keystonemiddleware external_oauth2_token support (Gerrit topic
+# external-oauth2) and keystone change 942222 merged or patched into the
+# image under test.
+#
+# Store OAuth2 client credentials in a Secret and reference paths below.
+apiVersion: keystone.openstack.org/v1beta1
+kind: KeystoneAPI
+metadata:
+  name: keystone
+spec:
+  adminProject: admin
+  adminUser: admin
+  customServiceConfig: |
+    [ext_oauth2_auth]
+    audience = https://idp.example.com/realms/openstack
+    auth_method = client_secret_basic
+    client_id = keystone-introspect
+    client_secret = /etc/keystone/external-oauth2/client_secret
+    introspect_endpoint = https://idp.example.com/realms/openstack/protocol/openid-connect/token/introspect
+    mapping_user_id = sub
+    mapping_user_name = preferred_username
+    mapping_user_domain_id = user_domain.id
+    mapping_user_domain_name = user_domain.name
+    mapping_project_id = access_project.id
+    mapping_project_name = access_project.name
+    mapping_project_domain_id = access_project.domain.id
+    mapping_project_domain_name = access_project.domain.name
+    mapping_roles = roles
+    mapping_expires_at = exp
+    service_token_roles = service
+    # Optional JWKS path for allow-expired + service token flows:
+    # jwks_uri = https://idp.example.com/realms/openstack/protocol/openid-connect/certs
+    # allow_expired_window = 172800
+  databaseInstance: openstack
+  databaseAccount: keystone
+  preserveJobs: false
+  region: regionOne
+  secret: osp-secret
+  resources:
+    requests:
+      memory: "500Mi"
+      cpu: "1.0"
