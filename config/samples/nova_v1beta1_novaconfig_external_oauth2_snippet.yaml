@@ -1,0 +1,28 @@
+# Draft snippet for NovaAPI (or other service) customServiceConfig when the
+# service API uses external_oauth2_token in its paste pipeline instead of
+# auth_token.  Adapt paths and mapping keys to your IdP token claims.
+#
+# This is not a complete CR — merge the [ext_oauth2_auth] block into the
+# service operator's customServiceConfig field.
+#
+# Example paste.ini change (not rendered by operators today — manual or
+# future operator template work):
+#   pipeline = cors request_id external_oauth2_token novaapiapp
+#
+#   [filter:external_oauth2_token]
+#   paste.factory = keystonemiddleware.external_oauth2_token:filter_factory
+#
+#   [ext_oauth2_auth]
+#   audience = https://idp.example.com/realms/openstack
+#   auth_method = client_secret_basic
+#   client_id = nova-introspect
+#   client_secret = /etc/nova/external-oauth2/client_secret
+#   introspect_endpoint = https://idp.example.com/realms/openstack/protocol/openid-connect/token/introspect
+#   mapping_user_id = sub
+#   mapping_user_name = preferred_username
+#   mapping_roles = roles
+#   mapping_project_id = access_project.id
+#   mapping_project_name = access_project.name
+#   mapping_project_domain_id = access_project.domain.id
+#   mapping_project_domain_name = access_project.domain.name
+#   service_token_roles = service
