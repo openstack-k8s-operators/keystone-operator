@@ -29,6 +29,8 @@ import (
 	. "github.com/onsi/gomega"    //revive:disable:dot-imports
 
 	"github.com/openstack-k8s-operators/lib-common/modules/common"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/clusterdns"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
 	//revive:disable-next-line:dot-imports
 	. "github.com/openstack-k8s-operators/lib-common/modules/common/test/helpers"
 
@@ -681,6 +683,16 @@ var _ = Describe("Keystone controller", func() {
 				Name:      "openstack-config-secret",
 			})
 		})
+
+		It("creates services with bare public/internal port names and unchanged object names", func() {
+			public := th.GetService(types.NamespacedName{Namespace: namespace, Name: "keystone-public"})
+			Expect(public.Name).To(Equal("keystone-public"))
+			Expect(public.Spec.Ports[0].Name).To(Equal("public"))
+
+			internal := th.GetService(types.NamespacedName{Namespace: namespace, Name: "keystone-internal"})
+			Expect(internal.Name).To(Equal("keystone-internal"))
+			Expect(internal.Spec.Ports[0].Name).To(Equal("internal"))
+		})
 	})
 
 	When("Deployment is completed", func() {
@@ -905,7 +917,7 @@ var _ = Describe("Keystone controller", func() {
 			// gets a LoadBalancer Service with MetalLB annotations
 			service := th.GetService(types.NamespacedName{Namespace: namespace, Name: "keystone-internal"})
 			Expect(service.Annotations).To(
-				HaveKeyWithValue("dnsmasq.network.openstack.org/hostname", "keystone-internal.openstack.svc"))
+				HaveKeyWithValue("dnsmasq.network.openstack.org/hostname", "keystone-internal."+namespace+".svc"))
 			Expect(service.Annotations).To(
 				HaveKeyWithValue("metallb.universe.tf/address-pool", "osp-internalapi"))
 			Expect(service.Annotations).To(
@@ -978,6 +990,182 @@ var _ = Describe("Keystone controller", func() {
 				condition.ReadyCondition,
 				corev1.ConditionTrue,
 			)
+		})
+
+		It("keeps the default vhost ServerName when endpointURL is set without a LoadBalancer (Route)", func() {
+			scrt := th.GetSecret(keystoneAPIConfigDataName)
+			configData := string(scrt.Data["httpd.conf"])
+
+			// The route host must not become a ServerName: the router sends no SNI,
+			// so httpd would answer 421 instead of serving the default vhost.
+			Expect(configData).ShouldNot(ContainSubstring("keystone-openstack.apps-crc.testing"))
+			Expect(configData).Should(
+				ContainSubstring("ServerName keystone-public." + keystoneAPIName.Namespace + ".svc"))
+			Expect(configData).Should(
+				ContainSubstring("ServerAlias keystone-public." + keystoneAPIName.Namespace + ".svc." + clusterdns.GetDNSClusterDomain()))
+			Expect(configData).Should(
+				ContainSubstring("ServerName keystone-internal." + keystoneAPIName.Namespace + ".svc"))
+			Expect(configData).Should(
+				ContainSubstring("ServerAlias keystone-internal." + keystoneAPIName.Namespace + ".svc." + clusterdns.GetDNSClusterDomain()))
+			Expect(strings.Count(configData, "ServerAlias")).To(Equal(2))
+		})
+
+		It("renders the internal vhost ServerName from its own endpointURL on a LoadBalancer", func() {
+			Eventually(func(g Gomega) {
+				api := GetKeystoneAPI(keystoneAPIName)
+				api.Spec.Override.Service["internal"] = service.RoutedOverrideSpec{
+					OverrideSpec: service.OverrideSpec{
+						Spec: &service.OverrideServiceSpec{Type: corev1.ServiceTypeLoadBalancer},
+					},
+					EndpointURL: ptr.To("https://keystone-int.example.com:5000"),
+				}
+				g.Expect(k8sClient.Update(ctx, api)).To(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				configData := string(th.GetSecret(keystoneAPIConfigDataName).Data["httpd.conf"])
+				g.Expect(configData).To(ContainSubstring("ServerName keystone-int.example.com"))
+				g.Expect(configData).To(ContainSubstring("ServerAlias keystone-internal." + keystoneAPIName.Namespace + ".svc"))
+			}, timeout, interval).Should(Succeed())
+		})
+	})
+
+	When("A KeystoneAPI public endpoint is a LoadBalancer with endpointURL set", func() {
+		BeforeEach(func() {
+			spec := GetDefaultKeystoneAPISpec()
+			serviceOverride := map[string]any{}
+			serviceOverride["public"] = map[string]any{
+				"endpointURL": "https://keystone.foo.bar:5000",
+				"spec": map[string]any{
+					"type": "LoadBalancer",
+				},
+			}
+
+			spec["override"] = map[string]any{
+				"service": serviceOverride,
+			}
+
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			keystoneCR := CreateKeystoneAPI(keystoneAPIName, spec)
+			DeferCleanup(th.DeleteInstance, keystoneCR)
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
+				Namespace: namespace,
+			})
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateLoadBalancerServiceIP(types.NamespacedName{Namespace: namespace, Name: "keystone-public"})
+			th.SimulateJobSuccess(bootstrapJobName)
+			th.SimulateDeploymentReplicaReady(deploymentName)
+		})
+
+		It("does not set the dnsmasq hostname annotation on the public LoadBalancer Service", func() {
+			service := th.GetService(types.NamespacedName{Namespace: namespace, Name: "keystone-public"})
+			Expect(service.Annotations).NotTo(HaveKey("dnsmasq.network.openstack.org/hostname"))
+		})
+
+		It("drops a stale dnsmasq hostname annotation when the public Service becomes ClusterIP", func() {
+			name := types.NamespacedName{Namespace: namespace, Name: "keystone-public"}
+			// simulate a registration left on the public LoadBalancer by a previous release
+			Eventually(func(g Gomega) {
+				svc := th.GetService(name)
+				svc.Annotations[service.AnnotationHostnameKey] = "keystone-public.stale.svc"
+				g.Expect(k8sClient.Update(ctx, svc)).To(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				instance := GetKeystoneAPI(keystoneAPIName)
+				override := instance.Spec.Override.Service[service.EndpointPublic]
+				override.Spec = nil
+				instance.Spec.Override.Service[service.EndpointPublic] = override
+				g.Expect(k8sClient.Update(ctx, instance)).To(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				svc := th.GetService(name)
+				g.Expect(svc.Spec.Type).To(Equal(corev1.ServiceTypeClusterIP))
+				g.Expect(svc.Annotations).NotTo(HaveKey(service.AnnotationHostnameKey))
+			}, timeout, interval).Should(Succeed())
+		})
+	})
+
+	When("A KeystoneAPI internal endpoint is a LoadBalancer that is then switched to ClusterIP", func() {
+		BeforeEach(func() {
+			spec := GetDefaultKeystoneAPISpec()
+			spec["override"] = map[string]any{
+				"service": map[string]any{
+					"internal": map[string]any{"spec": map[string]any{"type": "LoadBalancer"}},
+				},
+			}
+
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneMessageBusSecret(namespace, "rabbitmq-secret"))
+			DeferCleanup(th.DeleteInstance, CreateKeystoneAPI(keystoneAPIName, spec))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateKeystoneAPISecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetKeystoneAPI(keystoneAPIName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(keystoneAccountName)
+			mariadb.SimulateMariaDBDatabaseCompleted(keystoneDatabaseName)
+			infra.SimulateTransportURLReady(types.NamespacedName{
+				Name:      fmt.Sprintf("%s-keystone-transport", keystoneAPIName.Name),
+				Namespace: namespace,
+			})
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			th.SimulateJobSuccess(dbSyncJobName)
+			th.SimulateLoadBalancerServiceIP(types.NamespacedName{Namespace: namespace, Name: "keystone-internal"})
+		})
+
+		It("drops the dnsmasq hostname annotation", func() {
+			name := types.NamespacedName{Namespace: namespace, Name: "keystone-internal"}
+			Eventually(func(g Gomega) {
+				g.Expect(th.GetService(name).Annotations).To(HaveKey(service.AnnotationHostnameKey))
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				instance := GetKeystoneAPI(keystoneAPIName)
+				override := instance.Spec.Override.Service[service.EndpointInternal]
+				override.Spec = nil
+				instance.Spec.Override.Service[service.EndpointInternal] = override
+				g.Expect(k8sClient.Update(ctx, instance)).To(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				svc := th.GetService(name)
+				g.Expect(svc.Spec.Type).To(Equal(corev1.ServiceTypeClusterIP))
+				g.Expect(svc.Annotations).NotTo(HaveKey(service.AnnotationHostnameKey))
+			}, timeout, interval).Should(Succeed())
 		})
 	})
 

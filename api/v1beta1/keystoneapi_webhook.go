@@ -118,6 +118,7 @@ func (spec *KeystoneAPISpecCore) ValidateCreate(basePath *field.Path, namespace 
 
 	// validate the service override key is valid
 	allErrs = append(allErrs, service.ValidateRoutedOverrides(basePath.Child("override").Child("service"), spec.Override.Service)...)
+	allErrs = append(allErrs, validateServicePortNames(basePath.Child("override").Child("service"), spec.Override.Service)...)
 
 	// When a TopologyRef CR is referenced, fail if a different Namespace is
 	// referenced because is not supported
@@ -171,6 +172,7 @@ func (spec *KeystoneAPISpecCore) ValidateUpdate(old KeystoneAPISpecCore, basePat
 
 	// validate the service override key is valid
 	allErrs = append(allErrs, service.ValidateRoutedOverrides(basePath.Child("override").Child("service"), spec.Override.Service)...)
+	allErrs = append(allErrs, validateServicePortNames(basePath.Child("override").Child("service"), spec.Override.Service)...)
 
 	// When a TopologyRef CR is referenced, fail if a different Namespace is
 	// referenced because is not supported
@@ -180,6 +182,13 @@ func (spec *KeystoneAPISpecCore) ValidateUpdate(old KeystoneAPISpecCore, basePat
 	allErrs = append(allErrs, spec.ValidateExternalKeystoneAPI(basePath)...)
 
 	return allWarns, allErrs
+}
+
+// validateServicePortNames rejects a service port override (public or
+// internal) whose name does not match the corresponding KeystoneAPI Service
+// port name. See webhook.ValidatePortNameOverrides for why this matters.
+func validateServicePortNames(basePath *field.Path, overrides map[service.Endpoint]service.RoutedOverrideSpec) field.ErrorList {
+	return common_webhook.ValidatePortNameOverrides(basePath, overrides, common_webhook.DefaultServicePortNames())
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
