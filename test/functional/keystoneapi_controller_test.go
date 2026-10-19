@@ -1104,7 +1104,7 @@ var _ = Describe("Keystone controller", func() {
 			Expect(configData).To(
 				ContainSubstring("backend = oslo_cache.memcache_pool"))
 			Expect(configData).To(
-				ContainSubstring(fmt.Sprintf("memcache_servers=memcached-0.memcached.%s.svc:11211,memcached-1.memcached.%s.svc:11211,memcached-2.memcached.%s.svc:11211",
+				ContainSubstring(fmt.Sprintf("memcache_servers=memcached-0.memcached.%s.svc:11212,memcached-1.memcached.%s.svc:11212,memcached-2.memcached.%s.svc:11212",
 					keystoneAPIName.Namespace, keystoneAPIName.Namespace, keystoneAPIName.Namespace)))
 
 			mariadbAccount := mariadb.GetMariaDBAccount(keystoneAccountName)
