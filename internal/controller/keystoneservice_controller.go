@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	roles "github.com/gophercloud/gophercloud/v2/openstack/identity/v3/roles"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	helper "github.com/openstack-k8s-operators/lib-common/modules/common/helper"
@@ -562,6 +563,52 @@ func (r *KeystoneServiceReconciler) reconcileUser(
 		}
 	}
 
+	// Nova reads unified limits with system_scope=all. Keystone allows
+	// that only when the compute service user has the system reader role.
+	if instance.Spec.ServiceType == "compute" {
+		err = assignSystemRole(ctx, log, os, "reader", userID)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	log.Info("Reconciled User successfully")
 	return ctrl.Result{}, nil
+}
+
+// assignSystemRole grants roleName to userID on the system. The role is
+// created when it is missing. An existing assignment is left in place.
+func assignSystemRole(
+	ctx context.Context,
+	log logr.Logger,
+	osClient *openstack.OpenStack,
+	roleName string,
+	userID string,
+) error {
+	roleID, err := osClient.CreateRole(ctx, log, roleName)
+	if err != nil {
+		return err
+	}
+
+	allPages, err := roles.ListAssignments(osClient.GetOSClient(), roles.ListAssignmentsOpts{
+		ScopeSystem: "all",
+		UserID:      userID,
+		RoleID:      roleID,
+	}).AllPages(ctx)
+	if err != nil {
+		return err
+	}
+	empty, err := allPages.IsEmpty()
+	if err != nil {
+		return err
+	}
+	if !empty {
+		return nil
+	}
+
+	log.Info("Assigning system role", "role", roleName, "userID", userID)
+	return roles.Assign(ctx, osClient.GetOSClient(), roleID, roles.AssignOpts{
+		UserID: userID,
+		System: true,
+	}).ExtractErr()
 }
