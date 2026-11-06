@@ -992,29 +992,31 @@ var _ = Describe("Keystone controller", func() {
 			)
 		})
 
-		It("renders the public vhost ServerName from endpointURL with both in-cluster names as ServerAliases", func() {
+		It("keeps the default vhost ServerName when endpointURL is set without a LoadBalancer (Route)", func() {
 			scrt := th.GetSecret(keystoneAPIConfigDataName)
 			configData := string(scrt.Data["httpd.conf"])
 
+			// The route host must not become a ServerName: the router sends no SNI,
+			// so httpd would answer 421 instead of serving the default vhost.
+			Expect(configData).ShouldNot(ContainSubstring("keystone-openstack.apps-crc.testing"))
 			Expect(configData).Should(
-				ContainSubstring("ServerName keystone-openstack.apps-crc.testing"))
-			Expect(configData).Should(
-				ContainSubstring("ServerAlias keystone-public." + keystoneAPIName.Namespace + ".svc"))
+				ContainSubstring("ServerName keystone-public." + keystoneAPIName.Namespace + ".svc"))
 			Expect(configData).Should(
 				ContainSubstring("ServerAlias keystone-public." + keystoneAPIName.Namespace + ".svc." + clusterdns.GetDNSClusterDomain()))
-
-			// The internal vhost keeps its default ServerName and gets its FQDN alias.
 			Expect(configData).Should(
 				ContainSubstring("ServerName keystone-internal." + keystoneAPIName.Namespace + ".svc"))
 			Expect(configData).Should(
 				ContainSubstring("ServerAlias keystone-internal." + keystoneAPIName.Namespace + ".svc." + clusterdns.GetDNSClusterDomain()))
-			Expect(strings.Count(configData, "ServerAlias")).To(Equal(3))
+			Expect(strings.Count(configData, "ServerAlias")).To(Equal(2))
 		})
 
-		It("renders the internal vhost ServerName from its own endpointURL", func() {
+		It("renders the internal vhost ServerName from its own endpointURL on a LoadBalancer", func() {
 			Eventually(func(g Gomega) {
 				api := GetKeystoneAPI(keystoneAPIName)
 				api.Spec.Override.Service["internal"] = service.RoutedOverrideSpec{
+					OverrideSpec: service.OverrideSpec{
+						Spec: &service.OverrideServiceSpec{Type: corev1.ServiceTypeLoadBalancer},
+					},
 					EndpointURL: ptr.To("https://keystone-int.example.com:5000"),
 				}
 				g.Expect(k8sClient.Update(ctx, api)).To(Succeed())
