@@ -114,7 +114,7 @@ metadata:
   name: keystone-internal
 spec:
   ports:
-    - name: keystone-internal
+    - name: internal
   selector:
     service: keystone
   type: ClusterIP
@@ -128,7 +128,7 @@ metadata:
   name: keystone-public
 spec:
   ports:
-    - name: keystone-public
+    - name: public
   selector:
     service: keystone
   type: ClusterIP
