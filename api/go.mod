@@ -7,7 +7,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gophercloud/gophercloud/v2 v2.15.0
 	github.com/onsi/gomega v1.44.0
-	github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20261029162902-788ea2b9b568
+	github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20261103062158-cd6b23975d53
 	github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20261029145133-3102c1c3b3b2
 	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20261029145133-3102c1c3b3b2
 	github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20261029145133-3102c1c3b3b2
