@@ -666,6 +666,9 @@ var _ = Describe("Keystone controller", func() {
 
 		It("should create a Deployment", func() {
 			deployment := th.GetDeployment(deploymentName)
+			container := deployment.Spec.Template.Spec.Containers[0]
+			Expect(container.Command).To(Equal([]string{"/usr/bin/dumb-init"}))
+			Expect(container.Args).To(Equal([]string{"--single-child", "--", "/bin/bash", "-c", "/usr/sbin/httpd -DFOREGROUND"}))
 			Expect(*(deployment.Spec.Replicas)).Should(Equal(int32(1)))
 		})
 
