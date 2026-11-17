@@ -172,3 +172,7 @@ The current design takes care of the following:
 - Generates Fernet keys (TODO: rotate them, and bounce the APIs upon rotation)
 - Keystone bootstrap, and db sync are executed automatically on install and updates
 - ConfigMap is recreated on any changes KeystoneAPI object changes and the Deployment updated.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and DCO information.
