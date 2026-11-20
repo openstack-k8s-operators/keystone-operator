@@ -422,6 +422,11 @@ func (r *KeystoneAPIReconciler) SetupWithManager(ctx context.Context, mgr ctrl.M
 		Watches(&topologyv1.Topology{},
 			handler.EnqueueRequestsFromMapFunc(r.findObjectsForSrc),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		// Reconcile when the well-known TLS profile ConfigMap maintained by
+		// the openstack-operator changes, so rendered configs pick up the
+		// new cluster-wide TLS defaults.
+		Watches(&corev1.ConfigMap{},
+			util.WatchDefaultTemplateConfigMap(r.Client, &keystonev1.KeystoneAPI{})).
 		Complete(r)
 }
 
