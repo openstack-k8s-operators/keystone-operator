@@ -31,7 +31,12 @@ spec:
         service: keystone
     spec:
       containers:
-      - args:
+      - command:
+        - /usr/bin/dumb-init
+        args:
+        - --single-child
+        - --
+        - /bin/bash
         - -c
         - /usr/sbin/httpd -DFOREGROUND
         volumeMounts:
