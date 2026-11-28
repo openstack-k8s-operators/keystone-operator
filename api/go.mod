@@ -7,11 +7,11 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gophercloud/gophercloud/v2 v2.16.0
 	github.com/onsi/gomega v1.44.0
-	github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20261118064743-77184024dab3
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20261120143354-e8b5bd7909b0
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20261120143354-e8b5bd7909b0
-	github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20261120143354-e8b5bd7909b0
-	github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20261120143354-e8b5bd7909b0
+	github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20261126151057-6acd4550a5b7
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20261121125531-8c4903cdda25
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20261121125531-8c4903cdda25
+	github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20261121125531-8c4903cdda25
+	github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20261121125531-8c4903cdda25
 	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67
 	k8s.io/api v0.33.13
 	k8s.io/apimachinery v0.33.13
