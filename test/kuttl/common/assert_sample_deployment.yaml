@@ -59,10 +59,13 @@ spec:
             weight: 100
       containers:
       - args:
+        - --single-child
+        - --
+        - /bin/bash
         - -c
         - /usr/sbin/httpd -DFOREGROUND
         command:
-        - /bin/bash
+        - /usr/bin/dumb-init
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
